@@ -2,6 +2,7 @@ import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleManager from "@/components/SalaryRuleManager";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
+import SalaryMonthlyImporter from "@/components/SalaryMonthlyImporter";
 import {
   getCurrentUser,
   getPublicSalaryRule,
@@ -71,6 +72,11 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
       <h2 className="section-title">工资体系配置</h2>
       <div className="card">
         <SalaryRuleManager initialRules={rules} demo={user.demo} userId={user.id} />
+      </div>
+
+      <h2 className="section-title">月度工资导入</h2>
+      <div className="card">
+        <SalaryMonthlyImporter members={members} demo={user.demo} userId={user.id} />
       </div>
 
       <h2 className="section-title">员工月度工资（按人行，仅老板可见）</h2>
