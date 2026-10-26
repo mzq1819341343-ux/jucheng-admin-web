@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { ExpenseClaim, Role } from "@/lib/data";
 import { EXPENSE_SCOPE_LABEL, type ExpenseScope, type ExpenseStatus } from "@/lib/expenses";
 import { money2 } from "@/lib/format";
+import { downloadExcel } from "@/lib/excel";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const DEMO_OWN_ID = "demo-current-user";
@@ -59,6 +60,7 @@ export default function ExpenseManager({
     return initialClaims;
   });
   const [monthFilter, setMonthFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | ExpenseStatus>("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [claimDate, setClaimDate] = useState("");
   const [title, setTitle] = useState("");
@@ -75,9 +77,27 @@ export default function ExpenseManager({
     () => [...new Set(claims.map((c) => c.claim_date.slice(0, 7)))].sort((a, b) => b.localeCompare(a)),
     [claims]
   );
+  // 指令52-3：月份 + 状态双筛选，列表、分类统计、汇总小计与导出共用同一可见范围。
   const visibleClaims = useMemo(
-    () => (monthFilter === "all" ? claims : claims.filter((c) => c.claim_date.startsWith(monthFilter))),
-    [claims, monthFilter]
+    () =>
+      claims.filter(
+        (c) =>
+          (monthFilter === "all" || c.claim_date.startsWith(monthFilter)) &&
+          (statusFilter === "all" || c.status === statusFilter)
+      ),
+    [claims, monthFilter, statusFilter]
+  );
+  const visibleTotals = useMemo(
+    () => ({
+      total: visibleClaims.reduce((s, c) => s + Number(c.amount ?? 0), 0),
+      reimbursed: visibleClaims
+        .filter((c) => c.status === "reimbursed")
+        .reduce((s, c) => s + Number(c.amount ?? 0), 0),
+      unreimbursed: visibleClaims
+        .filter((c) => c.status === "unreimbursed")
+        .reduce((s, c) => s + Number(c.amount ?? 0), 0),
+    }),
+    [visibleClaims]
   );
 
   // 指令46 B3：分类统计（当前可见范围 + 当前月份筛选）与 CSV 导出。
@@ -96,34 +116,46 @@ export default function ExpenseManager({
   }, [visibleClaims]);
   const categoryMax = categoryStats.reduce((m, s) => Math.max(m, s.total), 0);
 
+  // 指令52-3：CSV / Excel 共用同一导出行（当前筛选范围）；文件名带月份与状态。
+  const EXPORT_HEADERS = ["日期", "事由", "类别", "金额（元）", "归属", "报销人", "状态", "备注"];
+  const exportRows = () =>
+    visibleClaims.map((c) => [
+      c.claim_date,
+      c.title,
+      c.category || "其他",
+      Number(c.amount ?? 0).toFixed(2),
+      c.scope ? EXPENSE_SCOPE_LABEL[c.scope] : "",
+      c.claimant_name ?? "",
+      c.status === "reimbursed" ? "已报销" : "未报销",
+      c.note ?? "",
+    ]);
+  const exportBaseName = () =>
+    `报销台账_${monthFilter === "all" ? "全部月份" : monthFilter}_${
+      statusFilter === "all" ? "全部状态" : statusFilter === "reimbursed" ? "已报销" : "未报销"
+    }`;
+
   function exportCsv() {
     const esc = (v: string | number | null | undefined) => {
       const s = v === null || v === undefined ? "" : String(v);
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = [
-      ["日期", "事由", "类别", "金额（元）", "归属", "报销人", "状态", "备注"].join(","),
-      ...visibleClaims.map((c) =>
-        [
-          c.claim_date,
-          esc(c.title),
-          esc(c.category),
-          Number(c.amount ?? 0).toFixed(2),
-          c.scope ? EXPENSE_SCOPE_LABEL[c.scope] : "",
-          esc(c.claimant_name ?? ""),
-          c.status === "reimbursed" ? "已报销" : "未报销",
-          esc(c.note ?? ""),
-        ].join(",")
-      ),
+      EXPORT_HEADERS.join(","),
+      ...exportRows().map((r) => r.map(esc).join(",")),
     ];
     const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `报销台账_${monthFilter === "all" ? "全部月份" : monthFilter}.csv`;
+    a.download = `${exportBaseName()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     setMsg("已导出当前筛选范围的 CSV");
+  }
+
+  function exportExcel() {
+    downloadExcel(`${exportBaseName()}.xls`, "报销台账", EXPORT_HEADERS, exportRows());
+    setMsg("已导出当前筛选范围的 Excel（.xls）");
   }
 
   function resetForm() {
@@ -357,13 +389,42 @@ export default function ExpenseManager({
         {msg ? <div className="access-msg" role="status">{msg}</div> : null}
       </form>
 
-      <div className="field" style={{ maxWidth: 260 }}>
-        <label htmlFor="expense-month-filter">按月筛选</label>
-        <select id="expense-month-filter" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
-          <option value="all">全部月份</option>
-          {months.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
+      <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
+        <div className="field" style={{ maxWidth: 260, marginBottom: 0 }}>
+          <label htmlFor="expense-month-filter">按月筛选</label>
+          <select id="expense-month-filter" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
+            <option value="all">全部月份</option>
+            {months.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>按状态筛选</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {(
+              [
+                ["all", "全部"],
+                ["unreimbursed", "未报销"],
+                ["reimbursed", "已报销"],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                className={`chip${statusFilter === v ? " chip-active" : ""}`}
+                aria-pressed={statusFilter === v}
+                onClick={() => setStatusFilter(v)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+      <p className="access-msg" style={{ marginTop: 12 }} role="status">
+        当前筛选共 {visibleClaims.length} 笔 · 合计 {money2(visibleTotals.total)} 元（未报销{" "}
+        {money2(visibleTotals.unreimbursed)} 元 · 已报销 {money2(visibleTotals.reimbursed)} 元）；
+        分类统计与导出均按此范围。
+      </p>
 
       {categoryStats.length > 0 ? (
         <div style={{ margin: "18px 0 22px" }}>
@@ -400,9 +461,14 @@ export default function ExpenseManager({
               </div>
             ))}
           </div>
-          <button type="button" className="btn btn-ghost" style={{ marginTop: 14 }} onClick={exportCsv}>
-            导出 CSV（当前筛选）
-          </button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 14 }}>
+            <button type="button" className="btn btn-ghost" onClick={exportCsv}>
+              导出 CSV（当前筛选）
+            </button>
+            <button type="button" className="btn btn-ghost" onClick={exportExcel}>
+              导出 Excel（当前筛选）
+            </button>
+          </div>
         </div>
       ) : null}
 

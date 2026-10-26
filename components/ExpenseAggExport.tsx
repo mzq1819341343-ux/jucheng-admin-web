@@ -1,9 +1,20 @@
 "use client";
 
 import type { ExpenseMonthlyAgg } from "@/lib/data";
+import { downloadExcel } from "@/lib/excel";
 
-/** 指令46 B3：合伙人月度汇总 CSV 导出（仅汇总，无明细字段）。 */
+const AGG_HEADERS = ["月份", "公司花费合计（元）", "已报销（元）", "未报销（元）", "笔数"];
+
+/** 指令46 B3：合伙人月度汇总 CSV 导出（仅汇总，无明细字段）。指令52-3 补 Excel（.xls）。 */
 export default function ExpenseAggExport({ rows }: { rows: ExpenseMonthlyAgg[] }) {
+  const aggRows = () =>
+    rows.map((r) => [
+      r.month,
+      Number(r.total ?? 0).toFixed(2),
+      Number(r.reimbursed_total ?? 0).toFixed(2),
+      Number(r.unreimbursed_total ?? 0).toFixed(2),
+      String(r.count ?? 0),
+    ]);
   function exportCsv() {
     const lines = [
       ["月份", "公司花费合计（元）", "已报销（元）", "未报销（元）", "笔数"].join(","),
@@ -26,10 +37,19 @@ export default function ExpenseAggExport({ rows }: { rows: ExpenseMonthlyAgg[] }
     URL.revokeObjectURL(url);
   }
 
+  function exportXls() {
+    downloadExcel("报销月度汇总.xls", "报销月度汇总", AGG_HEADERS, aggRows());
+  }
+
   if (rows.length === 0) return null;
   return (
-    <button type="button" className="btn btn-ghost" style={{ marginTop: 14 }} onClick={exportCsv}>
-      导出月度汇总 CSV
-    </button>
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+      <button type="button" className="btn btn-ghost" style={{ marginTop: 14 }} onClick={exportCsv}>
+        导出月度汇总 CSV
+      </button>
+      <button type="button" className="btn btn-ghost" style={{ marginTop: 14 }} onClick={exportXls}>
+        导出月度汇总 Excel
+      </button>
+    </div>
   );
 }
