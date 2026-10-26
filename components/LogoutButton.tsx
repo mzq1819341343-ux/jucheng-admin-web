@@ -7,8 +7,9 @@ export default function LogoutButton() {
   const router = useRouter();
 
   async function onLogout() {
-    // 清演示角色 Cookie（演示模式与真实模式都安全）
+    // 清演示 Cookie（演示模式与真实模式都安全）
     document.cookie = "demo_role=; path=/; max-age=0";
+    document.cookie = "demo_biz=; path=/; max-age=0";
     if (isSupabaseConfigured()) {
       try {
         const supabase = createClient();

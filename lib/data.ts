@@ -1,6 +1,8 @@
 import { cookies} from "next/headers";
 import { createClient as createServerSupabase, isSupabaseConfigured} from "./supabase/server";
+import { FALLBACK_BUSINESSES, type BusinessDef } from "./businesses";
 
+export type { BusinessDef };
 export type Role = "owner" | "partner" | "staff";
 export type Scope = "combined" | "wanda" | "friendship";
 
@@ -93,6 +95,7 @@ export const FALLBACK_FETCH_LOGS: FetchLog[] = [
 // - 否则进入：角色取 Cookie demo_role（成员页可切换），默认 owner。
 // ============================================================
 export interface CurrentUser {
+id: string | null;
 role: Role;
 demo: boolean;
 email: string | null;
@@ -113,6 +116,7 @@ const { data: profile} = await supabase
 .eq("id", user.id)
 .single();
 return {
+id: user.id,
 role: (profile?.role as Role)?? "staff",
 demo: false,
 email: user.email?? null,
@@ -127,7 +131,69 @@ const cookieStore = await cookies();
 const demoRole = cookieStore.get("demo_role")?.value;
 const role: Role =
 demoRole === "partner" || demoRole === "staff"? demoRole: "owner";
-return { role, demo: true, email: null, displayName: "演示用户"};
+return { id: null, role, demo: true, email: null, displayName: "演示用户"};
+}
+
+// ============================================================
+// 多业务板块授权（指令33）
+// - 真实模式：businesses 表 + user_business_access 表（RLS 兜底）；
+//   owner 不受限（全部 active 板块），其他角色仅授权行内的板块。
+// - 演示模式：授权组合取 Cookie demo_biz（all / aihuishou / none），
+//   与演示角色组合切换，可直观演示「只开某一业务」的差异。
+// ============================================================
+export interface MyBusinesses {
+businesses: BusinessDef[];
+grantedIds: string[];
+}
+
+export async function getMyBusinesses(user: CurrentUser): Promise<MyBusinesses> {
+if (!user.demo && isSupabaseConfigured() && user.id) {
+try {
+const supabase = await createServerSupabase();
+const { data: bizRows } = await supabase
+.from("businesses")
+.select("id, name, status, sort")
+.order("sort", { ascending: true});
+const businesses: BusinessDef[] =
+bizRows && bizRows.length > 0
+? (bizRows as Omit<BusinessDef, "en">[]).map((b) => ({
+...b,
+en: FALLBACK_BUSINESSES.find((f) => f.id === b.id)?.en ?? b.id.toUpperCase(),
+}))
+: FALLBACK_BUSINESSES;
+if (user.role === "owner") {
+return {
+businesses,
+grantedIds: businesses.filter((b) => b.status === "active").map((b) => b.id),
+};
+}
+const { data: accRows } = await supabase
+.from("user_business_access")
+.select("business_id")
+.eq("user_id", user.id);
+return { businesses, grantedIds: (accRows ?? []).map((r) => r.business_id as string) };
+} catch {
+// 落到兜底：owner 给全部 active，其他角色不给（页面会被守卫拦下并提示）
+return {
+businesses: FALLBACK_BUSINESSES,
+grantedIds:
+user.role === "owner"
+? FALLBACK_BUSINESSES.filter((b) => b.status === "active").map((b) => b.id)
+: [],
+};
+}
+}
+// 演示模式
+const cookieStore = await cookies();
+const demoBiz = cookieStore.get("demo_biz")?.value;
+const activeIds = FALLBACK_BUSINESSES.filter((b) => b.status === "active").map((b) => b.id);
+const grantedIds =
+demoBiz === "none"? []: demoBiz === "aihuishou"? ["aihuishou"]: activeIds;
+return { businesses: FALLBACK_BUSINESSES, grantedIds };
+}
+
+export function canAccessBusiness(grantedIds: string[], businessId: string) {
+return grantedIds.includes(businessId);
 }
 
 /** staff 在数据层就拿不到敏感列（真实模式查 v_ops_metrics 视图；兜底模式在此剥离）。 */
@@ -166,7 +232,11 @@ const rows = scope === "combined"? FALLBACK_COMBINED: FALLBACK_STORES.filter((r)
 return { rows: role === "staff"? stripSensitive(rows): rows, fromDb: false};
 }
 
-export async function getAllMembers(): Promise<{ members: Profile[]; fromDb: boolean}> {
+export async function getAllMembers(): Promise<{
+members: Profile[];
+accessByUser: Record<string, string[]>;
+fromDb: boolean;
+}> {
 if (isSupabaseConfigured()) {
 try {
 const supabase = await createServerSupabase();
@@ -174,12 +244,26 @@ const { data, error} = await supabase
 .from("profiles")
 .select("id, role, display_name, store_scope")
 .order("created_at", { ascending: true});
-if (!error && data) return { members: data as Profile[], fromDb: true};
+if (!error && data) {
+const accessByUser: Record<string, string[]> = {};
+try {
+const { data: acc } = await supabase
+.from("user_business_access")
+.select("user_id, business_id");
+for (const row of acc ?? []) {
+const uid = row.user_id as string;
+(accessByUser[uid] ??= []).push(row.business_id as string);
+}
+} catch {
+// 授权表未迁移时忽略，勾选区按空授权展示
+}
+return { members: data as Profile[], accessByUser, fromDb: true};
+}
 } catch {
 // 空态
 }
 }
-return { members: [], fromDb: false};
+return { members: [], accessByUser: {}, fromDb: false};
 }
 
 export async function getFetchLogs(): Promise<{ logs: FetchLog[]; fromDb: boolean}> {

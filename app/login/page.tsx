@@ -47,12 +47,12 @@ export default function LoginPage() {
       <div className="login-brand">
         <div className="login-brand-name">聚成</div>
         <div className="login-brand-slogan">聚天下英豪，成全球唯一</div>
-        <div className="login-brand-en">JUCHENG</div>
+        <div className="login-brand-en en">JUCHENG</div>
         <div className="login-brand-rule" aria-hidden="true" />
       </div>
       <div className="card form-card login-card">
         <h1 className="page-title login-title">登录公司后台</h1>
-        <p className="page-desc">使用老板分配的邮箱与密码登录（Supabase Auth）。</p>
+        <p className="page-desc">使用老板分配的邮箱与密码登录（<span className="en">Supabase Auth</span>）。</p>
 
         {!configured ? (
           <div className="notice">
@@ -92,7 +92,7 @@ export default function LoginPage() {
         </form>
 
         <div style={{ marginTop: 18 }}>
-          <button type="button" className="btn btn-ghost" onClick={enterDemo} style={{ width: "100%" }}>
+          <button type="button" className="btn btn-ghost btn-sheen" onClick={enterDemo} style={{ width: "100%" }}>
             进入演示模式（免登录看界面）
           </button>
           <p className="page-desc" style={{ marginTop: 10, fontSize: 13 }}>

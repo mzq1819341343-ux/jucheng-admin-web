@@ -19,12 +19,16 @@ export default async function StatusPage() {
     <>
       <Nav user={user} />
       <main className="container">
+        <div className="eyebrow">
+          <span className="en">DATA STATUS</span>
+          <span className="eyebrow-cn">数据刷新状态</span>
+        </div>
         <h1 className="page-title">数据刷新状态</h1>
         <p className="page-desc">各数据源最近更新时间与刷新方式（全部在免费额度内运行）。</p>
 
         <div className="notice">
           爱回收后台登录状态：<strong>未登录（会话已过期）</strong>。自动抓取处于待启用状态——
-          请老板点：在 Muse 浏览器里本人登录一次爱回收后台（或更新保存的密码），登录恢复并成功续抓一次 10 月数据后，再按 auto_fetch 待启用配置开启定时抓取。不要把密码发到聊天里。
+          请老板点：在 Muse 浏览器里本人登录一次爱回收后台（或更新保存的密码），登录恢复并成功续抓一次 10 月数据后，再按 <span className="en">auto_fetch</span> 待启用配置开启定时抓取。不要把密码发到聊天里。
         </div>
 
         <h2 className="section-title">数据源</h2>
@@ -40,7 +44,7 @@ export default async function StatusPage() {
             </thead>
             <tbody>
               <tr>
-                <td>爱回收经营汇总（驾驶舱 v3.3）</td>
+                <td>爱回收经营汇总（驾驶舱 <span className="en">v3.3</span>）</td>
                 <td>
                   <span className="tag tag-ok">已更新至 2026-09</span>
                 </td>
@@ -56,7 +60,7 @@ export default async function StatusPage() {
                 </td>
                 <td>定时抓取（待启用）</td>
                 <td style={{ textAlign: "left", whiteSpace: "normal" }}>
-                  已定策略：增量抓取 + 每月 3 日抓上月整月（Asia/Shanghai）；会话过期只停下记录，不重试登录、不绕过验证。
+                  已定策略：增量抓取 + 每月 3 日抓上月整月（<span className="en">Asia/Shanghai</span>）；会话过期只停下记录，不重试登录、不绕过验证。
                 </td>
               </tr>
               <tr>
@@ -89,7 +93,7 @@ export default async function StatusPage() {
                 {logs.map((l, i) => (
                   <tr key={i}>
                     <td>{String(l.created_at).replace("T", " ").slice(0, 16)}</td>
-                    <td>{l.source}</td>
+                    <td className="en">{l.source}</td>
                     <td>
                       <span className={STATUS_LABEL[l.status]?.cls ?? "tag"}>
                         {STATUS_LABEL[l.status]?.text ?? l.status}
