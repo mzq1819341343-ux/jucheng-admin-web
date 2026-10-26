@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import { KpiValue } from "@/components/KpiCard";
-import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSiteTargets, type SiteTargetMetric } from "@/lib/data";
+import { TARGET_METRIC_LABEL } from "@/lib/targets";
 import { buildOperatingMetrics, coverageRange, buildStoreComparison } from "@/lib/operating";
 import { money, money2, int, pct } from "@/lib/format";
 
@@ -42,6 +43,32 @@ export default async function AihuishouReportPage() {
   );
   const wandaCostTotal = [...wandaCmp.values()].reduce((s, m) => s + m.storeCosts, 0);
   const friendshipCostTotal = [...friendshipCmp.values()].reduce((s, m) => s + m.storeCosts, 0);
+  // 指令58 A4：目标达成复盘——目标与总览目标卡同一数据源（site_targets），
+  // 实际走经营核算口径：分润/单量取两店合计月度汇总，公司口径净利仅完整
+  // 口径月份有值（operating.companyNetProfit），其余月份标「待核算」不冒数；
+  // 未设目标的月份标「未设定」。整节仅敏感角色渲染（店员不渲染，见 audit-staff）。
+  const siteTargets = sensitive ? await getSiteTargets(user) : [];
+  const REVIEW_METRICS: SiteTargetMetric[] = ["profit", "net_profit", "orders"];
+  const reviewRows = rows.flatMap((r) =>
+    REVIEW_METRICS.map((metric) => {
+      const target = siteTargets.find((t) => t.month === r.month && t.metric === metric) ?? null;
+      const actual =
+        metric === "profit"
+          ? (r.profit ?? null)
+          : metric === "orders"
+            ? (r.orders ?? null)
+            : (operatingByMonth.get(r.month)?.companyNetProfit ?? null);
+      const rate =
+        target !== null && actual !== null && target.target_value !== 0
+          ? (actual / target.target_value) * 100
+          : null;
+      const status =
+        target === null ? "未设定" : actual === null ? "待核算" : rate !== null && rate >= 100 ? "已达成" : "未达成";
+      return { month: r.month, metric, target, actual, rate, status };
+    })
+  );
+  const fmtReview = (metric: SiteTargetMetric, v: number | null) =>
+    v === null ? "—" : metric === "orders" ? int(v) : `${money2(v)} 元`;
 
   return (
     <>
@@ -125,6 +152,42 @@ export default async function AihuishouReportPage() {
           <p className="page-desc" style={{ marginTop: 12 }}>
             净利暂定仅最新月为完整口径（扣工资分摊、已知扣款、门店成本、报销花费），其余月份待补齐后出数。
           </p>
+        ) : null}
+
+        {sensitive ? (
+          <>
+            <h2 className="section-title">目标达成复盘</h2>
+            <div className="card table-wrap">
+              <table className="report">
+                <thead>
+                  <tr>
+                    <th>月份</th>
+                    <th style={{ textAlign: "left" }}>口径</th>
+                    <th>目标</th>
+                    <th>实际</th>
+                    <th>达成率</th>
+                    <th style={{ textAlign: "left" }}>状态</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {reviewRows.map((x) => (
+                    <tr key={`${x.month}-${x.metric}`}>
+                      <td>{x.month}</td>
+                      <td style={{ textAlign: "left" }}>{TARGET_METRIC_LABEL[x.metric]}</td>
+                      <td>{x.target === null ? "—" : fmtReview(x.metric, x.target.target_value)}</td>
+                      <td>{fmtReview(x.metric, x.actual)}</td>
+                      <td>{x.rate === null ? "—" : `${x.rate.toFixed(1)}%`}</td>
+                      <td style={{ textAlign: "left" }}>{x.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="page-desc" style={{ marginTop: 12 }}>
+              目标存 site_targets（与总览目标卡同一数据源，老板在总览设定）；未设目标的月份标「未设定」。
+              公司口径净利仅完整口径月份出数，缺完整口径的月份实际与达成率标「待核算」，不估算冒数。
+            </p>
+          </>
         ) : null}
 
         <h2 className="section-title">两店对比（按月，到店口径）</h2>

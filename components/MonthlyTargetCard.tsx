@@ -2,14 +2,11 @@
 
 import { useState } from "react";
 import type { Role, SiteTarget, SiteTargetMetric } from "@/lib/data";
+import { TARGET_METRIC_LABEL } from "@/lib/targets";
 import { money2, int } from "@/lib/format";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
-export const TARGET_METRIC_LABEL: Record<SiteTargetMetric, string> = {
-  profit: "当月分润",
-  net_profit: "公司口径净利",
-  orders: "当月单量",
-};
+export { TARGET_METRIC_LABEL };
 
 export interface TargetActuals {
   month: string;
