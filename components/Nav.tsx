@@ -8,6 +8,15 @@ import DemoBizSwitcher, { type DemoBiz } from "./DemoBizSwitcher";
 import ThemeToggle from "./ThemeToggle";
 import NavShell from "./NavShell";
 
+/** 邮箱掩码（指令51）：顶栏不明文展示完整邮箱，只留首尾与域名，全址进 title。 */
+function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return email;
+  const local = email.slice(0, at);
+  const head = local.slice(0, 2);
+  return `${head}***${email.slice(at)}`;
+}
+
 export default async function Nav({ user }: { user: CurrentUser }) {
   let demoBiz: DemoBiz = "all";
   if (user.demo) {
@@ -17,6 +26,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
   // 指令37：无权限板块入口完全不渲染——导航里的业务链接同样按授权显隐
   const { grantedIds } = await getMyBusinesses(user);
   const showAihuishou = canAccessBusiness(grantedIds, "aihuishou");
+  const showBizTools = showAihuishou && user.role !== "staff";
 
   return (
     <NavShell>
@@ -28,27 +38,33 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           <span className="brand-slogan">聚天下英豪，成全球唯一</span>
           <span className="brand-en en">JUCHENG</span>
         </div>
+        {/* 指令51：桌面单行导航——主链接直达，次要项收进「更多」溢出菜单，不再折行 */}
         <nav className="menu">
           <Link href="/">公司总览</Link>
           {showAihuishou ? <Link href="/business/aihuishou">爱回收</Link> : null}
-          {showAihuishou && user.role !== "staff" ? (
-            <Link href="/business/aihuishou/costs">门店成本</Link>
-          ) : null}
-          {showAihuishou && user.role !== "staff" ? (
-            <Link href="/business/aihuishou/breakdown">净利构成</Link>
-          ) : null}
           <Link href="/salary">{user.role === "staff" ? "我的薪酬" : "工资"}</Link>
           <Link href="/expenses">报销</Link>
-          <Link href="/members">成员与权限</Link>
-          <Link href="/status">数据刷新状态</Link>
-          <Link href="/help">操作手册</Link>
+          <details className="menu-more">
+            <summary>更多</summary>
+            <div className="menu-more-panel">
+              {showBizTools ? <Link href="/business/aihuishou/costs">门店成本</Link> : null}
+              {showBizTools ? <Link href="/business/aihuishou/breakdown">净利构成</Link> : null}
+              <Link href="/members">成员与权限</Link>
+              <Link href="/status">数据状态</Link>
+              <Link href="/help">帮助 · 操作手册</Link>
+            </div>
+          </details>
         </nav>
         <div className="userbox">
           <span className="user-role">
             {ROLE_LABEL[user.role]}
             {user.demo ? "（演示）" : ""}
           </span>
-          {user.email ? <span className="user-email en">{user.email}</span> : null}
+          {user.email ? (
+            <span className="user-email en" title={user.email}>
+              {maskEmail(user.email)}
+            </span>
+          ) : null}
           <ThemeToggle />
           <LogoutButton />
         </div>

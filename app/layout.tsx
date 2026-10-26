@@ -23,9 +23,7 @@ export default function RootLayout({
       <body>
         <HashAuthForwarder />
         {children}
-        <footer className="site-footer">
-          聚成 · 聚天下英豪，成全球唯一 ｜ 数据口径：爱回收驾驶舱 <span className="en">v3.3</span> 汇总 ｜ 本站只展示汇总数据，不含个人明细
-        </footer>
+        <footer className="site-footer">© {new Date().getFullYear()} 聚成</footer>
       </body>
     </html>
   );

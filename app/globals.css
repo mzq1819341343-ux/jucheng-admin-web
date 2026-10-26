@@ -132,9 +132,9 @@ a:hover { text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 34px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap; /* 指令51：桌面顶栏恒单行，次要链接走「更多」溢出菜单 */
 }
-.brand { display: flex; align-items: baseline; gap: 14px; }
+.brand { display: flex; align-items: baseline; gap: 14px; flex: none; }
 .brand-name {
   font-family: var(--serif);
   font-size: 32px;
@@ -145,16 +145,56 @@ a:hover { text-decoration: none; }
 }
 .brand-slogan { color: var(--muted); font-size: 13.5px; letter-spacing: 3px; }
 .brand-en { color: var(--faint); font-size: 11px; letter-spacing: 5px; }
-.menu { display: flex; gap: 28px; flex: 1; flex-wrap: wrap; }
+.menu { display: flex; gap: 28px; flex: 1; flex-wrap: nowrap; align-items: center; min-width: 0; }
 .menu a {
   color: var(--muted);
   font-size: 15.5px;
   padding: 6px 2px;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 .menu a:hover { color: var(--text); border-bottom-color: var(--gold); }
-.userbox { display: flex; align-items: center; gap: 14px; }
+/* 「更多」溢出菜单（指令51）：原生 details 下拉，无 JS 依赖 */
+.menu-more { position: relative; flex: none; }
+.menu-more summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 15.5px;
+  padding: 6px 2px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.menu-more summary::-webkit-details-marker { display: none; }
+.menu-more summary::after { content: "▾"; margin-left: 5px; font-size: 11px; color: var(--gold); }
+.menu-more summary:hover { color: var(--text); border-bottom-color: var(--gold); }
+.menu-more[open ] summary { color: var(--text); }
+.menu-more-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 70;
+  min-width: 196px;
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.menu-more-panel a {
+  padding: 10px 12px;
+  border-bottom: none;
+  border-radius: 8px;
+  font-size: 15px;
+}
+.menu-more-panel a:hover { background: var(--card-hover); border-bottom-color: transparent; }
+.userbox { display: flex; align-items: center; gap: 14px; flex: none; }
 .user-role { font-weight: 600; color: var(--gold); font-size: 14.5px; }
 .user-email { color: var(--muted); font-size: 13.5px; }
 .theme-toggle { white-space: nowrap; padding: 8px 14px; font-size: 13.5px; }
@@ -797,10 +837,17 @@ footer.site-footer {
 }
 .login-title { font-size: 24px; }
 
+/* 中宽（901–1180px）：收起品牌装饰字，保证顶栏单行不溢出 */
+@media (max-width: 1180px) and (min-width: 901px) {
+  .brand-slogan, .brand-en { display: none; }
+  .topbar-inner { gap: 22px; padding: 16px 24px; }
+  .menu { gap: 20px; }
+}
+
 /* ---------- 响应式 · 导航收起（指令37：≤900px 汉堡 + 抽屉） ---------- */
 @media (max-width: 900px) {
   .nav-burger { display: inline-flex; }
-  .topbar-inner { padding: 12px 60px 12px 18px; gap: 14px; }
+  .topbar-inner { padding: 12px 60px 12px 18px; gap: 14px; flex-wrap: wrap; }
   .brand-en { display: none; }
   .brand-slogan { letter-spacing: 1.5px; font-size: 12.5px; }
   /* 菜单 / 用户区 / 演示条默认收起，.nav-open 时展开为抽屉面板 */
@@ -824,6 +871,25 @@ footer.site-footer {
     border-radius: 8px;
   }
   .topbar.nav-open .menu a:hover { background: var(--card-hover); }
+  /* 抽屉内「更多」：面板静态展开（不浮动），与抽屉链接同节奏 */
+  .topbar.nav-open .menu-more { flex: 0 0 100%; }
+  .topbar.nav-open .menu-more summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 6px;
+    font-size: 16px;
+    border-bottom: none;
+    border-radius: 8px;
+  }
+  .topbar.nav-open .menu-more-panel {
+    position: static;
+    min-width: 0;
+    padding: 0 0 4px 16px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+  }
   .topbar.nav-open .userbox {
     display: flex;
     flex-wrap: wrap;
