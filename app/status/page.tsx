@@ -209,8 +209,10 @@ export default async function StatusPage() {
           </table>
         </div>
 
-        <h2 className="section-title">最近抓取 / 导入日志</h2>
+        {/* 指令57 自扫：抓取日志整节仅老板 / 合伙人渲染；店员不再出「无权限」占位卡。 */}
         {sensitive ? (
+          <>
+          <h2 className="section-title">最近抓取 / 导入日志</h2>
           <div className="card table-wrap">
             <table className="report">
               <thead>
@@ -237,11 +239,8 @@ export default async function StatusPage() {
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="card">
-            <p className="empty">无权限：抓取日志仅老板 / 合伙人可见。</p>
-          </div>
-        )}
+          </>
+        ) : null}
       </main>
     </>
   );

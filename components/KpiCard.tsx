@@ -49,7 +49,6 @@ export default function KpiCard({
   unit,
   sub,
   hint,
-  locked,
   className,
   tone = "default",
   size = "md",
@@ -61,27 +60,19 @@ export default function KpiCard({
   sub?: ReactNode;
   /** 长说明：走 title 悬停提示，不占卡面（指令51）。 */
   hint?: string;
-  locked?: boolean;
   className?: string;
   tone?: "default" | "negative" | "positive";
   size?: KpiSize;
   countUp?: boolean;
 }) {
   const sizeClass = size === "hero" ? " kpi-card-hero" : size === "sm" ? " kpi-card-sm" : "";
+  // 指令57 自扫：原 locked「无权限」占位变体已删除——无权限指标整卡不渲染，
+  // 由调用方按角色决定是否渲染本组件，组件内不再提供占位形态。
   return (
     <div className={`kpi-card${sizeClass}${className ? ` ${className}` : ""}`} title={hint}>
       <div className="kpi-label">{label}</div>
-      {locked ? (
-        <>
-          <div className="kpi-value locked">无权限</div>
-          <div className="kpi-sub">该指标仅老板 / 合伙人可见</div>
-        </>
-      ) : (
-        <>
-          <KpiValue value={value} unit={unit} tone={tone} animate={countUp} />
-          {sub ? <div className="kpi-sub">{sub}</div> : null}
-        </>
-      )}
+      <KpiValue value={value} unit={unit} tone={tone} animate={countUp} />
+      {sub ? <div className="kpi-sub">{sub}</div> : null}
     </div>
   );
 }

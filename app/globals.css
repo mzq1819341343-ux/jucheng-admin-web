@@ -355,7 +355,6 @@ h1.page-title {
   margin-left: 0.18em;
   letter-spacing: 0.02em;
 }
-.kpi-value.locked { font-size: 28px; color: var(--red); padding: 12px 0; }
 .kpi-sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 10px; }
 .kpi-negative { color: var(--negative); }
 .kpi-positive { color: var(--green); }
@@ -605,7 +604,6 @@ table.report tbody tr { transition: background-color 0.15s ease; }
 table.report tbody tr:hover { background: var(--card-hover); }
 table.report tr.total td { font-weight: 700; background: var(--card-hover); border-top: 1px solid var(--border); }
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
-.locked-cell { color: var(--red); }
 
 /* ---------- buttons / forms ---------- */
 .btn {
