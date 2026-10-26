@@ -35,6 +35,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
             <Link href="/business/aihuishou/costs">门店成本</Link>
           ) : null}
           <Link href="/salary">{user.role === "staff" ? "我的薪酬" : "工资"}</Link>
+          <Link href="/expenses">报销</Link>
           <Link href="/members">成员与权限</Link>
           <Link href="/status">数据刷新状态</Link>
           <Link href="/help">操作手册</Link>

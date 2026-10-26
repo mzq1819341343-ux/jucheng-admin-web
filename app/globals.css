@@ -412,6 +412,18 @@ a.biz-card:hover {
 .contract-card { overflow-wrap: break-word; }
 .contract-card .plain li { margin-bottom: 10px; }
 .salary-import-table { min-width: 940px; }
+.expense-table { min-width: 980px; }
+.status-badge {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.status-badge.is-done { color: var(--green); background: rgba(127, 176, 105, 0.12); }
+.status-badge.is-pending { color: var(--gold); background: rgba(216, 178, 90, 0.1); }
 .salary-import-table td { vertical-align: top; }
 .import-row-error td { background: var(--negative-bg); }
 code { overflow-wrap: anywhere; }

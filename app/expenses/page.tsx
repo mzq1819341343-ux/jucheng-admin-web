@@ -1,0 +1,126 @@
+import Nav from "@/components/Nav";
+import KpiCard from "@/components/KpiCard";
+import ExpenseManager from "@/components/ExpenseManager";
+import {
+  getCurrentUser,
+  getExpenseClaims,
+  getExpenseMonthlyAgg,
+  aggregateExpenseClaims,
+  type ExpenseMonthlyAgg,
+} from "@/lib/data";
+import { money, money2, int } from "@/lib/format";
+
+export const dynamic = "force-dynamic";
+
+function SummaryCards({ rows, latestMonth }: { rows: ExpenseMonthlyAgg[]; latestMonth: string }) {
+  const unreimbursed = rows.reduce((s, r) => s + r.unreimbursed_total, 0);
+  const reimbursed = rows.reduce((s, r) => s + r.reimbursed_total, 0);
+  const latest = rows.find((r) => r.month === latestMonth);
+  return (
+    <div className="kpi-row">
+      <KpiCard label="未报销合计（全部月份）" value={money(unreimbursed)} unit="元" />
+      <KpiCard label="已报销合计（全部月份）" value={money(reimbursed)} unit="元" />
+      <KpiCard
+        label={`本月公司花费合计（${latestMonth}）`}
+        value={money(latest?.total)}
+        unit="元"
+        sub={latest ? `共 ${int(latest.count)} 笔 · 已报销与未报销均计入已发生花费` : "当月暂无报销记录"}
+      />
+    </div>
+  );
+}
+
+export default async function ExpensesPage() {
+  const user = await getCurrentUser();
+  const isPartner = user.role === "partner";
+
+  if (isPartner) {
+    const agg = await getExpenseMonthlyAgg(user);
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const latestMonth = agg[0]?.month ?? currentMonth;
+    return (
+      <>
+        <Nav user={user} />
+        <main className="container">
+          <div className="eyebrow">
+            <span className="en">EXPENSES</span>
+            <span className="eyebrow-cn">公司报销</span>
+          </div>
+          <h1 className="page-title">报销台账</h1>
+          <p className="page-desc">
+            合伙人仅看公司汇总，不显示报销明细、报销人或录入表单。未报销也属于已经发生的公司花费。
+          </p>
+          <SummaryCards rows={agg} latestMonth={latestMonth} />
+          <h2 className="section-title">按月汇总</h2>
+          <div className="card table-wrap">
+            {agg.length === 0 ? (
+              <p className="empty">暂无报销汇总。</p>
+            ) : (
+              <table className="report">
+                <thead>
+                  <tr>
+                    <th>月份</th>
+                    <th>公司花费合计（元）</th>
+                    <th>已报销（元）</th>
+                    <th>未报销（元）</th>
+                    <th>笔数</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {agg.map((r) => (
+                    <tr key={r.month}>
+                      <td>{r.month}</td>
+                      <td>{money2(r.total)}</td>
+                      <td>{money2(r.reimbursed_total)}</td>
+                      <td>{money2(r.unreimbursed_total)}</td>
+                      <td>{int(r.count)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  const claims = await getExpenseClaims(user);
+  const agg = aggregateExpenseClaims(claims);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const latestMonth = agg[0]?.month ?? currentMonth;
+  const isStaff = user.role === "staff";
+
+  return (
+    <>
+      <Nav user={user} />
+      <main className="container">
+        <div className="eyebrow">
+          <span className="en">EXPENSES</span>
+          <span className="eyebrow-cn">公司报销</span>
+        </div>
+        <h1 className="page-title">{isStaff ? "我的报销" : "报销台账"}</h1>
+        <p className="page-desc">
+          {isStaff
+            ? "这里只显示你自己创建的报销单；他人的记录不会出现。你可以新建、编辑、删除并切换自己单据的状态。"
+            : "老板可查看全部报销单，并新建、编辑、删除和切换状态。"}
+          未报销只表示尚未打款，仍计入当月已发生公司花费。
+          {user.demo ? " 当前为演示模式：本地样例数据，不写库。" : ""}
+        </p>
+
+        <SummaryCards rows={agg} latestMonth={latestMonth} />
+
+        <h2 className="section-title">{isStaff ? "我创建的报销单" : "全部报销单"}</h2>
+        <div className="card">
+          <ExpenseManager
+            initialClaims={claims}
+            demo={user.demo}
+            role={user.role}
+            userId={user.id}
+            claimantName={user.displayName ?? user.email}
+          />
+        </div>
+      </main>
+    </>
+  );
+}

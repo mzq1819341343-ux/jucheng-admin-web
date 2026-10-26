@@ -299,8 +299,11 @@ return { logs: FALLBACK_FETCH_LOGS, fromDb: false};
 // ============================================================
 // 门店 / 成本类型在 lib/stores（客户端安全模块）；此处 import 供本文件接口使用并转发导出
 import { STORE_LABEL, COST_TYPE_LABEL, STORE_SHORT_LABEL, type StoreScope, type CostType } from "./stores";
+import { EXPENSE_SCOPE_LABEL, type ExpenseScope, type ExpenseStatus } from "./expenses";
 import { money2 } from "./format";
 export type { StoreScope, CostType };
+export type { ExpenseScope, ExpenseStatus };
+export { EXPENSE_SCOPE_LABEL };
 
 export interface SalaryRule {
 id: string;
@@ -532,6 +535,157 @@ const missingStores = (Object.keys(STORE_LABEL) as StoreScope[]).filter(
 (s) => !rows.some((c) => c.scope === s)
 );
 return { total, items, missingStores };
+}
+
+// ============================================================
+// 公司报销台账（指令44 / migration_005）：未报销也算已发生花费。
+// owner 看全部；partner 只读月度汇总视图；staff 只查自己创建的行。
+// ============================================================
+export interface ExpenseClaim {
+  id: string;
+  claim_date: string;
+  title: string;
+  category: string;
+  amount: number;
+  scope: ExpenseScope | null;
+  claimant_name: string | null;
+  status: ExpenseStatus;
+  reimbursed_at: string | null;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExpenseMonthlyAgg {
+  month: string;
+  total: number;
+  reimbursed_total: number;
+  unreimbursed_total: number;
+  count: number;
+}
+
+export const FALLBACK_EXPENSE_CLAIMS: ExpenseClaim[] = [
+  {
+    id: "demo-expense-travel",
+    claim_date: "2026-10-12",
+    title: "示例·差旅",
+    category: "差旅",
+    amount: 320,
+    scope: "company",
+    claimant_name: null,
+    status: "unreimbursed",
+    reimbursed_at: null,
+    note: "演示种子，老板可直接删除",
+    created_by: null,
+    created_at: "2026-10-12T00:00:00+08:00",
+    updated_at: "2026-10-12T00:00:00+08:00",
+  },
+  {
+    id: "demo-expense-purchase",
+    claim_date: "2026-10-03",
+    title: "示例·采购",
+    category: "采购",
+    amount: 158.5,
+    scope: "wanda",
+    claimant_name: null,
+    status: "reimbursed",
+    reimbursed_at: "2026-10-05T00:00:00+08:00",
+    note: "演示种子，老板可直接删除",
+    created_by: null,
+    created_at: "2026-10-03T00:00:00+08:00",
+    updated_at: "2026-10-05T00:00:00+08:00",
+  },
+  {
+    id: "demo-expense-logistics",
+    claim_date: "2026-10-18",
+    title: "示例·物流",
+    category: "物流",
+    amount: 96,
+    scope: "friendship",
+    claimant_name: null,
+    status: "unreimbursed",
+    reimbursed_at: null,
+    note: "演示种子，老板可直接删除",
+    created_by: null,
+    created_at: "2026-10-18T00:00:00+08:00",
+    updated_at: "2026-10-18T00:00:00+08:00",
+  },
+];
+
+export function aggregateExpenseClaims(claims: ExpenseClaim[]): ExpenseMonthlyAgg[] {
+  const byMonth = new Map<string, ExpenseMonthlyAgg>();
+  for (const claim of claims) {
+    const month = claim.claim_date.slice(0, 7);
+    const row = byMonth.get(month) ?? {
+      month,
+      total: 0,
+      reimbursed_total: 0,
+      unreimbursed_total: 0,
+      count: 0,
+    };
+    row.total += claim.amount;
+    if (claim.status === "reimbursed") row.reimbursed_total += claim.amount;
+    else row.unreimbursed_total += claim.amount;
+    row.count += 1;
+    byMonth.set(month, row);
+  }
+  return [...byMonth.values()].sort((a, b) => b.month.localeCompare(a.month));
+}
+
+function normalizeExpenseClaim(row: Record<string, unknown>): ExpenseClaim {
+  return {
+    ...(row as unknown as ExpenseClaim),
+    amount: Number(row.amount ?? 0),
+  };
+}
+
+/** 报销明细：owner 全量、staff 仅自己；partner 不查本表（只用汇总视图）。 */
+export async function getExpenseClaims(user: CurrentUser): Promise<ExpenseClaim[]> {
+  if (user.role === "partner") return [];
+  if (user.demo) return user.role === "owner" ? FALLBACK_EXPENSE_CLAIMS : [];
+  if (!realMode(user)) return [];
+  try {
+    const supabase = await createServerSupabase();
+    let query = supabase
+      .from("expense_claims")
+      .select("*")
+      .order("claim_date", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (user.role === "staff") query = query.eq("created_by", user.id as string);
+    const { data, error } = await query;
+    if (!error && data) return data.map((r) => normalizeExpenseClaim(r as Record<string, unknown>));
+  } catch {
+    // migration 未执行或暂无数据时显示空态
+  }
+  return [];
+}
+
+/** 报销月度汇总：owner / partner 全量汇总；staff 仅自己的汇总（视图内已按角色过滤）。 */
+export async function getExpenseMonthlyAgg(user: CurrentUser): Promise<ExpenseMonthlyAgg[]> {
+  if (user.demo) {
+    return user.role === "staff" ? [] : aggregateExpenseClaims(FALLBACK_EXPENSE_CLAIMS);
+  }
+  if (!realMode(user)) return [];
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase
+      .from("expense_monthly_agg")
+      .select("*")
+      .order("month", { ascending: false });
+    if (!error && data) {
+      return data.map((r) => ({
+        month: String(r.month),
+        total: Number(r.total ?? 0),
+        reimbursed_total: Number(r.reimbursed_total ?? 0),
+        unreimbursed_total: Number(r.unreimbursed_total ?? 0),
+        count: Number(r.count ?? 0),
+      }));
+    }
+  } catch {
+    // 空态
+  }
+  return [];
 }
 
 // ============================================================
