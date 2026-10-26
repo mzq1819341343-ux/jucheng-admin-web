@@ -149,8 +149,21 @@ export default function SalaryRuleManager({
     }
   }
 
+  const previewEff =
+    (rules.find((r) => r.id === previewRuleId) ?? rules[0])?.effective_from ?? null;
+
   return (
     <div>
+      {/* 指令56-3c：双规则确认动线压成一条步骤条——待确认预览 → 填生效月 → 保存 → 预览翻转 → 按双版本回算。 */}
+      <ol className="flow-steps" aria-label="工资双规则确认动线">
+        <li className={previewEff ? "done" : "current"}>
+          1 看双版本预览（{previewEff ? `生效起始月 ${previewEff}` : "当前待确认"}）
+        </li>
+        <li>2 在规则行填生效起始月</li>
+        <li>3 点保存</li>
+        <li>4 预览逐月翻转（生效月带「生效月」高亮）</li>
+        <li>5 历史按双版本回算</li>
+      </ol>
       <div className="access-msg" style={{ marginBottom: 14 }}>
         历史双版本按生效起始月切换：新规则自生效月起算，之前月份按旧规则回算。
       </div>

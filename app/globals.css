@@ -768,6 +768,11 @@ ol.steps li, ul.plain li { margin-bottom: 7px; }
 }
 .tag-ok { color: var(--green); border-color: rgba(67, 181, 129, 0.5); }
 .tag-pending { color: var(--gold); border-color: var(--gold-dim); }
+.tag-current { box-shadow: 0 0 0 1.5px var(--gold); font-weight: 700; }
+.flow-steps { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0 0 14px; padding: 0; }
+.flow-steps li { border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px; font-size: 13px; color: var(--muted); }
+.flow-steps li.current { border-color: var(--gold); color: var(--gold); }
+.flow-steps li.done { border-color: var(--gold-dim); color: var(--text); }
 footer.site-footer {
   border-top: 1px solid var(--border);
   color: var(--faint);

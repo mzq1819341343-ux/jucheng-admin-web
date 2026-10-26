@@ -36,11 +36,13 @@ export default function SalaryRuleVersionPreview({
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {sorted.map((m) => {
           const isNew = eff !== null && m >= eff;
+          const isEffMonth = eff !== null && m === eff;
           const label = eff === null ? "待确认" : isNew ? "新规则" : "旧规则";
           const cls = eff === null ? "tag tag-pending" : isNew ? "tag tag-ok" : "tag";
           return (
-            <span key={m} className={cls}>
+            <span key={m} className={isEffMonth ? `${cls} tag-current` : cls}>
               {m} · {label}
+              {isEffMonth ? " · 生效月" : ""}
             </span>
           );
         })}
