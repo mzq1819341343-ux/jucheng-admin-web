@@ -424,6 +424,7 @@ a.biz-card:hover {
 }
 .status-badge.is-done { color: var(--green); background: rgba(127, 176, 105, 0.12); }
 .status-badge.is-pending { color: var(--gold); background: rgba(216, 178, 90, 0.1); }
+.status-badge.is-overdue { color: var(--negative); background: var(--negative-bg); border-color: var(--negative); margin-top: 4px; }
 .salary-import-table td { vertical-align: top; }
 .import-row-error td { background: var(--negative-bg); }
 code { overflow-wrap: anywhere; }
