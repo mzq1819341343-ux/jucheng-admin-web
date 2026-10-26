@@ -472,6 +472,22 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
 .form-row { display: flex; gap: 14px; flex-wrap: wrap; }
 .form-row .field { flex: 1 1 160px; }
 .field input::placeholder { color: var(--faint); font-weight: 600; }
+/* 表格单元格内的紧凑输入（生效起始月行内编辑，指令42） */
+.inline-input {
+  width: 104px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14.5px;
+  background: var(--input-bg);
+  color: var(--text);
+}
+.inline-input::placeholder { color: var(--faint); }
+.inline-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+}
 .field input:focus {
   outline: none;
   border-color: var(--gold);

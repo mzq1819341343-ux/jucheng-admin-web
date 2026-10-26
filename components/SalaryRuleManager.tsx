@@ -25,8 +25,14 @@ export default function SalaryRuleManager({
   const [baseSalary, setBaseSalary] = useState("");
   const [commissionJson, setCommissionJson] = useState("");
   const [note, setNote] = useState("");
+  const [effectiveFrom, setEffectiveFrom] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function onEffectiveSaved(id: string, value: string | null) {
+    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, effective_from: value } : r)));
+    setMsg(value ? `生效起始月已设为 ${value}` : "生效起始月已清空（待老板确认）");
+  }
 
   async function onAdd(e: React.FormEvent) {
     e.preventDefault();
@@ -53,12 +59,18 @@ export default function SalaryRuleManager({
       setMsg("底薪需为数字");
       return;
     }
+    const eff = effectiveFrom.trim();
+    if (eff !== "" && !/^\d{4}-\d{2}$/.test(eff)) {
+      setMsg("生效起始月格式应为 YYYY-MM（可留空）");
+      return;
+    }
     const draft: SalaryRule = {
       id: `local-${Date.now()}`,
       title: title.trim(),
       base_salary: base,
       commission_rules: commission,
       note: note.trim() || null,
+      effective_from: eff === "" ? null : eff,
       updated_at: new Date().toISOString(),
     };
     if (demo || !isSupabaseConfigured()) {
@@ -68,6 +80,7 @@ export default function SalaryRuleManager({
       setBaseSalary("");
       setCommissionJson("");
       setNote("");
+      setEffectiveFrom("");
       return;
     }
     setBusy(true);
@@ -81,9 +94,10 @@ export default function SalaryRuleManager({
           base_salary: draft.base_salary,
           commission_rules: draft.commission_rules,
           note: draft.note,
+          effective_from: draft.effective_from,
           updated_by: userId,
         })
-        .select("id, title, base_salary, commission_rules, note, updated_at")
+        .select("id, title, base_salary, commission_rules, note, effective_from, updated_at")
         .single();
       if (error) {
         setMsg(`保存失败：${error.message}`);
@@ -94,6 +108,7 @@ export default function SalaryRuleManager({
         setBaseSalary("");
         setCommissionJson("");
         setNote("");
+        setEffectiveFrom("");
       }
     } catch (err) {
       setMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
@@ -139,6 +154,7 @@ export default function SalaryRuleManager({
                 <th>底薪（元）</th>
                 <th style={{ textAlign: "left" }}>提成规则</th>
                 <th style={{ textAlign: "left" }}>备注</th>
+                <th>生效起始月</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -151,6 +167,9 @@ export default function SalaryRuleManager({
                     <code className="en">{JSON.stringify(r.commission_rules)}</code>
                   </td>
                   <td style={{ textAlign: "left", whiteSpace: "normal" }}>{r.note ?? "—"}</td>
+                  <td>
+                    <EffectiveFromEditor rule={r} demo={demo} onSaved={onEffectiveSaved} />
+                  </td>
                   <td>
                     <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDelete(r.id)}>
                       删除
@@ -172,6 +191,10 @@ export default function SalaryRuleManager({
           <div className="field">
             <label htmlFor="sr-base">底薪（元，可空）</label>
             <input id="sr-base" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} inputMode="decimal" placeholder="待老板提供" />
+          </div>
+          <div className="field">
+            <label htmlFor="sr-eff">生效起始月（<span className="en">YYYY-MM</span>，可空）</label>
+            <input id="sr-eff" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} placeholder="待老板补填" />
           </div>
         </div>
         <div className="field">
@@ -196,5 +219,72 @@ export default function SalaryRuleManager({
         {msg ? <div className="access-msg">{msg}</div> : null}
       </form>
     </div>
+  );
+}
+
+/**
+ * 生效起始月行内编辑（指令42）：老板可直接在规则行上改 effective_from。
+ * 格式 YYYY-MM，清空 = 置空（待老板确认）；真实模式写 salary_rules，演示/本地行只改本地状态。
+ * 补填后「工资怎么算」规则卡即显示该月，并支持新旧双版本规则按月回算。
+ */
+function EffectiveFromEditor({
+  rule,
+  demo,
+  onSaved,
+}: {
+  rule: SalaryRule;
+  demo: boolean;
+  onSaved: (id: string, value: string | null) => void;
+}) {
+  const [value, setValue] = useState(rule.effective_from ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onSave() {
+    const v = value.trim();
+    if (v !== "" && !/^\d{4}-\d{2}$/.test(v)) {
+      setErr("格式应为 YYYY-MM");
+      return;
+    }
+    const next = v === "" ? null : v;
+    if (demo || !isSupabaseConfigured() || rule.id.startsWith("local-") || rule.id.startsWith("fallback-")) {
+      onSaved(rule.id, next);
+      setErr(null);
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("salary_rules")
+        .update({ effective_from: next })
+        .eq("id", rule.id);
+      if (error) {
+        setErr(`保存失败：${error.message}`);
+      } else {
+        onSaved(rule.id, next);
+      }
+    } catch (e) {
+      setErr(`保存失败：${e instanceof Error ? e.message : "未知错误"}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+      <input
+        className="inline-input"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="待确认"
+        aria-label={`「${rule.title}」生效起始月`}
+      />
+      <button type="button" className="btn btn-ghost" disabled={saving} onClick={onSave}>
+        保存
+      </button>
+      {err ? <span className="access-msg">{err}</span> : null}
+    </span>
   );
 }

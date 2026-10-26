@@ -1,5 +1,5 @@
 import Nav from "@/components/Nav";
-import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, storeCostsTotalForMonth } from "@/lib/data";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
 import { money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -20,9 +20,10 @@ export default async function AihuishouReportPage() {
   const tProfit = rows.reduce((s, r) => s + (r.profit ?? 0), 0);
   const tDoor = rows.reduce((s, r) => s + (r.door_orders ?? 0), 0);
   const tWage = rows.reduce((s, r) => s + (r.wage_cost ?? 0), 0);
-  // 指令41：门店成本脚注（本表净利为扣除前口径，仪表盘已扣已录入成本）
+  // 指令41/42：门店成本脚注（本表净利为扣除前口径，仪表盘已扣已录入成本）
   const costs = sensitive ? await getStoreCosts(user) : [];
   const sepCostTotal = storeCostsTotalForMonth(costs, "2026-09");
+  const sepCostDesc = describeMonthCosts(costs, "2026-09");
 
   return (
     <>
@@ -128,7 +129,7 @@ export default async function AihuishouReportPage() {
         <p className="page-desc" style={{ marginTop: 12 }}>
           口径：上门单的门店标注只是业务员就近寄件点，只看两店合计、不计入单店业绩；净利暂定未扣房租水电等固定成本，仅 2026-09 有现成数，其余月份留空不估算。
           {sepCostTotal > 0
-            ? ` 2026-09 已在「门店成本」录入 ${money2(sepCostTotal)} 元，爱回收仪表盘的净利暂定已扣除该金额；本表为扣除前口径。`
+            ? ` 2026-09 已在「门店成本」录入 ${money2(sepCostTotal)} 元（${sepCostDesc.items}），爱回收仪表盘的净利暂定已扣除该金额；本表为扣除前口径。`
             : ""}
         </p>
       </main>

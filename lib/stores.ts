@@ -10,6 +10,12 @@ export const STORE_LABEL: Record<StoreScope, string> = {
   friendship: "石河子友谊商厦店",
 };
 
+/** 脚注 / 分项描述用的门店短名（指令42） */
+export const STORE_SHORT_LABEL: Record<StoreScope, string> = {
+  wanda: "万达",
+  friendship: "友谊",
+};
+
 export const COST_TYPE_LABEL: Record<CostType, string> = {
   rent: "房租",
   utilities: "水电",

@@ -1,8 +1,10 @@
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleManager from "@/components/SalaryRuleManager";
+import SalaryRuleCard from "@/components/SalaryRuleCard";
 import {
   getCurrentUser,
+  getPublicSalaryRule,
   getSalaryRules,
   getMySalary,
   getAllSalaryMonthly,
@@ -24,6 +26,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function SalaryPage() {
   const user = await getCurrentUser();
+  const publicRule = await getPublicSalaryRule(user);
 
   return (
     <>
@@ -39,6 +42,9 @@ export default async function SalaryPage() {
           {user.demo ? "｜演示模式（表单仅本地演示，不落库）" : ""}
           ｜工资数字由老板提供后录入，本站不展示工资原表。
         </p>
+
+        <h2 className="section-title">工资怎么算</h2>
+        <SalaryRuleCard rule={publicRule} />
 
         {user.role === "owner" ? (
           <OwnerSalary user={user} />

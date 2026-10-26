@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Nav from "@/components/Nav";
 import StoreCostManager from "@/components/StoreCostManager";
-import { getCurrentUser, getStoreCosts, type StoreCost } from "@/lib/data";
+import { getCurrentUser, getStoreCosts, getStoreContracts, type StoreCost, type StoreContract } from "@/lib/data";
 import { STORE_LABEL, COST_TYPE_LABEL, type CostType } from "@/lib/stores";
 import { money2 } from "@/lib/format";
 
@@ -20,6 +20,7 @@ export default async function StoreCostsPage() {
     redirect("/?denied=costs");
   }
   const costs = await getStoreCosts(user);
+  const contracts = await getStoreContracts(user);
   const isOwner = user.role === "owner";
 
   // 按月分组（新→旧），组内给出两店分项与当月合计
@@ -40,6 +41,20 @@ export default async function StoreCostsPage() {
           {user.demo ? " 当前为演示模式，表单仅本地演示。" : ""}
         </p>
 
+        <h2 className="section-title">合同台账</h2>
+        {contracts.length === 0 ? (
+          <div className="card">
+            <p className="empty">合同台账待录入：两店合同要点落库后在此列示。</p>
+          </div>
+        ) : (
+          <div className="biz-grid" style={{ marginBottom: 8 }}>
+            {contracts.map((c) => (
+              <ContractCard key={c.id} contract={c} />
+            ))}
+          </div>
+        )}
+
+        <h2 className="section-title">月度成本</h2>
         {isOwner ? (
           <div className="card">
             <StoreCostManager initialCosts={costs} demo={user.demo} userId={user.id} />
@@ -63,6 +78,64 @@ export default async function StoreCostsPage() {
 
 function EmptyCosts() {
   return <p className="empty">待老板提供成本数字后录入：录入后按月在此列示，并进入净利核算。</p>;
+}
+
+/** 合同卡片（指令42）：门店、点位、期限、月费与构成、支付方式、保证金（不进月成本）、备注。 */
+function ContractCard({ contract: c }: { contract: StoreContract }) {
+  const breakdown = Object.entries(c.fee_breakdown ?? {});
+  return (
+    <div className="biz-card">
+      <div className="biz-en">{c.scope === "wanda" ? "WANDA" : "FRIENDSHIP"} · CONTRACT</div>
+      <div className="biz-name" style={{ fontSize: 24 }}>
+        {STORE_LABEL[c.scope]}
+      </div>
+      <p className="biz-summary" style={{ marginTop: 6 }}>
+        {c.title}
+      </p>
+      <ul className="plain" style={{ marginTop: 14 }}>
+        <li>
+          <strong>签约双方：</strong>
+          {c.party_a ?? "—"} × {c.party_b ?? "—"}
+        </li>
+        <li>
+          <strong>点位：</strong>
+          {c.location ?? "—"}
+          {c.area_sqm !== null ? `（约 ${c.area_sqm} ㎡）` : ""}
+        </li>
+        <li>
+          <strong>期限：</strong>
+          {c.term_start ?? "—"} ~ {c.term_end ?? "—"}
+        </li>
+        <li>
+          <strong>月费：</strong>
+          {c.monthly_fee === null ? "—" : `${money2(c.monthly_fee)} 元/月`}
+          {breakdown.length > 0 ? (
+            <span style={{ color: "var(--muted)" }}>
+              （
+              {breakdown
+                .map(([k, v]) => `${k} ${typeof v === "number" ? `${money2(v)} 元` : String(v)}`)
+                .join("；")}
+              ）
+            </span>
+          ) : null}
+        </li>
+        <li>
+          <strong>支付：</strong>
+          {c.payment_cycle ?? "—"}
+        </li>
+        <li>
+          <strong>保证金：</strong>
+          {c.deposit_total === null ? "—" : `${money2(c.deposit_total)} 元`}
+          <span style={{ color: "var(--muted)" }}>（只登记，不进月成本）</span>
+        </li>
+      </ul>
+      {c.note ? (
+        <p className="biz-summary" style={{ marginTop: 12 }}>
+          {c.note}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function CostTables({ costs, months }: { costs: StoreCost[]; months: string[] }) {
