@@ -29,7 +29,7 @@ export default async function NetBreakdownPage() {
     (wanda.rows.find((r) => r.month === month)?.profit ?? 0) +
     (friendship.rows.find((r) => r.month === month)?.profit ?? 0);
 
-  type Step = { label: string; note?: string; delta: number | null; cumulative: number; kind: "start" | "delta" | "total" | "final" };
+  type Step = { label: string; note?: string; delta: number | null; cumulative: number; kind: "start" | "delta" | "total" | "final"; pending?: boolean };
   let steps: Step[] = [];
   if (op && op.profit !== null && op.baseNetProfit !== null && op.companyNetProfit !== null) {
     const storeProfit = storeRow(op.month);
@@ -38,6 +38,8 @@ export default async function NetBreakdownPage() {
     const residual = storeProfit - wage - op.baseNetProfit;
     const afterWage = storeProfit - wage;
     steps = [
+      // 指令52-4：营收段占位（灰段）——营收接入后瀑布自营收起算，当前自当月分润起算，不编营收数。
+      { label: "营收（待接入）", note: "营收数据接入后自营收起算；当前自当月分润起算", delta: null, cumulative: op.profit, kind: "start", pending: true },
       { label: `当月分润（两店到店 + 上门）`, delta: null, cumulative: op.profit, kind: "start" },
       { label: "减：上门分润", note: "上门只看两店合计，不计入到店净利口径", delta: -doorProfit, cumulative: storeProfit, kind: "delta" },
       { label: "减：工资实发", note: "当月工资汇总，按口径计入净利", delta: -wage, cumulative: afterWage, kind: "delta" },
@@ -87,16 +89,25 @@ export default async function NetBreakdownPage() {
                     : s.kind === "total"
                       ? "var(--muted)"
                       : "var(--negative)";
+                const barBackground = s.pending
+                  ? "repeating-linear-gradient(45deg, var(--faint) 0 6px, transparent 6px 12px)"
+                  : barColor;
                 return (
                   <div key={i}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                      <span>
+                      <span style={s.pending ? { color: "var(--faint)" } : undefined}>
                         {s.label}
                         {s.note ? <span className="kpi-sub" style={{ marginLeft: 8 }}>{s.note}</span> : null}
                       </span>
                       <strong style={{ fontVariantNumeric: "tabular-nums" }}>
-                        {s.delta !== null ? `−${money2(Math.abs(s.delta))} 元 · ` : ""}
-                        累计 {money2(s.cumulative)} 元
+                        {s.pending ? (
+                          "—（待接入）"
+                        ) : (
+                          <>
+                            {s.delta !== null ? `−${money2(Math.abs(s.delta))} 元 · ` : ""}
+                            累计 {money2(s.cumulative)} 元
+                          </>
+                        )}
                       </strong>
                     </div>
                     <div
@@ -117,8 +128,8 @@ export default async function NetBreakdownPage() {
                           bottom: 0,
                           left: `${from}%`,
                           width: `${Math.max(1, width)}%`,
-                          background: barColor,
-                          opacity: s.kind === "delta" ? 0.55 : 1,
+                          background: barBackground,
+                          opacity: s.pending ? 0.5 : s.kind === "delta" ? 0.55 : 1,
                           borderRadius: 7,
                         }}
                       />
@@ -129,7 +140,8 @@ export default async function NetBreakdownPage() {
             </div>
             <p className="page-desc" style={{ marginTop: 16, marginBottom: 0 }}>
               口径：净利暂定为到店口径（已扣工资分摊与已知扣款），上门分润不计入；门店成本与报销花费在此页继续向下扣减，
-              得到与仪表盘一致的公司口径净利。其余月份净利口径未补齐，暂不出图，不估算。
+              得到与仪表盘一致的公司口径净利。瀑布首段「营收（待接入）」为灰色占位段：营收数据接入后瀑布自营收起算，当前自当月分润起算，不编营收数字。
+              其余月份净利口径未补齐，暂不出图，不估算。
             </p>
           </div>
         ) : (
