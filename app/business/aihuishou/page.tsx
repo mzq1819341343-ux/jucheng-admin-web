@@ -62,7 +62,7 @@ export default async function DashboardPage() {
             )}
           </div>
           <KpiCard
-            label="净利暂定（当月，两店合计，未扣房租水电）"
+            label="净利暂定（当月，未扣房租水电）"
             value={sensitive ? money(latest?.net_profit_provisional) : ""}
             unit="元"
             locked={!sensitive}

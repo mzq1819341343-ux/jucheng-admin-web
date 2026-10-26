@@ -106,7 +106,7 @@ export default async function HelpPage() {
 
         <h2 className="section-title">看不到某个板块？</h2>
         <div className="card">
-          <p style={{ margin: 0, lineHeight: 1.7 }}>
+          <p style={{ margin: 0, lineHeight: 1.65 }}>
             未被授权的业务板块不会出现在你的总览与导航中，直接输入地址也无法进入——这是权限设置，不是故障。
             需要开通时请联系老板，由老板在「成员与权限」页为你的账号勾选对应板块，授权后重新打开页面即可看到。
           </p>
@@ -114,7 +114,7 @@ export default async function HelpPage() {
 
         <h2 className="section-title">遇到问题</h2>
         <div className="card">
-          <p style={{ margin: 0, lineHeight: 1.7 }}>
+          <p style={{ margin: 0, lineHeight: 1.65 }}>
             登录失败、密码遗忘、板块未开通、数据有疑问，请联系老板处理。密码遗忘时由老板重发邀请邮件，按邮件链接重新设置密码。
           </p>
         </div>

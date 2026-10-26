@@ -14,6 +14,7 @@
   --border-soft: #1b2740;
   --text: #f2f5fa;
   --muted: #93a1b8;
+  --label: #a9b8cf; /* KPI 标签/单位专用（指令39 第2轮）：比 muted 更亮，对比达标 */
   --faint: #5f708f;
   --gold: #c9a227;
   --gold-bright: #d9b43c;
@@ -44,6 +45,7 @@ html[data-theme="light"] {
   --border-soft: #e8e2d1;
   --text: #141a26;
   --muted: #5c6577;
+  --label: #46536b; /* 浅底上约 7.4:1，强于 #5A6478 基线 */
   --faint: #9aa1b1;
   --gold: #c9a227;
   --gold-bright: #b28f1d;
@@ -263,7 +265,7 @@ h1.page-title {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 32px 32px 28px;
+  padding: 30px 28px 26px; /* 第2轮：横向内距 32→28，给主数字多留 8px 安全余量 */
   box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.3s ease, color 0.3s ease;
   animation: fadeUp 0.6s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
@@ -290,7 +292,7 @@ h1.page-title {
   border-color: var(--gold-dim);
 }
 /* 三级层级（指令39 · IBCS）：标签（小而清晰）→ 主数字（绝对主导）→ 单位后缀 / 说明行 */
-.kpi-label { color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.04em; }
+.kpi-label { color: var(--label); font-size: 13px; font-weight: 600; line-height: 1.45; margin-bottom: 10px; letter-spacing: 0.04em; }
 .kpi-value {
   --kpi-fs: clamp(40px, 4.6vw, 64px); /* 流体基准字号：桌面大场、窄屏自动收 */
   font-size: calc(var(--kpi-fs) * var(--kpi-scale, 1)); /* × 长度分档（组件按字符数给） */
@@ -303,10 +305,10 @@ h1.page-title {
 }
 /* 单位：主数字的基线对齐后缀，与主值同视线（不再缩到角落当小字） */
 .kpi-unit {
-  font-size: 0.34em;
+  font-size: 0.36em;
   font-weight: 600;
-  color: var(--muted);
-  margin-left: 0.16em;
+  color: var(--label);
+  margin-left: 0.18em;
   letter-spacing: 0.02em;
 }
 .kpi-value.locked { font-size: 28px; color: var(--red); padding: 12px 0; }
@@ -356,7 +358,7 @@ a.biz-card:hover {
 .biz-card-off::before { background: var(--faint); }
 .biz-en { color: var(--faint); font-size: 12px; letter-spacing: 5px; }
 .biz-name { font-size: 30px; font-weight: 800; color: var(--text); margin-top: 8px; letter-spacing: 1px; }
-.biz-summary { color: var(--muted); font-size: 15px; margin-top: 14px; line-height: 1.7; }
+.biz-summary { color: var(--muted); font-size: 15px; margin-top: 14px; line-height: 1.65; }
 .biz-cta { color: var(--gold); font-weight: 700; margin-top: 20px; font-size: 15px; }
 .biz-badge {
   display: inline-block;
@@ -628,8 +630,8 @@ footer.site-footer {
   .kpi-row { grid-template-columns: 1fr; } /* KPI 卡纵向堆叠 */
   .biz-grid { grid-template-columns: 1fr; }
   .kpi-wide { grid-column: span 1; }
-  .kpi-value { --kpi-fs: 46px; }
-  .kpi-hero .kpi-value { --kpi-fs: 58px; }
+  .kpi-value { --kpi-fs: 48px; }
+  .kpi-hero .kpi-value { --kpi-fs: 60px; }
   .kpi-card { padding: 26px 24px 22px; }
   .kpi-sub { font-size: 13px; }
   .card { padding: 22px 18px; }
@@ -645,8 +647,8 @@ footer.site-footer {
   table.report th, table.report td { padding: 11px 12px; }
 }
 @media (max-width: 400px) {
-  .kpi-value { --kpi-fs: 38px; }
-  .kpi-hero .kpi-value { --kpi-fs: 46px; }
+  .kpi-value { --kpi-fs: 42px; }
+  .kpi-hero .kpi-value { --kpi-fs: 50px; }
   .biz-grid { grid-template-columns: 1fr; }
 }
 
