@@ -150,6 +150,57 @@ export default async function DashboardPage() {
               年回报率 = 年度净利润 ÷ 年度投入（门店成本合计 + 报销花费（未报销 + 已报销） + 工资实发合计）；
               净利覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}；投入覆盖月份：{coverageRange(operating.annual.investedCoverageMonths)}。
             </p>
+
+            <h2 className="section-title">公司花费拆分</h2>
+            <section className="net-panel" aria-label="公司花费拆分">
+              <div>
+                <div className="net-panel-label">
+                  <span className="en">COST BREAKDOWN</span> · 最新月（{latestOp.month}）
+                </div>
+                <KpiValue
+                  value={money(latestOp.storeCosts + latestOp.expenseTotal + (latestOp.wageCost ?? 0))}
+                  unit="元"
+                />
+                <div className="kpi-sub">当月四项花费合计（与经营核算同一来源）</div>
+              </div>
+              <div className="net-panel-breakdown">
+                <div className="net-line">
+                  <span>门店成本（房租 / 物业等）</span>
+                  <strong>{money2(latestOp.storeCosts)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>报销 · 未报销（已发生未打款）</span>
+                  <strong>{money2(latestOp.expenseUnreimbursed)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>报销 · 已报销</span>
+                  <strong>{money2(latestOp.expenseReimbursed)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>工资实发</span>
+                  <strong>{money2(latestOp.wageCost)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>年度合计（投入覆盖 {coverageRange(operating.annual.investedCoverageMonths)}）</span>
+                  <strong>
+                    {money2(
+                      operating.annual.storeCostsTotal +
+                        operating.annual.expenseAllTotal +
+                        operating.annual.wageTotal
+                    )}{" "}
+                    元
+                  </strong>
+                </div>
+                <div className="net-line">
+                  <span>年度拆分</span>
+                  <strong>
+                    门店 {money2(operating.annual.storeCostsTotal)}｜报销未报{" "}
+                    {money2(operating.annual.expenseAllTotal - operating.annual.expenseReimbursedTotal)}｜报销已报{" "}
+                    {money2(operating.annual.expenseReimbursedTotal)}｜工资 {money2(operating.annual.wageTotal)}
+                  </strong>
+                </div>
+              </div>
+            </section>
           </>
         ) : null}
 
