@@ -1,5 +1,6 @@
 import { cookies} from "next/headers";
 import { createClient as createServerSupabase, isSupabaseConfigured} from "./supabase/server";
+import { isDemoAllowed } from "./demo";
 import { FALLBACK_BUSINESSES, type BusinessDef } from "./businesses";
 
 export type { BusinessDef };
@@ -124,8 +125,12 @@ displayName: profile?.display_name?? null,
 };
 }
 } catch {
-// 落到演示模式
+// 落到演示模式（生产环境在下方被总开关拦住）
 }
+}
+if (!isDemoAllowed()) {
+// 指令40-2：生产环境禁用演示——忽略 demo Cookie，按未登录的最低权限用户处理（页面由 middleware 导向登录）
+return { id: null, role: "staff", demo: false, email: null, displayName: null };
 }
 const cookieStore = await cookies();
 const demoRole = cookieStore.get("demo_role")?.value;
@@ -183,7 +188,10 @@ user.role === "owner"
 };
 }
 }
-// 演示模式
+// 演示模式（仅演示用户可达；真实/匿名用户到此一律无授权，板块不渲染）
+if (!user.demo) {
+return { businesses: FALLBACK_BUSINESSES, grantedIds: [] };
+}
 const cookieStore = await cookies();
 const demoBiz = cookieStore.get("demo_biz")?.value;
 const activeIds = FALLBACK_BUSINESSES.filter((b) => b.status === "active").map((b) => b.id);

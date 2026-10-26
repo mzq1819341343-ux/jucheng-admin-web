@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { isDemoAllowed } from "@/lib/demo";
 
 export default function LoginPage() {
   const router = useRouter();
   const configured = isSupabaseConfigured();
+  const demoAllowed = isDemoAllowed();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -16,7 +18,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (!configured) {
-      setError("Supabase 尚未配置：先按 README 完成建项目与环境变量，再用邮箱密码登录。也可以直接进入演示模式看界面。");
+      setError(
+        demoAllowed
+          ? "Supabase 尚未配置：先按 README 完成建项目与环境变量，再用邮箱密码登录。也可以直接进入演示模式看界面。"
+          : "Supabase 尚未配置：先按 README 完成建项目与环境变量，再用邮箱密码登录。"
+      );
       return;
     }
     setBusy(true);
@@ -56,7 +62,9 @@ export default function LoginPage() {
 
         {!configured ? (
           <div className="notice">
-            当前部署尚未连接 Supabase（环境变量未配）：登录暂不可用，可先进入演示模式查看三角色界面差异；正式启用步骤见仓库 README。
+            {demoAllowed
+              ? "当前部署尚未连接 Supabase（环境变量未配）：登录暂不可用，可先进入演示模式查看三角色界面差异；正式启用步骤见仓库 README。"
+              : "当前部署尚未连接 Supabase（环境变量未配）：登录暂不可用；正式启用步骤见仓库 README。"}
           </div>
         ) : null}
 
@@ -91,14 +99,16 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 18 }}>
-          <button type="button" className="btn btn-ghost btn-sheen" onClick={enterDemo} style={{ width: "100%" }}>
-            进入演示模式（免登录看界面）
-          </button>
-          <p className="page-desc" style={{ marginTop: 10, fontSize: 13 }}>
-            演示模式使用 v3.3 汇总样例口径，可在页面顶部切换老板 / 合伙人 / 店员，查看权限差异。
-          </p>
-        </div>
+        {demoAllowed ? (
+          <div style={{ marginTop: 18 }}>
+            <button type="button" className="btn btn-ghost btn-sheen" onClick={enterDemo} style={{ width: "100%" }}>
+              进入演示模式（免登录看界面）
+            </button>
+            <p className="page-desc" style={{ marginTop: 10, fontSize: 13 }}>
+              演示模式使用 v3.3 汇总样例口径，可在页面顶部切换老板 / 合伙人 / 店员，查看权限差异。
+            </p>
+          </div>
+        ) : null}
       </div>
     </main>
   );
