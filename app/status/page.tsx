@@ -38,11 +38,12 @@ export default async function StatusPage() {
 
   // 指令51：工资 0.01 校验从首页移到状态页——按 salary_detail_import 与月度汇总
   // 的实际对账结果生成（明细仅老板可读；差额月份逐个列出，不写死任何数字）。
+  // 指令58 A3 裁定：对账行仅老板渲染；合伙人 / 店员整行不渲染（不挂「仅老板可见」占位）。
   let wageRecon: { tag: ReactNode; desc: string } | null = null;
-  if (freshness.demo) {
+  if (user.role !== "owner") {
+    wageRecon = null;
+  } else if (freshness.demo) {
     wageRecon = { tag: <span className="tag tag-pending">演示数据</span>, desc: "演示模式不做实际对账。" };
-  } else if (user.role !== "owner") {
-    wageRecon = { tag: <span className="tag">仅老板可见</span>, desc: "工资明细仅老板可读，对账结果不对合伙人 / 店员展示。" };
   } else {
     const detailRows = await getSalaryDetailImport(user);
     if (detailRows.length === 0) {
@@ -88,10 +89,13 @@ export default async function StatusPage() {
         <h1 className="page-title">数据刷新状态</h1>
         <p className="page-desc">各数据源最近更新时间与刷新方式（全部在免费额度内运行）。</p>
 
-        <div className="notice">
-          爱回收后台登录状态：<strong>未登录（会话已过期）</strong>。自动抓取处于待启用状态——
-          请老板点：在 Muse 浏览器里本人登录一次爱回收后台（或更新保存的密码），登录恢复并成功续抓一次 10 月数据后，再按 <span className="en">auto_fetch</span> 待启用配置开启定时抓取。不要把密码发到聊天里。
-        </div>
+        {/* 指令58 A3：登录恢复操作说明只对老板 / 合伙人渲染，店员不展示老板操作指引行。 */}
+        {sensitive ? (
+          <div className="notice">
+            爱回收后台登录状态：<strong>未登录（会话已过期）</strong>。自动抓取处于待启用状态——
+            请老板点：在 Muse 浏览器里本人登录一次爱回收后台（或更新保存的密码），登录恢复并成功续抓一次 10 月数据后，再按 <span className="en">auto_fetch</span> 待启用配置开启定时抓取。不要把密码发到聊天里。
+          </div>
+        ) : null}
 
         <h2 className="section-title">10 月对账（待抓取）</h2>
         <div className="card">
@@ -200,7 +204,7 @@ export default async function StatusPage() {
                   {freshness.demo
                     ? "演示数据"
                     : user.role === "staff"
-                      ? "仅老板 / 合伙人可见"
+                      ? "—"
                       : configUpdated ?? "暂无录入"}
                   。工资体系在「工资」页配置、门店成本在「门店成本」页录入；无自动抓取，更新时间以人工录入为准。
                 </td>

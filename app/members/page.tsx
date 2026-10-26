@@ -96,13 +96,14 @@ export default async function MembersPage() {
           </table>
         </div>
 
-        <h2 className="section-title">成员列表与业务授权</h2>
-        {!isOwner ? (
+        {/* 指令58 A3 裁定：店员整段不渲染（标题与提示一并撤下）；合伙人只留中性只读说明，不挂权限占位标签。 */}
+        {user.role === "staff" ? null : (
+          <h2 className="section-title">成员列表与业务授权</h2>
+        )}
+        {user.role === "staff" ? null : !isOwner ? (
           <div className="card">
             <p className="empty">
-              {user.role === "partner"
-                ? "合伙人可查看角色说明，成员管理为只读：成员列表与业务授权仅老板可见可改。"
-                : "无权限：成员列表与业务授权仅老板可见可改。"}
+              合伙人可查看上方角色说明；成员列表与业务授权由老板维护，本页不展示成员明细。
             </p>
           </div>
         ) : showDemoMembers ? (

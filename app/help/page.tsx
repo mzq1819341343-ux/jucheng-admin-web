@@ -187,7 +187,7 @@ export default async function HelpPage() {
                 <td>可改（邀请 / 改角色 / 按板块授权）</td>
                 <td>仅角色说明（列表不显示）</td>
                 <td>—</td>
-                <td>仅无权限提示</td>
+                <td>仅角色说明（本节不渲染）</td>
                 <td>—</td>
               </tr>
               <tr>

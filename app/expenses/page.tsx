@@ -72,7 +72,7 @@ export default async function ExpensesPage({
           <SummaryCards
             rows={agg}
             latestMonth={latestMonth}
-            overdueSub="超期笔数按逐单发生日计算，合伙人汇总不含逐单日期，仅老板 / 本人明细可见"
+            overdueSub="超期笔数按逐单发生日计算，合伙人汇总不含逐单日期，笔数不在汇总中单列"
           />
           <h2 className="section-title">按月汇总</h2>
           <div className="card table-wrap">

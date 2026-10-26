@@ -54,7 +54,6 @@ export default async function AihuishouReportPage() {
         <h1 className="page-title">爱回收报表</h1>
         <p className="page-desc">
           数据来源：爱回收驾驶舱 <span className="en">v3.3</span> 汇总口径（2026-01~09，已锁定台账：3,958 单 / 416,661.32 元）。
-          {!sensitive ? " 当前角色为店员：工资成本、工资占分润比、人均分润、净利暂定等敏感列已按权限隐藏。" : ""}
         </p>
 
         <h2 className="section-title">按月汇总（两店合计）</h2>

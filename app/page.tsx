@@ -118,7 +118,7 @@ export default async function OverviewPage({
 
         {denied ? (
           <div className="notice">
-            无权限：你未被授权进入该业务板块（或该板块尚未开放）。如需开通，请联系老板在「成员与权限」页为你勾选对应业务。
+            你未被授权进入该业务板块（或该板块尚未开放），入口未对你开放。如需开通，请联系老板在「成员与权限」页为你勾选对应业务。
           </div>
         ) : null}
 
