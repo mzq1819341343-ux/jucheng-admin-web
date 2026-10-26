@@ -769,6 +769,19 @@ footer.site-footer {
   .biz-grid { grid-template-columns: 1fr; }
 }
 
+/* ---------- 报销分类统计行（指令46 B3/B6） ---------- */
+.cat-row {
+  display: grid;
+  grid-template-columns: 72px 1fr 150px;
+  gap: 10px;
+  align-items: center;
+}
+.cat-row .cat-value { text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .cat-row { grid-template-columns: 52px 1fr 118px; gap: 8px; font-size: 13px; }
+  .cat-row .cat-value { font-size: 13px; }
+}
+
 /* ---------- 动效降级（指令35：reduced-motion 下关闭/大幅减弱全部动画与过渡） ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

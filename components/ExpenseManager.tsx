@@ -362,7 +362,7 @@ export default function ExpenseManager({
           </div>
           <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
             {categoryStats.map((s) => (
-              <div key={s.category} style={{ display: "grid", gridTemplateColumns: "72px 1fr 130px", gap: 10, alignItems: "center" }}>
+              <div key={s.category} className="cat-row">
                 <span>{s.category}</span>
                 <span
                   aria-hidden
@@ -384,7 +384,7 @@ export default function ExpenseManager({
                     }}
                   />
                 </span>
-                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                <span className="cat-value">
                   {money2(s.total)} 元 · {s.count} 笔
                 </span>
               </div>
