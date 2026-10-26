@@ -84,7 +84,7 @@ function EmptyCosts() {
 function ContractCard({ contract: c }: { contract: StoreContract }) {
   const breakdown = Object.entries(c.fee_breakdown ?? {});
   return (
-    <div className="biz-card">
+    <div className="biz-card contract-card">
       <div className="biz-en">{c.scope === "wanda" ? "WANDA" : "FRIENDSHIP"} · CONTRACT</div>
       <div className="biz-name" style={{ fontSize: 24 }}>
         {STORE_LABEL[c.scope]}

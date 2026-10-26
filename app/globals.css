@@ -21,6 +21,8 @@
   --gold-dim: rgba(201, 162, 39, 0.35);
   --red: #e0655a;
   --error: #e8837a;
+  --negative: #e8837a;
+  --negative-bg: rgba(224, 101, 90, 0.12);
   --green: #43b581;
   --on-gold: #0c1220;
   --topbar-bg: rgba(14, 21, 38, 0.94);
@@ -52,6 +54,8 @@ html[data-theme="light"] {
   --gold-dim: rgba(201, 162, 39, 0.45);
   --red: #c0453b;
   --error: #c0453b;
+  --negative: #a9342c;
+  --negative-bg: rgba(192, 69, 59, 0.09);
   --green: #2e8b62;
   --on-gold: #141a26;
   --topbar-bg: rgba(250, 248, 243, 0.92);
@@ -370,6 +374,15 @@ a.biz-card:hover {
   color: var(--muted);
 }
 
+/* 工资 / 成本页细节（指令43 块3）：长文本可读、导入异常行可辨、合同卡不溢出 */
+.rule-card li, .contract-card li { line-height: 1.65; }
+.contract-card { overflow-wrap: break-word; }
+.contract-card .plain li { margin-bottom: 10px; }
+.salary-import-table { min-width: 940px; }
+.salary-import-table td { vertical-align: top; }
+.import-row-error td { background: var(--negative-bg); }
+code { overflow-wrap: anywhere; }
+
 /* ---------- tables / cards ---------- */
 .card {
   background: var(--card);
@@ -443,6 +456,7 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
 .field label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 14px; }
 .field input {
   width: 100%;
+  min-height: 44px;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -453,6 +467,7 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
 }
 .field select, .field textarea {
   width: 100%;
+  min-height: 44px;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 9px;
@@ -463,6 +478,22 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
 }
 .field textarea { resize: vertical; min-height: 84px; line-height: 1.55; }
+.field input[type="file"] { padding: 9px 12px; }
+.field input[type="file"]::file-selector-button {
+  min-height: 36px;
+  margin-right: 12px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 7px;
+  background: var(--card-hover);
+  color: var(--text);
+  padding: 7px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 .field select:focus, .field textarea:focus {
   outline: none;
   border-color: var(--gold);
@@ -475,6 +506,7 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
 /* 表格单元格内的紧凑输入（生效起始月行内编辑，指令42） */
 .inline-input {
   width: 104px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -677,6 +709,8 @@ footer.site-footer {
   .container { padding: 36px 18px 56px; }
   .biz-name { font-size: 25px; }
   .biz-card { padding: 26px 24px 24px; }
+  .form-row { flex-direction: column; gap: 0; }
+  .form-row .field { flex: 1 1 auto; width: 100%; }
   .login-wrap { padding: 40px 18px 48px; }
   .login-brand-name { font-size: 52px; }
   .login-card { padding: 26px 22px 22px; }

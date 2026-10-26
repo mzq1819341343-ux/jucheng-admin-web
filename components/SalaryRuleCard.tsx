@@ -24,7 +24,7 @@ function asArr(v: unknown): Record<string, unknown>[] {
 export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
   if (!rule) {
     return (
-      <div className="card">
+      <div className="card rule-card">
         <p className="empty">工资体系待老板提供后录入：规则落库后，这里会用一句话讲清工资怎么算。</p>
       </div>
     );
@@ -48,7 +48,7 @@ export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
   const doorPct = asNum(cr.door_profit_pct);
 
   return (
-    <div className="card">
+    <div className="card rule-card">
       <ul className="plain">
         <li>
           <strong>底薪：</strong>
