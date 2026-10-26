@@ -688,6 +688,53 @@ export async function getExpenseMonthlyAgg(user: CurrentUser): Promise<ExpenseMo
   return [];
 }
 
+/**
+ * 经营核算用的报销输入：只取月度汇总再合成核算行，不把 partner 的明细带进页面。
+ * owner / partner 用全量汇总；staff 不参与敏感经营核算，返回空。
+ */
+export async function getExpenseOperatingInput(user: CurrentUser): Promise<ExpenseClaim[]> {
+  if (user.role === "staff") return [];
+  const agg = await getExpenseMonthlyAgg(user);
+  const rows: ExpenseClaim[] = [];
+  for (const row of agg) {
+    if (row.reimbursed_total > 0) {
+      rows.push({
+        id: `agg-${row.month}-reimbursed`,
+        claim_date: `${row.month}-01`,
+        title: "月度汇总（已报销）",
+        category: "汇总",
+        amount: row.reimbursed_total,
+        scope: "company",
+        claimant_name: null,
+        status: "reimbursed",
+        reimbursed_at: `${row.month}-01T00:00:00+08:00`,
+        note: null,
+        created_by: null,
+        created_at: `${row.month}-01T00:00:00+08:00`,
+        updated_at: `${row.month}-01T00:00:00+08:00`,
+      });
+    }
+    if (row.unreimbursed_total > 0) {
+      rows.push({
+        id: `agg-${row.month}-unreimbursed`,
+        claim_date: `${row.month}-01`,
+        title: "月度汇总（未报销）",
+        category: "汇总",
+        amount: row.unreimbursed_total,
+        scope: "company",
+        claimant_name: null,
+        status: "unreimbursed",
+        reimbursed_at: null,
+        note: null,
+        created_by: null,
+        created_at: `${row.month}-01T00:00:00+08:00`,
+        updated_at: `${row.month}-01T00:00:00+08:00`,
+      });
+    }
+  }
+  return rows;
+}
+
 // ============================================================
 // 合同台账（指令42 / migration_004）：只登记合同要点，不直接进成本；
 // 成本由 store_costs 按合同口径逐月种子 / 录入。保证金不进月成本。

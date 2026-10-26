@@ -8,10 +8,12 @@ import {
   canAccessBusiness,
   canSeeSensitive,
   getStoreCosts,
+  getExpenseOperatingInput,
   storeCostsTotalForMonth,
   describeMonthCosts,
 } from "@/lib/data";
-import { money, money2, int } from "@/lib/format";
+import { buildOperatingMetrics } from "@/lib/operating";
+import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -40,10 +42,13 @@ export default async function OverviewPage({
   const totalOrders = rows.reduce((s, r) => s + (r.orders ?? 0), 0);
   const sensitive = canSeeSensitive(user.role);
   const costs = hasAihuishou && sensitive ? await getStoreCosts(user) : [];
+  const expenseInput = hasAihuishou && sensitive ? await getExpenseOperatingInput(user) : [];
+  const operating = buildOperatingMetrics({ metrics: rows, storeCosts: costs, expenses: expenseInput });
+  const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
-  const netBase = latest?.net_profit_provisional ?? null;
-  const netAdjusted = netBase === null ? null : netBase - latestCostTotal;
+  const netBase = latestOp?.baseNetProfit ?? null;
+  const netAdjusted = latestOp?.storeNetProfit ?? null;
 
   return (
     <>
@@ -107,8 +112,38 @@ export default async function OverviewPage({
                     <span>门店成本{latestCostDesc?.items ? `（${latestCostDesc.items}）` : ""}</span>
                     <strong className="negative-text">−{money2(latestCostTotal)} 元</strong>
                   </div>
+                  <div className="net-line">
+                    <span>公司花费（报销）当月（未报销 {money2(latestOp?.expenseUnreimbursed)} 元）</span>
+                    <strong className="negative-text">−{money2(latestOp?.expenseTotal)} 元</strong>
+                  </div>
+                  <div className="net-line">
+                    <span>公司口径净利</span>
+                    <strong>{money2(latestOp?.companyNetProfit)} 元</strong>
+                  </div>
+                  <div className="net-line">
+                    <span>利润率（净利润 ÷ 当月分润）</span>
+                    <strong>{latestOp?.profitMargin === null || !latestOp ? "—" : pct(latestOp.profitMargin)}</strong>
+                  </div>
                 </div>
               </section>
+            ) : null}
+            {sensitive && latestOp ? (
+              <div className="kpi-row" style={{ marginTop: 16 }}>
+                <KpiCard
+                  label="本月利润率（净利润 ÷ 当月分润）"
+                  value={latestOp.profitMargin === null ? "—" : latestOp.profitMargin.toFixed(1)}
+                  unit={latestOp.profitMargin === null ? undefined : "%"}
+                  sub={`公司口径净利 ${money2(latestOp.companyNetProfit)} 元`}
+                  tone={latestOp.profitMargin !== null && latestOp.profitMargin < 0 ? "negative" : "default"}
+                />
+                <KpiCard
+                  label={`年回报率（${operating.annual.label}）`}
+                  value={operating.annual.returnRate === null ? "—" : operating.annual.returnRate.toFixed(1)}
+                  unit={operating.annual.returnRate === null ? undefined : "%"}
+                  sub={`覆盖月份：${operating.annual.coverageMonths.join("、") || "—"}｜年度投入成本 ${money2(operating.annual.investedCost)} 元｜近12个月 ${operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}（覆盖 ${operating.rolling12.coverageMonths.join("、") || "—"}）`}
+                  tone={operating.annual.returnRate !== null && operating.annual.returnRate < 0 ? "negative" : "default"}
+                />
+              </div>
             ) : null}
           </>
         ) : (

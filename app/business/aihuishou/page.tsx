@@ -1,7 +1,8 @@
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
-import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
+import { buildOperatingMetrics } from "@/lib/operating";
 import { STORE_SHORT_LABEL } from "@/lib/stores";
 import { money, money2, int, pct } from "@/lib/format";
 
@@ -23,10 +24,13 @@ export default async function DashboardPage() {
   // 指令41/42：净利暂定再扣除当月已录入的门店成本（store_costs 两店合计）。
   // 无成本录入时 latestCostTotal = 0，数字与现版完全一致；staff 不查成本（RLS 亦不可见）。
   const costs = sensitive ? await getStoreCosts(user) : [];
+  const expenseInput = sensitive ? await getExpenseOperatingInput(user) : [];
+  const operating = buildOperatingMetrics({ metrics: rows, storeCosts: costs, expenses: expenseInput });
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
-  const netBase = latest?.net_profit_provisional ?? null;
-  const netAdjusted = netBase === null ? null : netBase - latestCostTotal;
+  const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
+  const netBase = latestOp?.baseNetProfit ?? null;
+  const netAdjusted = latestOp?.storeNetProfit ?? null;
 
   return (
     <>
@@ -89,6 +93,16 @@ export default async function DashboardPage() {
                   ) : (
                     <span className="net-breakdown-line">门店成本未取得，未计入</span>
                   )}
+                  {latestOp ? (
+                    <>
+                      <span className="net-breakdown-line">
+                        公司花费（报销）当月 {money2(latestOp.expenseTotal)} 元（未报销 {money2(latestOp.expenseUnreimbursed)} 元）
+                      </span>
+                      <span className="net-breakdown-line">
+                        公司口径净利 {money2(latestOp.companyNetProfit)} 元（门店净利再扣报销花费）
+                      </span>
+                    </>
+                  ) : null}
                 </>
               ) : undefined
             }
@@ -101,6 +115,52 @@ export default async function DashboardPage() {
             sub={`分润 ${money(totalProfit)} 元｜上门 ${int(totalDoor)} 单`}
           />
         </div>
+
+        {sensitive && latestOp ? (
+          <>
+            <section className="net-panel" aria-label="本月利润率">
+              <div>
+                <div className="net-panel-label">
+                  <span className="en">PROFIT MARGIN</span> · 本月利润率（净利润 ÷ 当月分润）
+                </div>
+                <KpiValue
+                  value={latestOp.profitMargin === null ? "—" : latestOp.profitMargin.toFixed(1)}
+                  unit={latestOp.profitMargin === null ? undefined : "%"}
+                  tone={latestOp.profitMargin !== null && latestOp.profitMargin < 0 ? "negative" : "default"}
+                />
+                <div className="kpi-sub">
+                  旁注：公司口径净利 {money2(latestOp.companyNetProfit)} 元 · 当月分润 {money2(latestOp.profit)} 元
+                </div>
+              </div>
+              <div className="net-panel-breakdown">
+                <div className="net-line">
+                  <span>门店净利暂定（完整口径）</span>
+                  <strong>{money2(latestOp.storeNetProfit)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>公司花费（报销）当月（未报销 {money2(latestOp.expenseUnreimbursed)} 元）</span>
+                  <strong className="negative-text">−{money2(latestOp.expenseTotal)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>公司口径净利</span>
+                  <strong>{money2(latestOp.companyNetProfit)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>年回报率（{operating.annual.label}）</span>
+                  <strong>{operating.annual.returnRate === null ? "—" : pct(operating.annual.returnRate)}</strong>
+                </div>
+                <div className="net-line">
+                  <span>{operating.rolling12.label}</span>
+                  <strong>{operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}</strong>
+                </div>
+              </div>
+            </section>
+            <p className="page-desc" style={{ marginTop: 12 }}>
+              净利暂定仅最新月为完整口径（扣工资分摊、已知扣款、门店成本、报销花费），其余月份待补齐后出数。
+              年回报率覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}。
+            </p>
+          </>
+        ) : null}
 
         <h2 className="section-title">月度走势（两店合计）</h2>
         <div className="card table-wrap">
