@@ -23,6 +23,13 @@ export default async function HelpPage() {
           当前账号角色：{ROLE_LABEL[user.role]}。本页说明各角色的权限范围与常用操作。
         </p>
 
+        <h2 className="section-title">总览怎么看</h2>
+        <div className="card">
+          <p style={{ margin: 0 }}>
+            总览改版：先看英雄区扣成本后净利 → 次看双利润率 → 成本拆解默认折叠，展开看分项。年回报率收在英雄下方一行（自然年 + 近12个月，附覆盖月份）；月度目标未设定时只有一行按钮，点开再填。
+          </p>
+        </div>
+
         <h2 className="section-title">角色与权限矩阵</h2>
         <div className="card table-wrap">
           <table className="report">
