@@ -13,7 +13,10 @@
  * - 只有 net_profit_provisional 非空的月份才算完整口径；其余月份公司净利 / 利润率不出数（null）。
  * - 年回报率（45 版） = 年度净利润 ÷ 年度投入；
  *   年度投入 = 门店成本合计（store_costs） + 报销花费（未报销 + 已报销全计）
- *            + 工资实发合计（monthly_metrics 工资汇总 wage_cost）。
+ *            + 工资实发合计。工资实发以 salary_detail_import 实表明细为准
+ *            （指令47）：明细覆盖的月份用明细净额合计，未覆盖月份回退
+ *            monthly_metrics 工资汇总（wage_cost）；明细与汇总的差额经
+ *            wageDiff 暴露给页面脚注（明细未导入时页面标注「按月度汇总」）。
  *   年度净利润 = 已核算月份的公司口径净利合计。
  * - 年度窗口截到数据最新月（不把未来月份的种子成本计入本年投入）；
  *   净利覆盖月份与投入覆盖月份分别标注，分母为 0 或无已核算月份时不出数。
@@ -72,8 +75,16 @@ export interface ReturnSummary {
   /** 报销花费（未报销 + 已报销全计，45 版口径） */
   expenseAllTotal: number;
   expenseReimbursedTotal: number;
-  /** 工资实发合计（monthly_metrics 工资汇总） */
+  /** 工资实发合计（明细覆盖月份以实表明细为准，否则月度汇总） */
   wageTotal: number;
+  /** 是否做过明细校验（调用方传入了 salaryDetailByMonth；仅老板视角传入） */
+  wageChecked: boolean;
+  /** 明细是否覆盖窗口内至少一个月（为真时 wageTotal 以明细为主） */
+  wageFromDetail: boolean;
+  /** 窗口内明细净额合计（明细覆盖月份部分）；未校验或无覆盖时为 null */
+  wageDetailTotal: number | null;
+  /** 明细合计 − 同月份月度汇总（2 位小数）；未校验或无覆盖时为 null */
+  wageDiff: number | null;
   returnRate: number | null;
 }
 
@@ -115,6 +126,8 @@ function buildReturnSummary(params: {
   months: MonthlyOperating[];
   storeCosts: OperatingCostInput[];
   expenses: OperatingExpenseInput[];
+  /** 工资实表明细按月净额合计（指令47）：传入 = 已做明细校验（仅老板视角）；不传 = 未校验 */
+  salaryDetailByMonth?: Record<string, number> | null;
 }): ReturnSummary {
   const { label, startMonth, endMonth, months, storeCosts, expenses } = params;
   const start = monthIndex(startMonth);
@@ -137,7 +150,32 @@ function buildReturnSummary(params: {
     .filter((e) => e.status === "reimbursed")
     .reduce((s, e) => s + Number(e.amount ?? 0), 0);
   const monthsInPeriod = months.filter((m) => inPeriod(m.month));
-  const wageTotal = monthsInPeriod.reduce((s, m) => s + Number(m.wageCost ?? 0), 0);
+  const metricsWageTotal = monthsInPeriod.reduce((s, m) => s + Number(m.wageCost ?? 0), 0);
+  // 工资实发（指令47）：明细覆盖月份以 salary_detail_import 为准，未覆盖月份回退月度汇总；
+  // 明细与汇总同月份差额经 wageDiff 暴露（页面脚注报警），不静默吞差。
+  const round2 = (v: number) => Math.round(v * 100) / 100;
+  const detailMap = params.salaryDetailByMonth ?? null;
+  const wageChecked = detailMap !== null;
+  const detailMonths = detailMap
+    ? Object.keys(detailMap).filter((m) => inPeriod(m))
+    : [];
+  let wageTotal = metricsWageTotal;
+  let wageDetailTotal: number | null = null;
+  let wageDiff: number | null = null;
+  const wageFromDetail = detailMonths.length > 0;
+  if (wageFromDetail && detailMap) {
+    wageDetailTotal = round2(
+      detailMonths.reduce((s, m) => s + Number(detailMap[m] ?? 0), 0)
+    );
+    const metricsForDetailMonths = monthsInPeriod
+      .filter((m) => detailMonths.includes(m.month))
+      .reduce((s, m) => s + Number(m.wageCost ?? 0), 0);
+    wageDiff = round2(wageDetailTotal - metricsForDetailMonths);
+    const restWage = monthsInPeriod
+      .filter((m) => !detailMonths.includes(m.month))
+      .reduce((s, m) => s + Number(m.wageCost ?? 0), 0);
+    wageTotal = round2(wageDetailTotal + restWage);
+  }
   const investedCoverage = new Set<string>();
   for (const m of monthsInPeriod) if (m.wageCost !== null) investedCoverage.add(m.month);
   for (const c of storeCostsInPeriod) investedCoverage.add(c.month);
@@ -156,6 +194,10 @@ function buildReturnSummary(params: {
     expenseAllTotal,
     expenseReimbursedTotal,
     wageTotal,
+    wageChecked,
+    wageFromDetail,
+    wageDetailTotal,
+    wageDiff,
     returnRate:
       complete.length > 0 && investedCost !== 0 && annualNetProfit !== null
         ? (annualNetProfit / investedCost) * 100
@@ -167,8 +209,11 @@ export function buildOperatingMetrics(input: {
   metrics: OperatingMetricInput[];
   storeCosts: OperatingCostInput[];
   expenses: OperatingExpenseInput[];
+  /** 工资实表明细按月净额合计（指令47，可选；仅老板视角传入做交叉校验） */
+  salaryDetailByMonth?: Record<string, number> | null;
 }): OperatingResult {
   const { metrics, storeCosts, expenses } = input;
+  const salaryDetailByMonth = input.salaryDetailByMonth ?? null;
   const months: MonthlyOperating[] = [...metrics]
     .sort((a, b) => a.month.localeCompare(b.month))
     .map((metric) => {
@@ -221,6 +266,7 @@ export function buildOperatingMetrics(input: {
       months,
       storeCosts,
       expenses,
+      salaryDetailByMonth,
     });
     const emptyRolling = buildReturnSummary({
       label: "近12个月 · 按已核算月份",
@@ -229,6 +275,7 @@ export function buildOperatingMetrics(input: {
       months,
       storeCosts,
       expenses,
+      salaryDetailByMonth,
     });
     return { months, latestComplete: null, annual: emptyAnnual, rolling12: emptyRolling };
   }
@@ -241,6 +288,7 @@ export function buildOperatingMetrics(input: {
     months,
     storeCosts,
     expenses,
+    salaryDetailByMonth,
   });
 
   const endIdx = monthIndex(latestComplete.month);
@@ -251,9 +299,23 @@ export function buildOperatingMetrics(input: {
     months,
     storeCosts,
     expenses,
+    salaryDetailByMonth,
   });
 
   return { months, latestComplete, annual, rolling12 };
+}
+
+/**
+ * 年回报工资项校验脚注（指令47）：明细未校验（非老板视角）返回 null 不显示；
+ * 已校验但明细未导入 → 提示按月度汇总；明细与汇总有差额 → 报警文案。
+ */
+export function wageCheckNote(summary: ReturnSummary): string | null {
+  if (!summary.wageChecked) return null;
+  if (!summary.wageFromDetail) return "工资明细未导入，年回报工资项按月度汇总";
+  if (summary.wageDiff !== null && summary.wageDiff !== 0) {
+    return `工资明细校验：实表明细合计与月度汇总差 ${summary.wageDiff.toFixed(2)} 元，请核对`;
+  }
+  return null;
 }
 
 /** 投入覆盖标注：如「2026-01 ~ 2026-09」；无数据时「—」。 */

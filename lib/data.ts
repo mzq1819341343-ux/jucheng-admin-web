@@ -478,6 +478,51 @@ if (!error && data) return data as SalaryMonthlyRow[];
 return [];
 }
 
+export interface SalaryDetailImportRow {
+  id: string;
+  month: string;
+  section: "store" | "door";
+  employee_name: string;
+  base_amount: number | null;
+  commission_amount: number | null;
+  deduction_amount: number | null;
+  net_amount: number | null;
+  note: string | null;
+  matched_user_id: string | null;
+  imported_at: string;
+}
+
+/**
+ * 工资实表明细（salary_detail_import，指令47）：仅老板可读——应用层先按
+ * role 收口，RLS 也只有 owner 策略；partner / staff 恒返回空且不发查询。
+ * 演示模式返回空（页面走空骨架），明细数字只来自私有导入，不进仓库。
+ */
+export async function getSalaryDetailImport(user: CurrentUser): Promise<SalaryDetailImportRow[]> {
+  if (user.role !== "owner" || !realMode(user)) return [];
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase
+      .from("salary_detail_import")
+      .select("*")
+      .order("month", { ascending: true })
+      .order("section", { ascending: true })
+      .order("employee_name", { ascending: true });
+    if (!error && data) return data as SalaryDetailImportRow[];
+  } catch {
+    // 空态（迁移未执行时表不存在，页面走空骨架）
+  }
+  return [];
+}
+
+/** 明细按月净额合计（年回报分母交叉校验用）：key = 'YYYY-MM'。 */
+export function salaryDetailByMonth(rows: SalaryDetailImportRow[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    map[r.month] = (map[r.month] ?? 0) + Number(r.net_amount ?? 0);
+  }
+  return map;
+}
+
 /** 门店月度工资汇总（视图）：老板全量、合伙人按视图内行过滤；staff 恒空。 */
 export async function getSalaryStoreAgg(user: CurrentUser): Promise<SalaryStoreAgg[]> {
 if (user.role === "staff" || !realMode(user)) return [];

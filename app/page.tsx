@@ -11,8 +11,10 @@ import {
   getExpenseOperatingInput,
   storeCostsTotalForMonth,
   describeMonthCosts,
+  getSalaryDetailImport,
+  salaryDetailByMonth,
 } from "@/lib/data";
-import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
+import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import MonthlyTargetCard from "@/components/MonthlyTargetCard";
 import { getSiteTargets } from "@/lib/data";
 import { money, money2, int, pct } from "@/lib/format";
@@ -45,7 +47,15 @@ export default async function OverviewPage({
   const sensitive = canSeeSensitive(user.role);
   const costs = hasAihuishou && sensitive ? await getStoreCosts(user) : [];
   const expenseInput = hasAihuishou && sensitive ? await getExpenseOperatingInput(user) : [];
-  const operating = buildOperatingMetrics({ metrics: rows, storeCosts: costs, expenses: expenseInput });
+  // 指令47：工资实发明细仅老板可读，传入核算函数与月度汇总交叉校验（其余角色不传 = 不校验）。
+  const detailRows = user.role === "owner" && hasAihuishou && sensitive ? await getSalaryDetailImport(user) : null;
+  const operating = buildOperatingMetrics({
+    metrics: rows,
+    storeCosts: costs,
+    expenses: expenseInput,
+    salaryDetailByMonth: detailRows ? salaryDetailByMonth(detailRows) : null,
+  });
+  const wageNote = wageCheckNote(operating.annual);
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
@@ -165,6 +175,11 @@ export default async function OverviewPage({
                   tone={operating.annual.returnRate !== null && operating.annual.returnRate < 0 ? "negative" : "default"}
                 />
               </div>
+            ) : null}
+            {sensitive && wageNote ? (
+              <p className="page-desc" style={{ marginTop: 8 }}>
+                <span className="negative-text">{wageNote}。</span>
+              </p>
             ) : null}
           </>
         ) : (

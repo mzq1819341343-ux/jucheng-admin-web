@@ -1,8 +1,8 @@
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
-import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
-import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth } from "@/lib/data";
+import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import { STORE_SHORT_LABEL } from "@/lib/stores";
 import { money, money2, int, pct } from "@/lib/format";
 
@@ -25,7 +25,15 @@ export default async function DashboardPage() {
   // 无成本录入时 latestCostTotal = 0，数字与现版完全一致；staff 不查成本（RLS 亦不可见）。
   const costs = sensitive ? await getStoreCosts(user) : [];
   const expenseInput = sensitive ? await getExpenseOperatingInput(user) : [];
-  const operating = buildOperatingMetrics({ metrics: rows, storeCosts: costs, expenses: expenseInput });
+  // 指令47：工资实发明细仅老板可读，传入核算函数与月度汇总交叉校验（其余角色不传 = 不校验）。
+  const detailRows = user.role === "owner" && sensitive ? await getSalaryDetailImport(user) : null;
+  const operating = buildOperatingMetrics({
+    metrics: rows,
+    storeCosts: costs,
+    expenses: expenseInput,
+    salaryDetailByMonth: detailRows ? salaryDetailByMonth(detailRows) : null,
+  });
+  const wageNote = wageCheckNote(operating.annual);
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
@@ -149,6 +157,7 @@ export default async function DashboardPage() {
               净利已扣门店成本与公司花费（报销，未报销亦计入已发生花费）；净利暂定仅最新月为完整口径，其余月份待补齐后出数。
               年回报率 = 年度净利润 ÷ 年度投入（门店成本合计 + 报销花费（未报销 + 已报销） + 工资实发合计）；
               净利覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}；投入覆盖月份：{coverageRange(operating.annual.investedCoverageMonths)}。
+              {wageNote ? <span className="negative-text"> {wageNote}。</span> : null}
             </p>
 
             <h2 className="section-title">公司花费拆分</h2>
