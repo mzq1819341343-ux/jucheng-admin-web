@@ -33,6 +33,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           {showAihuishou ? <Link href="/business/aihuishou">爱回收</Link> : null}
           <Link href="/members">成员与权限</Link>
           <Link href="/status">数据刷新状态</Link>
+          <Link href="/help">操作手册</Link>
         </nav>
         <div className="userbox">
           <span className="user-role">
