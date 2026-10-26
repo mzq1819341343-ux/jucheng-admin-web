@@ -262,3 +262,57 @@ export function coverageRange(months: string[]): string {
   if (months.length === 1) return months[0];
   return `${months[0]} ~ ${months[months.length - 1]}`;
 }
+
+// ============================================================
+// 两店对比（指令46 B1）：单店口径与公司口径分开。
+// - 单店净利暂定 = 该店 net_profit_provisional（到店口径，已扣该店工资分摊与已知扣款）
+//   − 该店当月 store_costs。报销是公司级花费，不摊入单店。
+// - 单店利润率（分润） = 单店净利暂定（扣门店成本后） ÷ 该店当月到店分润。
+// - 营收无数据源：revenue 恒为 null，利润率（营收）不出数。
+// - 只有 net_profit_provisional 非空的月份才有单店净利/利润率（当前仅 2026-09）。
+// ============================================================
+
+export interface StoreCostScopedInput {
+  month: string;
+  amount: number;
+  scope: string;
+}
+
+export interface StoreMonthComparison {
+  month: string;
+  profit: number | null;
+  revenue: number | null;
+  baseNetProfit: number | null;
+  storeCosts: number;
+  netAfterCosts: number | null;
+  profitMargin: number | null;
+  revenueMargin: number | null;
+}
+
+export function buildStoreComparison(input: {
+  metrics: OperatingMetricInput[];
+  storeCosts: StoreCostScopedInput[];
+  scope: string;
+}): StoreMonthComparison[] {
+  return input.metrics.map((metric) => {
+    const storeCosts = input.storeCosts
+      .filter((c) => c.month === metric.month && c.scope === input.scope)
+      .reduce((s, c) => s + Number(c.amount ?? 0), 0);
+    const baseNetProfit = metric.net_profit_provisional ?? null;
+    const netAfterCosts = baseNetProfit === null ? null : baseNetProfit - storeCosts;
+    const profitMargin =
+      netAfterCosts === null || !metric.profit
+        ? null
+        : (netAfterCosts / metric.profit) * 100;
+    return {
+      month: metric.month,
+      profit: metric.profit ?? null,
+      revenue: null,
+      baseNetProfit,
+      storeCosts,
+      netAfterCosts,
+      profitMargin,
+      revenueMargin: null,
+    };
+  });
+}

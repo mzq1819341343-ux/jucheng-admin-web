@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import { KpiValue } from "@/components/KpiCard";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
-import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
+import { buildOperatingMetrics, coverageRange, buildStoreComparison } from "@/lib/operating";
 import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,15 @@ export default async function AihuishouReportPage() {
   const sepNetBase = sepOp?.baseNetProfit ?? null;
   const sepNetAdjusted = sepOp?.storeNetProfit ?? null;
   const totalExpense = operating.months.reduce((s, m) => s + m.expenseTotal, 0);
+  // 指令46 B1：两店对比（单店口径，报销不摊入单店；营收无源恒「—」）。
+  const wandaCmp = new Map(
+    buildStoreComparison({ metrics: wanda.rows, storeCosts: costs, scope: "wanda" }).map((m) => [m.month, m])
+  );
+  const friendshipCmp = new Map(
+    buildStoreComparison({ metrics: friendship.rows, storeCosts: costs, scope: "friendship" }).map((m) => [m.month, m])
+  );
+  const wandaCostTotal = [...wandaCmp.values()].reduce((s, m) => s + m.storeCosts, 0);
+  const friendshipCostTotal = [...friendshipCmp.values()].reduce((s, m) => s + m.storeCosts, 0);
 
   return (
     <>
@@ -124,6 +133,94 @@ export default async function AihuishouReportPage() {
             净利暂定仅最新月为完整口径（扣工资分摊、已知扣款、门店成本、报销花费），其余月份待补齐后出数。
           </p>
         ) : null}
+
+        <h2 className="section-title">两店对比（按月，到店口径）</h2>
+        <div className="card table-wrap">
+          <table className="report">
+            <thead>
+              <tr>
+                <th rowSpan={2}>月份</th>
+                <th colSpan={sensitive ? 5 : 2}>石河子万达店</th>
+                <th colSpan={sensitive ? 5 : 2}>石河子友谊商厦店</th>
+              </tr>
+              <tr>
+                <th>分润（元）</th>
+                <th>营收（元）</th>
+                {sensitive ? (
+                  <>
+                    <th>门店成本（元）</th>
+                    <th>净利暂定·扣成本后（元）</th>
+                    <th>利润率（分润）</th>
+                  </>
+                ) : null}
+                <th>分润（元）</th>
+                <th>营收（元）</th>
+                {sensitive ? (
+                  <>
+                    <th>门店成本（元）</th>
+                    <th>净利暂定·扣成本后（元）</th>
+                    <th>利润率（分润）</th>
+                  </>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const w = wandaCmp.get(r.month);
+                const f = friendshipCmp.get(r.month);
+                return (
+                  <tr key={r.month}>
+                    <td>{r.month}</td>
+                    <td>{money2(w?.profit)}</td>
+                    <td>—</td>
+                    {sensitive ? (
+                      <>
+                        <td>{money2(w?.storeCosts)}</td>
+                        <td>{w?.netAfterCosts == null ? "—" : money2(w.netAfterCosts)}</td>
+                        <td>{w?.profitMargin == null ? "—" : pct(w.profitMargin)}</td>
+                      </>
+                    ) : null}
+                    <td>{money2(f?.profit)}</td>
+                    <td>—</td>
+                    {sensitive ? (
+                      <>
+                        <td>{money2(f?.storeCosts)}</td>
+                        <td>{f?.netAfterCosts == null ? "—" : money2(f.netAfterCosts)}</td>
+                        <td>{f?.profitMargin == null ? "—" : pct(f.profitMargin)}</td>
+                      </>
+                    ) : null}
+                  </tr>
+                );
+              })}
+              <tr className="total">
+                <td>合计</td>
+                <td>{money2(wandaTotal)}</td>
+                <td>—</td>
+                {sensitive ? (
+                  <>
+                    <td>{money2(wandaCostTotal)}</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </>
+                ) : null}
+                <td>{money2(friendshipTotal)}</td>
+                <td>—</td>
+                {sensitive ? (
+                  <>
+                    <td>{money2(friendshipCostTotal)}</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </>
+                ) : null}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p className="page-desc" style={{ marginTop: 12 }}>
+          单店净利暂定 = 该店净利暂定（到店口径，已扣该店工资分摊与已知扣款）− 该店当月门店成本；仅 2026-09 有完整口径，其余月份显示「—」不估算。
+          报销为公司级花费，不摊入单店对比（公司口径见上方汇总）。营收暂无数据源（订单金额大面积缺失），整列显示「—」，不以分润冒充。
+          友谊店 2026-02 开业，2026-01 无经营数据。
+        </p>
 
         {sensitive && sepNetAdjusted !== null ? (
           <>
