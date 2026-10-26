@@ -93,10 +93,11 @@ export default async function DashboardPage() {
         </div>
 
         <div className="kpi-row" style={{ marginTop: 16 }}>
-          <div className="kpi-card kpi-wide kpi-hero">
-            <div className="kpi-label">工资占分润比（{latest?.month ?? "—"}，两店合计）</div>
-            {sensitive ? (
-              <>
+          {/* 指令55-2：敏感卡对无权限角色整卡不渲染（不再出「无权限」占位卡）。 */}
+          {sensitive ? (
+            <>
+              <div className="kpi-card kpi-wide kpi-hero">
+                <div className="kpi-label">工资占分润比（{latest?.month ?? "—"}，两店合计）</div>
                 <KpiValue
                   value={pct(latest?.wage_ratio).replace(/%$/, "")}
                   unit={pct(latest?.wage_ratio).endsWith("%") ? "%" : undefined}
@@ -105,48 +106,40 @@ export default async function DashboardPage() {
                   2026-01 至 2026-09 月度走势：{wageTrend.length ? `${pct(wageTrend[0])} → ${pct(wageTrend[wageTrend.length - 1])}` : "—"}
                 </div>
                 {wageTrend.length > 1 ? <Sparkline values={wageTrend} /> : null}
-              </>
-            ) : (
-              <>
-                <div className="kpi-value locked">无权限</div>
-                <div className="kpi-sub">该指标仅老板 / 合伙人可见</div>
-              </>
-            )}
-          </div>
-          <KpiCard
-            className="net-kpi-card"
-            tone={sensitive && netAdjusted !== null && netAdjusted < 0 ? "negative" : "default"}
-            label={latestCostTotal > 0 ? "净利暂定（当月，已扣门店成本）" : "净利暂定（当月，未扣房租水电）"}
-            value={sensitive ? money(netAdjusted) : ""}
-            unit="元"
-            sub={
-              sensitive ? (
-                <>
-                  <span className="net-breakdown-line">
-                    扣成本前 {money2(netBase)} 元（已扣工资分摊 {money2(latest?.wage_cost)} 元与已知扣款）
-                  </span>
-                  {latestCostTotal > 0 && latestCostDesc ? (
+              </div>
+              <KpiCard
+                className="net-kpi-card"
+                tone={netAdjusted !== null && netAdjusted < 0 ? "negative" : "default"}
+                label={latestCostTotal > 0 ? "净利暂定（当月，已扣门店成本）" : "净利暂定（当月，未扣房租水电）"}
+                value={money(netAdjusted)}
+                unit="元"
+                sub={
+                  <>
                     <span className="net-breakdown-line">
-                      门店成本 −{money2(latestCostTotal)} 元（{latestCostDesc.items}）
+                      扣成本前 {money2(netBase)} 元（已扣工资分摊 {money2(latest?.wage_cost)} 元与已知扣款）
                     </span>
-                  ) : (
-                    <span className="net-breakdown-line">门店成本未取得，未计入</span>
-                  )}
-                  {latestOp ? (
-                    <>
+                    {latestCostTotal > 0 && latestCostDesc ? (
                       <span className="net-breakdown-line">
-                        公司花费（报销）当月 {money2(latestOp.expenseTotal)} 元（未报销 {money2(latestOp.expenseUnreimbursed)} 元）
+                        门店成本 −{money2(latestCostTotal)} 元（{latestCostDesc.items}）
                       </span>
-                      <span className="net-breakdown-line">
-                        公司口径净利 {money2(latestOp.companyNetProfit)} 元（门店净利再扣报销花费）
-                      </span>
-                    </>
-                  ) : null}
-                </>
-              ) : undefined
-            }
-            locked={!sensitive}
-          />
+                    ) : (
+                      <span className="net-breakdown-line">门店成本未取得，未计入</span>
+                    )}
+                    {latestOp ? (
+                      <>
+                        <span className="net-breakdown-line">
+                          公司花费（报销）当月 {money2(latestOp.expenseTotal)} 元（未报销 {money2(latestOp.expenseUnreimbursed)} 元）
+                        </span>
+                        <span className="net-breakdown-line">
+                          公司口径净利 {money2(latestOp.companyNetProfit)} 元（门店净利再扣报销花费）
+                        </span>
+                      </>
+                    ) : null}
+                  </>
+                }
+              />
+            </>
+          ) : null}
           <KpiCard
             label="覆盖期累计（2026-01~09）"
             value={int(totalOrders)}
@@ -331,14 +324,19 @@ export default async function DashboardPage() {
           </table>
         </div>
         <p className="page-desc" style={{ marginTop: 12 }}>
-          口径：上门只看两店合计，不算单店业绩；净利暂定 = 到店分润 − 分摊工资 − 已知扣款
-          {latestCostTotal > 0 && latestCostDesc
-            ? ` − 已录入门店成本 ${money2(latestCostTotal)} 元（${latestCostDesc.items}）${
-                latestCostDesc.missingStores.length > 0
-                  ? `；${latestCostDesc.missingStores.map((s) => STORE_SHORT_LABEL[s]).join("、")}当月成本未取得，未计入`
-                  : ""
-              }；未录入的成本类型未取得，未计入。`
-            : "，房租水电未取得，未计入。"}
+          口径：上门只看两店合计，不算单店业绩。
+          {/* 指令55-2：净利构成口径句仅敏感角色渲染，店员连公式文字都不可见。 */}
+          {sensitive
+            ? `净利暂定 = 到店分润 − 分摊工资 − 已知扣款${
+                latestCostTotal > 0 && latestCostDesc
+                  ? ` − 已录入门店成本 ${money2(latestCostTotal)} 元（${latestCostDesc.items}）${
+                      latestCostDesc.missingStores.length > 0
+                        ? `；${latestCostDesc.missingStores.map((s) => STORE_SHORT_LABEL[s]).join("、")}当月成本未取得，未计入`
+                        : ""
+                    }；未录入的成本类型未取得，未计入。`
+                  : "，房租水电未取得，未计入。"
+              }`
+            : null}
         </p>
       </main>
     </>

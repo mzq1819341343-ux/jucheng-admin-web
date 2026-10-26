@@ -77,9 +77,7 @@ export default async function AihuishouReportPage() {
                     <th>利润率（分润）</th>
                     <th>利润率（营收）</th>
                   </>
-                ) : (
-                  <th>敏感列</th>
-                )}
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -100,9 +98,7 @@ export default async function AihuishouReportPage() {
                       <td>{operatingByMonth.get(r.month)?.profitMargin == null ? "—" : pct(operatingByMonth.get(r.month)?.profitMargin)}</td>
                       <td>{operatingByMonth.get(r.month)?.revenueMargin == null ? "—" : pct(operatingByMonth.get(r.month)?.revenueMargin)}</td>
                     </>
-                  ) : (
-                    <td className="locked-cell">无权限</td>
-                  )}
+                  ) : null}
                 </tr>
               ))}
               <tr className="total">
@@ -121,9 +117,7 @@ export default async function AihuishouReportPage() {
                     <td>—</td>
                     <td>—</td>
                   </>
-                ) : (
-                  <td>—</td>
-                )}
+                ) : null}
               </tr>
             </tbody>
           </table>
