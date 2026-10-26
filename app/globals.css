@@ -945,7 +945,17 @@ footer.site-footer {
   .kpi-hero .kpi-value { --kpi-fs: 50px; }
   .hero-net .kpi-value { --kpi-fs: 52px; }
   .biz-grid { grid-template-columns: 1fr; }
+  /* 指令52-6：≤400 临界收紧——品牌口号让位给汉堡区；英雄标签字距收窄防贴边 */
+  .brand-slogan { display: none; }
+  .brand-name { font-size: 28px; }
+  .hero-net { padding: 24px 18px 22px; }
+  .hero-net::before { left: 18px; }
+  .hero-net-label { letter-spacing: 0.08em; font-size: 13px; }
 }
+/* 折叠/拆解行标签允许收缩换行，金额保持不换行（指令52-6） */
+.net-line > span:first-child { min-width: 0; }
+.drill > summary .drill-name { min-width: 0; }
+.menu-more-panel { max-width: calc(100vw - 24px); }
 
 /* ---------- 报销分类统计行（指令46 B3/B6） ---------- */
 .cat-row {
