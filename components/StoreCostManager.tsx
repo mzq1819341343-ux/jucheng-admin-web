@@ -31,6 +31,116 @@ export default function StoreCostManager({
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // 指令53 D5：电费实报快捷录入（cost_type='utilities'，与通用表单同表同口径）。
+  // 同门店同月份已有电费行时走更新（编辑既有行），不重复新增；万达备注预填智能电表提示。
+  const [uScope, setUScope] = useState<StoreScope>("wanda");
+  const [uMonth, setUMonth] = useState("");
+  const [uAmount, setUAmount] = useState("");
+  const [uNote, setUNote] = useState("智能电表自记、按实预付");
+  const [uMsg, setUMsg] = useState<string | null>(null);
+  const [uBusy, setUBusy] = useState(false);
+
+  function onUScopeChange(s: StoreScope) {
+    setUScope(s);
+    // 备注未被老板改过时才跟随门店预填：万达=智能电表提示，友谊=空。
+    if (uNote === "" || uNote === "智能电表自记、按实预付") {
+      setUNote(s === "wanda" ? "智能电表自记、按实预付" : "");
+    }
+  }
+
+  async function onUtilitySubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!/^\d{4}-\d{2}$/.test(uMonth)) {
+      setUMsg("请填写月份（格式 2026-09）");
+      return;
+    }
+    const amt = Number(uAmount);
+    if (uAmount.trim() === "" || Number.isNaN(amt)) {
+      setUMsg("金额需为数字（按电表实际读数 / 预付金额填，不估算）");
+      return;
+    }
+    const existing = costs.find(
+      (c) => c.scope === uScope && c.month === uMonth && c.cost_type === "utilities"
+    );
+    const noteVal = uNote.trim() || null;
+    if (demo || !isSupabaseConfigured()) {
+      if (existing) {
+        setCosts(
+          costs.map((c) =>
+            c.id === existing.id
+              ? { ...c, amount: amt, note: noteVal, updated_at: new Date().toISOString() }
+              : c
+          )
+        );
+        setUMsg("演示：该月电费已存在，已本地更新既有行，未落库");
+      } else {
+        setCosts([
+          {
+            id: `local-${Date.now()}`,
+            scope: uScope,
+            month: uMonth,
+            cost_type: "utilities" as CostType,
+            amount: amt,
+            note: noteVal,
+            updated_at: new Date().toISOString(),
+          },
+          ...costs,
+        ]);
+        setUMsg("演示：电费已加入本地列表，未落库");
+      }
+      setUAmount("");
+      return;
+    }
+    setUBusy(true);
+    setUMsg(null);
+    try {
+      const supabase = createClient();
+      if (existing) {
+        const { data, error } = await supabase
+          .from("store_costs")
+          .update({ amount: amt, note: noteVal, updated_at: new Date().toISOString() })
+          .eq("id", existing.id)
+          .select("*")
+          .single();
+        if (error) {
+          setUMsg(`保存失败：${error.message}`);
+        } else {
+          setCosts(costs.map((c) => (c.id === existing.id ? (data as StoreCost) : c)));
+          setUMsg("该月电费已存在，已更新既有行");
+          setUAmount("");
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("store_costs")
+          .insert({
+            scope: uScope,
+            month: uMonth,
+            cost_type: "utilities",
+            amount: amt,
+            note: noteVal,
+            created_by: userId,
+          })
+          .select("*")
+          .single();
+        if (error) {
+          setUMsg(
+            error.message.includes("duplicate") || error.code === "23505"
+              ? "该门店该月份电费已存在，请重新提交以更新既有行"
+              : `保存失败：${error.message}`
+          );
+        } else {
+          setCosts([data as StoreCost, ...costs]);
+          setUMsg("电费已录入，将进入净利与花费拆解核算");
+          setUAmount("");
+        }
+      }
+    } catch (err) {
+      setUMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
+    } finally {
+      setUBusy(false);
+    }
+  }
+
   function resetForm() {
     setEditingId(null);
     setMonth("");
@@ -162,6 +272,42 @@ export default function StoreCostManager({
 
   return (
     <div>
+      {/* 指令53 D5：电费实报快捷区——按月按实际金额录入，未录入的月份不计入净利（脚注标明未取得）。 */}
+      <div style={{ borderBottom: "1px solid var(--border)", paddingBottom: 18, marginBottom: 22 }}>
+        <h3 style={{ margin: "0 0 6px", fontSize: 16 }}>电费实报</h3>
+        <p className="page-desc" style={{ margin: "0 0 12px" }}>
+          按门店 + 月份录入实际电费（万达智能电表自记、按实预付；友谊如有电费单据同样按实录入）。
+          同门店同月份重复提交会更新既有行；未录入的月份按「未取得，未计入」处理，不估算。
+        </p>
+        <form onSubmit={onUtilitySubmit}>
+          <div className="form-row">
+            <div className="field">
+              <label htmlFor="uc-scope">门店</label>
+              <select id="uc-scope" value={uScope} onChange={(e) => onUScopeChange(e.target.value as StoreScope)}>
+                <option value="wanda">{STORE_LABEL.wanda}</option>
+                <option value="friendship">{STORE_LABEL.friendship}</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="uc-month">月份</label>
+              <input id="uc-month" type="month" value={uMonth} onChange={(e) => setUMonth(e.target.value)} />
+            </div>
+            <div className="field">
+              <label htmlFor="uc-amount">电费金额（元）</label>
+              <input id="uc-amount" value={uAmount} onChange={(e) => setUAmount(e.target.value)} inputMode="decimal" placeholder="按实际金额填" />
+            </div>
+            <div className="field">
+              <label htmlFor="uc-note">备注</label>
+              <input id="uc-note" value={uNote} onChange={(e) => setUNote(e.target.value)} placeholder="如：智能电表自记、按实预付" />
+            </div>
+          </div>
+          <button type="submit" className="btn" disabled={uBusy}>
+            录入电费
+          </button>
+          {uMsg ? <div className="access-msg">{uMsg}</div> : null}
+        </form>
+      </div>
+
       <form onSubmit={onSubmit} style={{ marginBottom: 24 }}>
         <div className="form-row">
           <div className="field">
