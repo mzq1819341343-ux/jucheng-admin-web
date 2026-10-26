@@ -25,6 +25,7 @@
     "regression:390": "node scripts/regression/audit-390.mjs",
     "regression:staff": "node scripts/regression/audit-staff.mjs",
     "regression:anchors": "node scripts/regression/audit-anchors.mjs",
+    "regression:status": "node scripts/regression/audit-status-consistency.mjs",
     "regression:online": "node scripts/regression/audit-online.mjs",
     "shots": "node scripts/regression/capture-help-shots.mjs"
   },
