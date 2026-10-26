@@ -2,21 +2,18 @@
 
 import { useMemo, useState } from "react";
 import type { ExpenseClaim, Role } from "@/lib/data";
-import { EXPENSE_SCOPE_LABEL, type ExpenseScope, type ExpenseStatus } from "@/lib/expenses";
+import { EXPENSE_SCOPE_LABEL, isOverdueUnreimbursed, EXPENSE_OVERDUE_DAYS, type ExpenseScope, type ExpenseStatus } from "@/lib/expenses";
 import { money2 } from "@/lib/format";
 import { downloadExcel } from "@/lib/excel";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const DEMO_OWN_ID = "demo-current-user";
 
-/** 未报销超期阈值（指令46 B9 / 指令D7）：发生日距今超过 14 天仍未报销 → 站内「超期」标记（不发通知）。 */
-const OVERDUE_DAYS = 14;
+/** 超期判定统一走 lib/expenses 的 isOverdueUnreimbursed（与顶栏超期计数同源）。 */
+const OVERDUE_DAYS = EXPENSE_OVERDUE_DAYS;
 
-function isOverdueUnreimbursed(claim: ExpenseClaim): boolean {
-  if (claim.status !== "unreimbursed") return false;
-  const claimedAt = new Date(`${claim.claim_date}T00:00:00`).getTime();
-  if (Number.isNaN(claimedAt)) return false;
-  return Math.floor((Date.now() - claimedAt) / 86_400_000) > OVERDUE_DAYS;
+function isOverdueClaim(claim: ExpenseClaim): boolean {
+  return isOverdueUnreimbursed(claim.claim_date, claim.status);
 }
 
 function localMode(claim: ExpenseClaim | null, demo: boolean): boolean {
@@ -505,7 +502,7 @@ export default function ExpenseManager({
                     <span className={`status-badge ${claim.status === "reimbursed" ? "is-done" : "is-pending"}`}>
                       {claim.status === "reimbursed" ? "已报销" : "未报销"}
                     </span>
-                    {isOverdueUnreimbursed(claim) ? (
+                    {isOverdueClaim(claim) ? (
                       <>
                         {" "}
                         <span className="status-badge is-overdue" title={`发生日距今超过 ${OVERDUE_DAYS} 天仍未报销`}>

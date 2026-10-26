@@ -9,17 +9,27 @@ import {
   aggregateExpenseClaims,
   type ExpenseMonthlyAgg,
 } from "@/lib/data";
+import { isOverdueUnreimbursed } from "@/lib/expenses";
 import { money, money2, int } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-function SummaryCards({ rows, latestMonth }: { rows: ExpenseMonthlyAgg[]; latestMonth: string }) {
+function SummaryCards({
+  rows,
+  latestMonth,
+  overdueSub,
+}: {
+  rows: ExpenseMonthlyAgg[];
+  latestMonth: string;
+  /** 指令53 D7：未报销合计卡的超期说明（明细角色给超期笔数；合伙人给不可见说明）。 */
+  overdueSub?: string;
+}) {
   const unreimbursed = rows.reduce((s, r) => s + r.unreimbursed_total, 0);
   const reimbursed = rows.reduce((s, r) => s + r.reimbursed_total, 0);
   const latest = rows.find((r) => r.month === latestMonth);
   return (
     <div className="kpi-row">
-      <KpiCard label="未报销合计（全部月份）" value={money(unreimbursed)} unit="元" />
+      <KpiCard label="未报销合计（全部月份）" value={money(unreimbursed)} unit="元" sub={overdueSub} />
       <KpiCard label="已报销合计（全部月份）" value={money(reimbursed)} unit="元" />
       <KpiCard
         label={`本月公司花费合计（${latestMonth}）`}
@@ -51,7 +61,11 @@ export default async function ExpensesPage() {
           <p className="page-desc">
             合伙人仅看公司汇总，不显示报销明细、报销人或录入表单。未报销也属于已经发生的公司花费。
           </p>
-          <SummaryCards rows={agg} latestMonth={latestMonth} />
+          <SummaryCards
+            rows={agg}
+            latestMonth={latestMonth}
+            overdueSub="超期笔数按逐单发生日计算，合伙人汇总不含逐单日期，仅老板 / 本人明细可见"
+          />
           <h2 className="section-title">按月汇总</h2>
           <div className="card table-wrap">
             {agg.length === 0 ? (
@@ -92,6 +106,8 @@ export default async function ExpensesPage() {
   const currentMonth = new Date().toISOString().slice(0, 7);
   const latestMonth = agg[0]?.month ?? currentMonth;
   const isStaff = user.role === "staff";
+  // 指令53 D7：顶栏超期笔数——按当前角色可见范围（老板全部 / 店员自己）统计，与行内徽标同判定。
+  const overdueCount = claims.filter((c) => isOverdueUnreimbursed(c.claim_date, c.status)).length;
 
   return (
     <>
@@ -110,7 +126,11 @@ export default async function ExpensesPage() {
           {user.demo ? " 当前为演示模式：本地样例数据，不写库。" : ""}
         </p>
 
-        <SummaryCards rows={agg} latestMonth={latestMonth} />
+        <SummaryCards
+          rows={agg}
+          latestMonth={latestMonth}
+          overdueSub={`其中超期 ${overdueCount} 笔（发生超 14 天未报销）`}
+        />
 
         <h2 className="section-title">{isStaff ? "我创建的报销单" : "全部报销单"}</h2>
         <div className="card">
