@@ -12,7 +12,7 @@ import {
   storeCostsTotalForMonth,
   describeMonthCosts,
 } from "@/lib/data";
-import { buildOperatingMetrics } from "@/lib/operating";
+import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
 import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -121,7 +121,7 @@ export default async function OverviewPage({
                     <strong>{money2(latestOp?.companyNetProfit)} 元</strong>
                   </div>
                   <div className="net-line">
-                    <span>利润率（净利润 ÷ 当月分润）</span>
+                    <span>利润率（分润）（净利润 ÷ 当月分润）</span>
                     <strong>{latestOp?.profitMargin === null || !latestOp ? "—" : pct(latestOp.profitMargin)}</strong>
                   </div>
                 </div>
@@ -130,17 +130,28 @@ export default async function OverviewPage({
             {sensitive && latestOp ? (
               <div className="kpi-row" style={{ marginTop: 16 }}>
                 <KpiCard
-                  label="本月利润率（净利润 ÷ 当月分润）"
+                  label="本月利润率（分润）"
                   value={latestOp.profitMargin === null ? "—" : latestOp.profitMargin.toFixed(1)}
                   unit={latestOp.profitMargin === null ? undefined : "%"}
-                  sub={`公司口径净利 ${money2(latestOp.companyNetProfit)} 元`}
+                  sub={`公司口径净利 ${money2(latestOp.companyNetProfit)} 元 ÷ 当月分润 ${money2(latestOp.profit)} 元`}
                   tone={latestOp.profitMargin !== null && latestOp.profitMargin < 0 ? "negative" : "default"}
+                />
+                <KpiCard
+                  label="本月利润率（营收）"
+                  value={latestOp.revenueMargin === null ? "—" : latestOp.revenueMargin.toFixed(1)}
+                  unit={latestOp.revenueMargin === null ? undefined : "%"}
+                  sub={
+                    latestOp.revenueMargin === null
+                      ? "营收口径待接入（订单金额数据缺失），接入后自动出数"
+                      : `公司口径净利 ${money2(latestOp.companyNetProfit)} 元 ÷ 当月营收 ${money2(latestOp.revenue)} 元`
+                  }
+                  tone={latestOp.revenueMargin !== null && latestOp.revenueMargin < 0 ? "negative" : "default"}
                 />
                 <KpiCard
                   label={`年回报率（${operating.annual.label}）`}
                   value={operating.annual.returnRate === null ? "—" : operating.annual.returnRate.toFixed(1)}
                   unit={operating.annual.returnRate === null ? undefined : "%"}
-                  sub={`覆盖月份：${operating.annual.coverageMonths.join("、") || "—"}｜年度投入成本 ${money2(operating.annual.investedCost)} 元｜近12个月 ${operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}（覆盖 ${operating.rolling12.coverageMonths.join("、") || "—"}）`}
+                  sub={`净利覆盖 ${operating.annual.coverageMonths.join("、") || "—"}｜投入覆盖 ${coverageRange(operating.annual.investedCoverageMonths)}（门店成本 ${money2(operating.annual.storeCostsTotal)} + 报销 ${money2(operating.annual.expenseAllTotal)} + 工资实发 ${money2(operating.annual.wageTotal)}）｜近12个月 ${operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}`}
                   tone={operating.annual.returnRate !== null && operating.annual.returnRate < 0 ? "negative" : "default"}
                 />
               </div>

@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import { KpiValue } from "@/components/KpiCard";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
-import { buildOperatingMetrics } from "@/lib/operating";
+import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
 import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -65,7 +65,8 @@ export default async function AihuishouReportPage() {
                     <th>净利暂定（元）</th>
                     <th>当月报销花费（元）</th>
                     <th>公司口径净利（元）</th>
-                    <th>利润率（净利润 ÷ 当月分润）</th>
+                    <th>利润率（分润）</th>
+                    <th>利润率（营收）</th>
                   </>
                 ) : (
                   <th>敏感列</th>
@@ -86,8 +87,9 @@ export default async function AihuishouReportPage() {
                       <td>{money2(r.per_capita_profit)}</td>
                       <td>{money2(r.net_profit_provisional)}</td>
                       <td>{money2(operatingByMonth.get(r.month)?.expenseTotal)}</td>
-                      <td>{operatingByMonth.get(r.month)?.companyNetProfit === null ? "—" : money2(operatingByMonth.get(r.month)?.companyNetProfit)}</td>
-                      <td>{operatingByMonth.get(r.month)?.profitMargin === null ? "—" : pct(operatingByMonth.get(r.month)?.profitMargin)}</td>
+                      <td>{operatingByMonth.get(r.month)?.companyNetProfit == null ? "—" : money2(operatingByMonth.get(r.month)?.companyNetProfit)}</td>
+                      <td>{operatingByMonth.get(r.month)?.profitMargin == null ? "—" : pct(operatingByMonth.get(r.month)?.profitMargin)}</td>
+                      <td>{operatingByMonth.get(r.month)?.revenueMargin == null ? "—" : pct(operatingByMonth.get(r.month)?.revenueMargin)}</td>
                     </>
                   ) : (
                     <td className="locked-cell">无权限</td>
@@ -106,6 +108,7 @@ export default async function AihuishouReportPage() {
                     <td>—</td>
                     <td>—</td>
                     <td>{money2(totalExpense)}</td>
+                    <td>—</td>
                     <td>—</td>
                     <td>—</td>
                   </>
@@ -159,8 +162,12 @@ export default async function AihuishouReportPage() {
                   <strong>{money2(sepOp?.companyNetProfit)} 元</strong>
                 </div>
                 <div className="net-line">
-                  <span>利润率（净利润 ÷ 当月分润）</span>
-                  <strong>{sepOp?.profitMargin === null ? "—" : pct(sepOp?.profitMargin)}</strong>
+                  <span>利润率（分润）（净利润 ÷ 当月分润）</span>
+                  <strong>{sepOp?.profitMargin == null ? "—" : pct(sepOp?.profitMargin)}</strong>
+                </div>
+                <div className="net-line">
+                  <span>利润率（营收）（净利润 ÷ 当月营收）</span>
+                  <strong>{sepOp?.revenueMargin == null ? "—（营收口径待接入）" : pct(sepOp?.revenueMargin)}</strong>
                 </div>
               </div>
             </section>
@@ -169,17 +176,18 @@ export default async function AihuishouReportPage() {
             <div className="card">
               <p style={{ marginTop: 0 }}>
                 <strong>年回报率：{operating.annual.returnRate === null ? "—" : pct(operating.annual.returnRate)}</strong>
-                （覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}；年度净利润 {money2(operating.annual.annualNetProfit)} 元；
+                （净利覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}；年度净利润 {money2(operating.annual.annualNetProfit)} 元；
                 年度投入成本 {money2(operating.annual.investedCost)} 元 = 门店成本合计 {money2(operating.annual.storeCostsTotal)} 元
-                + 已报销公司花费 {money2(operating.annual.reimbursedExpenseTotal)} 元。）
+                + 报销花费 {money2(operating.annual.expenseAllTotal)} 元（未报销 + 已报销全计）
+                + 工资实发合计 {money2(operating.annual.wageTotal)} 元；投入覆盖月份：{coverageRange(operating.annual.investedCoverageMonths)}。）
               </p>
               <p>
                 近12个月：{operating.rolling12.label}，年回报率 {operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}
-                （覆盖月份：{operating.rolling12.coverageMonths.join("、") || "—"}；净利润 {money2(operating.rolling12.annualNetProfit)} 元；
-                投入成本 {money2(operating.rolling12.investedCost)} 元）。
+                （净利覆盖月份：{operating.rolling12.coverageMonths.join("、") || "—"}；净利润 {money2(operating.rolling12.annualNetProfit)} 元；
+                投入成本 {money2(operating.rolling12.investedCost)} 元；投入覆盖月份：{coverageRange(operating.rolling12.investedCoverageMonths)}）。
               </p>
               <p className="page-desc" style={{ marginBottom: 0 }}>
-                年度投入成本 = 门店成本合计（store_costs）+ 已报销公司花费（expense_claims 中 status=reimbursed）。
+                年回报率 = 年度净利润 ÷ 年度投入（指令45 口径）；年度投入 = 门店成本合计（store_costs）+ 报销花费（expense_claims，未报销与已报销均计入已发生）+ 工资实发合计（monthly_metrics 工资汇总）。
                 年度净利润 = 已核算月份公司口径净利合计；分母为 0 或无已核算月份时显示「—」。
               </p>
             </div>

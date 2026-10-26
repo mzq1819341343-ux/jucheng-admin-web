@@ -1,21 +1,30 @@
 /**
- * 经营核算单一来源（指令44 块C）。
- * 所有页面都从这里取门店净利、公司口径净利、利润率与年回报率，禁止各页另算。
+ * 经营核算单一来源（指令44 块C 建立，指令45 块1 修订公式）。
+ * 所有页面都从这里取门店净利、公司口径净利、双利润率与年回报率，禁止各页另算。
  *
- * 口径：
+ * 口径（指令45 定版）：
  * - 门店净利暂定（完整口径） = monthly_metrics.net_profit_provisional（已扣工资分摊、已知扣款）
  *   − 当月 store_costs 合计。
- * - 当月报销花费 = expense_claims 当月全部金额（已报销 + 未报销，均已发生）。
+ * - 当月报销花费 = expense_claims 当月全部金额（已报销 + 未报销，均计入已发生花费）。
  * - 公司口径净利 = 门店净利暂定 − 当月报销花费。
- * - 利润率（月） = 公司口径净利 ÷ 当月分润 × 100。
+ * - 利润率（分润） = 公司口径净利 ÷ 当月分润 × 100。
+ * - 利润率（营收） = 公司口径净利 ÷ 当月营收 × 100；营收暂无数据源（订单金额大面积缺失），
+ *   revenue 入参为 null 时不出数，页面显示「—」，严禁拿分润冒充营收。
  * - 只有 net_profit_provisional 非空的月份才算完整口径；其余月份公司净利 / 利润率不出数（null）。
- * - 年度投入成本 = 年内 store_costs 合计 + 年内 expense_claims 已报销金额。
- * - 年度净利润 = 年内已核算月份的公司口径净利合计。
+ * - 年回报率（45 版） = 年度净利润 ÷ 年度投入；
+ *   年度投入 = 门店成本合计（store_costs） + 报销花费（未报销 + 已报销全计）
+ *            + 工资实发合计（monthly_metrics 工资汇总 wage_cost）。
+ *   年度净利润 = 已核算月份的公司口径净利合计。
+ * - 年度窗口截到数据最新月（不把未来月份的种子成本计入本年投入）；
+ *   净利覆盖月份与投入覆盖月份分别标注，分母为 0 或无已核算月份时不出数。
  */
 
 export interface OperatingMetricInput {
   month: string;
   profit?: number | null;
+  /** 当月营收：暂无数据源，调用方传 null / 不传；接入后自动出「利润率（营收）」。 */
+  revenue?: number | null;
+  wage_cost?: number | null;
   net_profit_provisional?: number | null;
 }
 
@@ -33,6 +42,8 @@ export interface OperatingExpenseInput {
 export interface MonthlyOperating {
   month: string;
   profit: number | null;
+  revenue: number | null;
+  wageCost: number | null;
   baseNetProfit: number | null;
   storeCosts: number;
   storeNetProfit: number | null;
@@ -40,7 +51,10 @@ export interface MonthlyOperating {
   expenseReimbursed: number;
   expenseUnreimbursed: number;
   companyNetProfit: number | null;
+  /** 利润率（分润口径）% */
   profitMargin: number | null;
+  /** 利润率（营收口径）%：营收未接入时恒为 null */
+  revenueMargin: number | null;
   complete: boolean;
 }
 
@@ -48,11 +62,18 @@ export interface ReturnSummary {
   label: string;
   periodStart: string | null;
   periodEnd: string | null;
+  /** 净利覆盖月份：窗口内具备完整净利口径的月份 */
   coverageMonths: string[];
+  /** 投入覆盖月份：窗口内有门店成本 / 报销 / 工资任一投入数据的月份 */
+  investedCoverageMonths: string[];
   annualNetProfit: number | null;
   investedCost: number | null;
   storeCostsTotal: number;
-  reimbursedExpenseTotal: number;
+  /** 报销花费（未报销 + 已报销全计，45 版口径） */
+  expenseAllTotal: number;
+  expenseReimbursedTotal: number;
+  /** 工资实发合计（monthly_metrics 工资汇总） */
+  wageTotal: number;
   returnRate: number | null;
 }
 
@@ -108,22 +129,33 @@ function buildReturnSummary(params: {
     complete.length > 0
       ? complete.reduce((s, m) => s + (m.companyNetProfit ?? 0), 0)
       : null;
-  const storeCostsTotal = storeCosts
-    .filter((c) => inPeriod(c.month))
-    .reduce((s, c) => s + Number(c.amount ?? 0), 0);
-  const reimbursedExpenseTotal = expenses
-    .filter((e) => e.status === "reimbursed" && inPeriod(e.claim_date.slice(0, 7)))
+  const storeCostsInPeriod = storeCosts.filter((c) => inPeriod(c.month));
+  const storeCostsTotal = storeCostsInPeriod.reduce((s, c) => s + Number(c.amount ?? 0), 0);
+  const expensesInPeriod = expenses.filter((e) => inPeriod(e.claim_date.slice(0, 7)));
+  const expenseAllTotal = expensesInPeriod.reduce((s, e) => s + Number(e.amount ?? 0), 0);
+  const expenseReimbursedTotal = expensesInPeriod
+    .filter((e) => e.status === "reimbursed")
     .reduce((s, e) => s + Number(e.amount ?? 0), 0);
-  const investedCost = storeCostsTotal + reimbursedExpenseTotal;
+  const monthsInPeriod = months.filter((m) => inPeriod(m.month));
+  const wageTotal = monthsInPeriod.reduce((s, m) => s + Number(m.wageCost ?? 0), 0);
+  const investedCoverage = new Set<string>();
+  for (const m of monthsInPeriod) if (m.wageCost !== null) investedCoverage.add(m.month);
+  for (const c of storeCostsInPeriod) investedCoverage.add(c.month);
+  for (const e of expensesInPeriod) investedCoverage.add(e.claim_date.slice(0, 7));
+  const investedCoverageMonths = [...investedCoverage].sort();
+  const investedCost = storeCostsTotal + expenseAllTotal + wageTotal;
   return {
     label,
     periodStart: startMonth,
     periodEnd: endMonth,
     coverageMonths,
+    investedCoverageMonths,
     annualNetProfit,
     investedCost: complete.length > 0 ? investedCost : null,
     storeCostsTotal,
-    reimbursedExpenseTotal,
+    expenseAllTotal,
+    expenseReimbursedTotal,
+    wageTotal,
     returnRate:
       complete.length > 0 && investedCost !== 0 && annualNetProfit !== null
         ? (annualNetProfit / investedCost) * 100
@@ -152,9 +184,16 @@ export function buildOperatingMetrics(input: {
         companyNetProfit === null || !metric.profit
           ? null
           : (companyNetProfit / metric.profit) * 100;
+      const revenue = metric.revenue ?? null;
+      const revenueMargin =
+        companyNetProfit === null || !revenue
+          ? null
+          : (companyNetProfit / revenue) * 100;
       return {
         month: metric.month,
         profit: metric.profit ?? null,
+        revenue,
+        wageCost: metric.wage_cost ?? null,
         baseNetProfit: baseNetProfit ?? null,
         storeCosts: monthCosts,
         storeNetProfit,
@@ -163,19 +202,22 @@ export function buildOperatingMetrics(input: {
         expenseUnreimbursed: exp.unreimbursed,
         companyNetProfit,
         profitMargin,
+        revenueMargin,
         complete,
       };
     });
 
   const completeMonths = months.filter((m) => m.complete);
   const latestComplete = completeMonths[completeMonths.length - 1] ?? null;
+  const lastDataMonth = months[months.length - 1]?.month ?? null;
 
-  if (!latestComplete) {
-    const fallbackYear = months[months.length - 1]?.month.slice(0, 4) ?? "2026";
+  if (!latestComplete || !lastDataMonth) {
+    const fallbackYear = lastDataMonth?.slice(0, 4) ?? "2026";
+    const emptyEnd = lastDataMonth ?? `${fallbackYear}-12`;
     const emptyAnnual = buildReturnSummary({
       label: `${fallbackYear} 年 · 按已核算月份`,
       startMonth: `${fallbackYear}-01`,
-      endMonth: `${fallbackYear}-12`,
+      endMonth: emptyEnd,
       months,
       storeCosts,
       expenses,
@@ -183,7 +225,7 @@ export function buildOperatingMetrics(input: {
     const emptyRolling = buildReturnSummary({
       label: "近12个月 · 按已核算月份",
       startMonth: `${fallbackYear}-01`,
-      endMonth: `${fallbackYear}-12`,
+      endMonth: emptyEnd,
       months,
       storeCosts,
       expenses,
@@ -195,7 +237,7 @@ export function buildOperatingMetrics(input: {
   const annual = buildReturnSummary({
     label: `${year} 年 · 按已核算月份`,
     startMonth: `${year}-01`,
-    endMonth: `${year}-12`,
+    endMonth: lastDataMonth,
     months,
     storeCosts,
     expenses,
@@ -212,4 +254,11 @@ export function buildOperatingMetrics(input: {
   });
 
   return { months, latestComplete, annual, rolling12 };
+}
+
+/** 投入覆盖标注：如「2026-01 ~ 2026-09」；无数据时「—」。 */
+export function coverageRange(months: string[]): string {
+  if (months.length === 0) return "—";
+  if (months.length === 1) return months[0];
+  return `${months[0]} ~ ${months[months.length - 1]}`;
 }

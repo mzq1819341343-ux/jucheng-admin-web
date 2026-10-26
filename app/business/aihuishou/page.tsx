@@ -2,7 +2,7 @@ import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
-import { buildOperatingMetrics } from "@/lib/operating";
+import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
 import { STORE_SHORT_LABEL } from "@/lib/stores";
 import { money, money2, int, pct } from "@/lib/format";
 
@@ -118,46 +118,37 @@ export default async function DashboardPage() {
 
         {sensitive && latestOp ? (
           <>
-            <section className="net-panel" aria-label="本月利润率">
-              <div>
-                <div className="net-panel-label">
-                  <span className="en">PROFIT MARGIN</span> · 本月利润率（净利润 ÷ 当月分润）
-                </div>
-                <KpiValue
-                  value={latestOp.profitMargin === null ? "—" : latestOp.profitMargin.toFixed(1)}
-                  unit={latestOp.profitMargin === null ? undefined : "%"}
-                  tone={latestOp.profitMargin !== null && latestOp.profitMargin < 0 ? "negative" : "default"}
-                />
-                <div className="kpi-sub">
-                  旁注：公司口径净利 {money2(latestOp.companyNetProfit)} 元 · 当月分润 {money2(latestOp.profit)} 元
-                </div>
-              </div>
-              <div className="net-panel-breakdown">
-                <div className="net-line">
-                  <span>门店净利暂定（完整口径）</span>
-                  <strong>{money2(latestOp.storeNetProfit)} 元</strong>
-                </div>
-                <div className="net-line">
-                  <span>公司花费（报销）当月（未报销 {money2(latestOp.expenseUnreimbursed)} 元）</span>
-                  <strong className="negative-text">−{money2(latestOp.expenseTotal)} 元</strong>
-                </div>
-                <div className="net-line">
-                  <span>公司口径净利</span>
-                  <strong>{money2(latestOp.companyNetProfit)} 元</strong>
-                </div>
-                <div className="net-line">
-                  <span>年回报率（{operating.annual.label}）</span>
-                  <strong>{operating.annual.returnRate === null ? "—" : pct(operating.annual.returnRate)}</strong>
-                </div>
-                <div className="net-line">
-                  <span>{operating.rolling12.label}</span>
-                  <strong>{operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}</strong>
-                </div>
-              </div>
-            </section>
+            <div className="kpi-row" style={{ marginTop: 16 }}>
+              <KpiCard
+                label={`利润率（分润）（${latestOp.month}）`}
+                value={latestOp.profitMargin === null ? "—" : latestOp.profitMargin.toFixed(1)}
+                unit={latestOp.profitMargin === null ? undefined : "%"}
+                sub={`公司口径净利 ${money2(latestOp.companyNetProfit)} 元 ÷ 当月分润 ${money2(latestOp.profit)} 元`}
+                tone={latestOp.profitMargin !== null && latestOp.profitMargin < 0 ? "negative" : "default"}
+              />
+              <KpiCard
+                label={`利润率（营收）（${latestOp.month}）`}
+                value={latestOp.revenueMargin === null ? "—" : latestOp.revenueMargin.toFixed(1)}
+                unit={latestOp.revenueMargin === null ? undefined : "%"}
+                sub={
+                  latestOp.revenueMargin === null
+                    ? "营收口径待接入（订单金额数据缺失），接入后自动出数"
+                    : `公司口径净利 ${money2(latestOp.companyNetProfit)} 元 ÷ 当月营收 ${money2(latestOp.revenue)} 元`
+                }
+                tone={latestOp.revenueMargin !== null && latestOp.revenueMargin < 0 ? "negative" : "default"}
+              />
+              <KpiCard
+                label={`年回报率（${operating.annual.label}）`}
+                value={operating.annual.returnRate === null ? "—" : operating.annual.returnRate.toFixed(1)}
+                unit={operating.annual.returnRate === null ? undefined : "%"}
+                sub={`净利覆盖 ${operating.annual.coverageMonths.join("、") || "—"}｜投入覆盖 ${coverageRange(operating.annual.investedCoverageMonths)}｜近12个月 ${operating.rolling12.returnRate === null ? "—" : pct(operating.rolling12.returnRate)}`}
+                tone={operating.annual.returnRate !== null && operating.annual.returnRate < 0 ? "negative" : "default"}
+              />
+            </div>
             <p className="page-desc" style={{ marginTop: 12 }}>
-              净利暂定仅最新月为完整口径（扣工资分摊、已知扣款、门店成本、报销花费），其余月份待补齐后出数。
-              年回报率覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}。
+              净利已扣门店成本与公司花费（报销，未报销亦计入已发生花费）；净利暂定仅最新月为完整口径，其余月份待补齐后出数。
+              年回报率 = 年度净利润 ÷ 年度投入（门店成本合计 + 报销花费（未报销 + 已报销） + 工资实发合计）；
+              净利覆盖月份：{operating.annual.coverageMonths.join("、") || "—"}；投入覆盖月份：{coverageRange(operating.annual.investedCoverageMonths)}。
             </p>
           </>
         ) : null}
