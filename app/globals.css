@@ -745,6 +745,16 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .alert-bar:hover { background: rgba(224, 85, 85, 0.16); border-color: rgba(224, 85, 85, 0.8); }
 .alert-bar strong { color: #e05555; font-variant-numeric: tabular-nums; }
 .alert-bar .alert-cta { color: var(--gold); font-weight: 600; white-space: nowrap; }
+/* ---------- 手册截图（指令55-1）：内嵌图可点开大图，图注标演示数据 ---------- */
+.help-shot { margin: 14px 0 6px; }
+.help-shot img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.help-shot figcaption { color: var(--muted); font-size: 13px; margin-top: 6px; }
 .empty { color: var(--muted); padding: 18px 4px; }
 ol.steps li, ul.plain li { margin-bottom: 7px; }
 .tag {

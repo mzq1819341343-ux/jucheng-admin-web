@@ -28,6 +28,13 @@ export default async function HelpPage() {
           <p style={{ margin: 0 }}>
             总览改版：先看英雄区扣成本后净利 → 次看双利润率 → 成本拆解默认折叠，展开看分项。年回报率收在英雄下方一行（自然年 + 近12个月，附覆盖月份）；月度目标未设定时只有一行按钮，点开再填。
           </p>
+          <figure className="help-shot">
+            <a href="/help-shots/overview.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/overview.png" alt="总览：扣成本后净利、双利润率与年回报率一行" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：总览英雄净利、双利润率与年回报率一行。点图看大图。</figcaption>
+          </figure>
         </div>
 
         <h2 className="section-title">角色与权限矩阵</h2>
@@ -226,6 +233,13 @@ export default async function HelpPage() {
               合同全文要点在「门店成本」页的合同台账区。
             </li>
           </ul>
+          <figure className="help-shot">
+            <a href="/help-shots/costs-utilities.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/costs-utilities.png" alt="门店成本页电费实报快捷区：门店、月份、电费金额与备注" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：门店成本页「电费实报」快捷区，万达备注预填电表口径。点图看大图。</figcaption>
+          </figure>
         </div>
 
         <h2 className="section-title">工资怎么算</h2>
@@ -258,6 +272,13 @@ export default async function HelpPage() {
               改生效起始月保存后立即翻转，可先预览再确认。
             </li>
           </ul>
+          <figure className="help-shot">
+            <a href="/help-shots/salary-rule-preview.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/salary-rule-preview.png" alt="工资页双版本预览：生效起始月未填时各月标待确认" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：工资页「双版本预览」——生效起始月未填时逐月标「待确认」。点图看大图。</figcaption>
+          </figure>
         </div>
 
         <h2 className="section-title">报销</h2>
@@ -291,6 +312,13 @@ export default async function HelpPage() {
               老板可在「报销」页直接删除；演示模式中的示例与切换只在本机页面演示，不写数据库。
             </li>
           </ul>
+          <figure className="help-shot">
+            <a href="/help-shots/expenses.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/expenses.png" alt="报销页：按状态筛选（全部 / 未报销 / 已报销）与当前筛选小计" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：报销页状态筛选 chips（图中落在「未报销」）与当前筛选小计。点图看大图。</figcaption>
+          </figure>
         </div>
 
         <h2 className="section-title">利润率 / 年回报率</h2>
@@ -360,6 +388,20 @@ export default async function HelpPage() {
               <strong>管成员与数据状态：</strong>在「成员与权限」（/members）邀请成员、设角色、勾选业务授权；在「数据刷新状态」（/status）看抓取日志、工资对账与配置更新时间。
             </li>
           </ol>
+          <figure className="help-shot">
+            <a href="/help-shots/dashboard-drill.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/dashboard-drill.png" alt="爱回收仪表盘公司花费拆分展开：门店成本按店与类型、报销已报未报、工资占比" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：仪表盘「公司花费拆分」展开态——门店成本逐层下钻到门店与类型。点图看大图。</figcaption>
+          </figure>
+          <figure className="help-shot">
+            <a href="/help-shots/compare.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/compare.png" alt="两店对比：友谊与万达同月分润、门店成本、净利与双利润率并排" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：两店对比——同月双店大卡并排（分润、门店成本、扣成本后净利、双利润率）。点图看大图。</figcaption>
+          </figure>
         </div>
 
         <h2 className="section-title">员工动线（只看自己的）</h2>
