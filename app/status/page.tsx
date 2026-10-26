@@ -3,12 +3,14 @@ import Nav from "@/components/Nav";
 import {
   getCurrentUser,
   getFetchLogs,
+  getFetchRefreshMarker,
   canSeeSensitive,
   getConfigFreshness,
   getSalaryDetailImport,
   getMetrics,
   salaryDetailByMonth,
 } from "@/lib/data";
+import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
 import { money2 } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,7 @@ export const dynamic = "force-dynamic";
 const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
   success: { text: "成功", cls: "tag tag-ok" },
   pending: { text: "待启用", cls: "tag tag-pending" },
+  need_user_login: { text: "待登录", cls: "tag tag-pending" },
   failed: { text: "失败", cls: "tag" },
   skipped: { text: "跳过", cls: "tag" },
 };
@@ -24,6 +27,7 @@ export default async function StatusPage() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
   const { logs } = await getFetchLogs();
+  const refreshMarker = await getFetchRefreshMarker(user);
   const freshness = await getConfigFreshness(user);
   const fmtTime = (v: string | null) => (v ? v.replace("T", " ").slice(0, 16) : null);
   const configUpdated =
@@ -90,6 +94,7 @@ export default async function StatusPage() {
         </div>
 
         <h2 className="section-title">数据源</h2>
+        <FetchRefreshMarkerLine marker={refreshMarker} />
         <div className="card table-wrap">
           <table className="report">
             <thead>

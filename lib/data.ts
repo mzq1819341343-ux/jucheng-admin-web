@@ -291,6 +291,32 @@ if (!error && data && data.length > 0) return { logs: data as FetchLog[], fromDb
 return { logs: FALLBACK_FETCH_LOGS, fromDb: false};
 }
 
+/**
+ * 数据刷新标记（指令53 C2）：只读 fetch_logs，不写任何假时间。
+ * - 最近成功抓取 = 最新一条 status='success' 的 created_at；
+ * - 待登录 = 最新一条日志就是 need_user_login（抓数管道会话失效时写入）；
+ * - 真实模式下库里无记录（fromDb=false 且非演示）→ hasLogs=false，
+ *   页面显示「暂无抓取记录（管道已备未启用）」。
+ */
+export interface FetchRefreshMarker {
+lastSuccessAt: string | null;
+needLogin: boolean;
+hasLogs: boolean;
+}
+
+export async function getFetchRefreshMarker(user?: CurrentUser): Promise<FetchRefreshMarker> {
+const { logs, fromDb } = await getFetchLogs();
+if (!fromDb && !(user?.demo)) {
+  return { lastSuccessAt: null, needLogin: false, hasLogs: false };
+}
+const success = logs.find((l) => l.status === "success");
+return {
+  lastSuccessAt: success ? String(success.created_at).replace("T", " ").slice(0, 16) : null,
+  needLogin: logs[0]?.status === "need_user_login",
+  hasLogs: logs.length > 0,
+};
+}
+
 // ============================================================
 // 工资体系 + 两店成本（指令41 / migration_003）
 // 骨架阶段：老板尚未提供工资规则与成本数字，查询为空属正常，页面走空态。

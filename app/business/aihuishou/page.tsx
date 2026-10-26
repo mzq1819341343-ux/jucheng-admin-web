@@ -1,7 +1,8 @@
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
-import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth } from "@/lib/data";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth, getFetchRefreshMarker } from "@/lib/data";
+import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
 import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import { STORE_SHORT_LABEL, COST_TYPE_LABEL, type CostType, type StoreScope } from "@/lib/stores";
 import { money, money2, int, pct } from "@/lib/format";
@@ -39,6 +40,8 @@ export default async function DashboardPage() {
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
   const netBase = latestOp?.baseNetProfit ?? null;
   const netAdjusted = latestOp?.storeNetProfit ?? null;
+  // 指令53 C2：数据刷新标记（只读 fetch_logs）。
+  const refreshMarker = await getFetchRefreshMarker(user);
 
   // 指令52-2：花费拆解下钻——门店成本按店、按类型（store_costs 原始行）分层，
   // 报销拆已报/未报，工资当月合计；占比统一以当月总花费为分母，与上方合计同源。
@@ -80,6 +83,7 @@ export default async function DashboardPage() {
           最新月份 {latest?.month}（两店合计）｜数据来源：爱回收驾驶舱 <span className="en">v3.3</span> 汇总（2026-01~09）
           {user.demo ? "｜当前为演示模式" : ""}
         </p>
+        <FetchRefreshMarkerLine marker={refreshMarker} />
 
         <div className="kpi-row">
           <KpiCard label={`当月总单量（${latest?.month ?? "—"}）`} value={int(latest?.orders)} unit="单" />
