@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  authCallbackPathWithoutSecrets,
+  beginPasswordCallback,
+} from "@/lib/supabase/password-callback";
 
 type Phase = "checking" | "ready" | "invalid" | "done";
 
 /**
  * 设密码承接页（插队任务 · 正式登录打通）：
- * Supabase 邀请 / 找回邮件的链接把会话放在 URL hash（或 ?code=）里，
+ * Supabase 邀请 / 找回邮件把会话放在 URL hash（或 ?code=）里，
  * 必须由浏览器端承接会话后才能调 updateUser 设密码。
  */
 export default function SetPasswordPage() {
@@ -27,38 +31,26 @@ export default function SetPasswordPage() {
     }
     let cancelled = false;
     const supabase = createClient();
+    const href = window.location.href;
 
-    async function init() {
-      // PKCE 流程：?code= 先换会话
-      const code = new URLSearchParams(window.location.search).get("code");
-      if (code) {
-        try {
-          await supabase.auth.exchangeCodeForSession(code);
-        } catch {
-          // 换码失败不直接判死刑，继续看 hash / 现有会话
-        }
-      }
-      const { data } = await supabase.auth.getSession();
+    beginPasswordCallback(
+      {
+        exchangeCodeForSession: (code) => supabase.auth.exchangeCodeForSession(code),
+        setSession: (tokens) => supabase.auth.setSession(tokens),
+        getSession: () => supabase.auth.getSession(),
+      },
+      href,
+    ).then((next) => {
       if (cancelled) return;
-      if (data.session) {
-        setPhase("ready");
-        return;
+      if (next === "ready") {
+        const cleaned = authCallbackPathWithoutSecrets(window.location.href);
+        window.history.replaceState(window.history.state, "", cleaned);
       }
-      // hash 中的 access_token 由 supabase-js 异步解析，监听会话事件兜底
-      const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!cancelled && session) {
-          setPhase("ready");
-          sub.subscription.unsubscribe();
-        }
-      });
-      window.setTimeout(() => {
-        if (!cancelled) {
-          sub.subscription.unsubscribe();
-          setPhase((p) => (p === "checking" ? "invalid" : p));
-        }
-      }, 3000);
-    }
-    init();
+      setPhase(next);
+    }).catch(() => {
+      if (!cancelled) setPhase("invalid");
+    });
+
     return () => {
       cancelled = true;
     };
