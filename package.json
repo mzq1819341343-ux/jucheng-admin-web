@@ -24,7 +24,8 @@
     "regression": "node scripts/regression/run-all.mjs",
     "regression:390": "node scripts/regression/audit-390.mjs",
     "regression:staff": "node scripts/regression/audit-staff.mjs",
-    "regression:online": "node scripts/regression/audit-online.mjs"
+    "regression:online": "node scripts/regression/audit-online.mjs",
+    "shots": "node scripts/regression/capture-help-shots.mjs"
   },
   "version": "0.1.0"
 }

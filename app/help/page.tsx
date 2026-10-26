@@ -33,7 +33,7 @@ export default async function HelpPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/overview.png" alt="总览：扣成本后净利、双利润率与年回报率一行" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：总览英雄净利、双利润率与年回报率一行。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：总览英雄净利、双利润率与年回报率一行。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -47,14 +47,14 @@ export default async function HelpPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/mobile-overview.png" alt="手机 390 宽总览：英雄净利、双利润率、年回报一行、月度目标与业务卡单列排布" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：手机上的总览——卡片单列、数字不溢出。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：手机上的总览——卡片单列、数字不溢出。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
           <figure className="help-shot">
             <a href="/help-shots/mobile-expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/mobile-expenses.png" alt="手机 390 宽报销页：汇总卡、建单表单、状态筛选与台账单列排布" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：手机上的报销页——表单纵排、筛选 chips 同行、台账在卡片内滑动。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：手机上的报销页——表单纵排、筛选 chips 同行、台账在卡片内滑动。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -265,7 +265,7 @@ export default async function HelpPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/costs-utilities.png" alt="门店成本页电费实报快捷区：门店、月份、电费金额与备注" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：门店成本页「电费实报」快捷区，万达备注预填电表口径。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：门店成本页「电费实报」快捷区，万达备注预填电表口径。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -304,7 +304,7 @@ export default async function HelpPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/salary-rule-preview.png" alt="工资页双版本预览：生效起始月未填时各月标待确认" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：工资页「双版本预览」——生效起始月未填时逐月标「待确认」。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：工资页「双版本预览」——生效起始月未填时逐月标「待确认」。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -344,7 +344,7 @@ export default async function HelpPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/expenses.png" alt="报销页：按状态筛选（全部 / 未报销 / 已报销）与当前筛选小计" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：报销页状态筛选 chips（图中落在「未报销」）与当前筛选小计。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：报销页状态筛选 chips（图中落在「未报销」）与当前筛选小计。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -420,14 +420,14 @@ export default async function HelpPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/dashboard-drill.png" alt="爱回收仪表盘公司花费拆分展开：门店成本按店与类型、报销已报未报、工资占比" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：仪表盘「公司花费拆分」展开态——门店成本逐层下钻到门店与类型。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：仪表盘「公司花费拆分」展开态——门店成本逐层下钻到门店与类型。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
           <figure className="help-shot">
             <a href="/help-shots/compare.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/help-shots/compare.png" alt="两店对比：友谊与万达同月分润、门店成本、净利与双利润率并排" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：两店对比——同月双店大卡并排（分润、门店成本、扣成本后净利、双利润率）。点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：两店对比——同月双店大卡并排（分润、门店成本、扣成本后净利、双利润率）。截图刷新：2026-10-27；点图看大图。</figcaption>
           </figure>
         </div>
 
