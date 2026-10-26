@@ -7,6 +7,7 @@ import DemoRoleSwitcher from "./DemoRoleSwitcher";
 import DemoBizSwitcher, { type DemoBiz } from "./DemoBizSwitcher";
 import ThemeToggle from "./ThemeToggle";
 import NavShell from "./NavShell";
+import MoreMenu from "./MoreMenu";
 
 /** 邮箱掩码（指令51）：顶栏不明文展示完整邮箱，只留首尾与域名，全址进 title。 */
 function maskEmail(email: string): string {
@@ -44,18 +45,15 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           {showAihuishou ? <Link href="/business/aihuishou">爱回收</Link> : null}
           <Link href="/salary">{user.role === "staff" ? "我的薪酬" : "工资"}</Link>
           <Link href="/expenses">报销</Link>
-          <details className="menu-more">
-            <summary>更多</summary>
-            <div className="menu-more-panel">
-              {showAihuishou ? <Link href="/business/aihuishou/reports">经营报表</Link> : null}
-              {showAihuishou ? <Link href="/business/aihuishou/compare">两店对比</Link> : null}
-              {showBizTools ? <Link href="/business/aihuishou/costs">门店成本</Link> : null}
-              {showBizTools ? <Link href="/business/aihuishou/breakdown">净利构成</Link> : null}
-              <Link href="/members">成员与权限</Link>
-              <Link href="/status">数据状态</Link>
-              <Link href="/help">帮助 · 操作手册</Link>
-            </div>
-          </details>
+          <MoreMenu>
+            {showAihuishou ? <Link href="/business/aihuishou/reports">经营报表</Link> : null}
+            {showAihuishou ? <Link href="/business/aihuishou/compare">两店对比</Link> : null}
+            {showBizTools ? <Link href="/business/aihuishou/costs">门店成本</Link> : null}
+            {showBizTools ? <Link href="/business/aihuishou/breakdown">净利构成</Link> : null}
+            <Link href="/members">成员与权限</Link>
+            <Link href="/status">数据状态</Link>
+            <Link href="/help">帮助 · 操作手册</Link>
+          </MoreMenu>
         </nav>
         <div className="userbox">
           <span className="user-role">
