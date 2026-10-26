@@ -41,8 +41,16 @@ function SummaryCards({
   );
 }
 
-export default async function ExpensesPage() {
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   const user = await getCurrentUser();
+  const { status } = await searchParams;
+  // 指令55-3：总览超期提醒条直达——带 ?status=unreimbursed 时列表初始落在「未报销」筛选。
+  const initialStatusFilter =
+    status === "unreimbursed" || status === "reimbursed" ? status : "all";
   const isPartner = user.role === "partner";
 
   if (isPartner) {
@@ -140,6 +148,7 @@ export default async function ExpensesPage() {
             role={user.role}
             userId={user.id}
             claimantName={user.displayName ?? user.email}
+            initialStatusFilter={initialStatusFilter}
           />
         </div>
       </main>

@@ -26,12 +26,15 @@ export default function ExpenseManager({
   role,
   userId,
   claimantName,
+  initialStatusFilter = "all",
 }: {
   initialClaims: ExpenseClaim[];
   demo: boolean;
   role: Role;
   userId: string | null;
   claimantName: string | null;
+  /** 指令55-3：总览提醒条直达时初始状态筛选（?status=unreimbursed）。 */
+  initialStatusFilter?: "all" | ExpenseStatus;
 }) {
   const currentUserKey = userId ?? DEMO_OWN_ID;
   const [claims, setClaims] = useState<ExpenseClaim[]>(() => {
@@ -57,7 +60,7 @@ export default function ExpenseManager({
     return initialClaims;
   });
   const [monthFilter, setMonthFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | ExpenseStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | ExpenseStatus>(initialStatusFilter);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [claimDate, setClaimDate] = useState("");
   const [title, setTitle] = useState("");

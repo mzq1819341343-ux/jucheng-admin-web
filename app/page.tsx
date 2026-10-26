@@ -8,6 +8,7 @@ import {
   canAccessBusiness,
   canSeeSensitive,
   getStoreCosts,
+  getExpenseClaims,
   getExpenseOperatingInput,
   storeCostsTotalForMonth,
   describeMonthCosts,
@@ -15,6 +16,7 @@ import {
   salaryDetailByMonth,
 } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
+import { isOverdueUnreimbursed } from "@/lib/expenses";
 import MonthlyTargetCard from "@/components/MonthlyTargetCard";
 import { getSiteTargets } from "@/lib/data";
 import { money, money2, int, pct } from "@/lib/format";
@@ -83,6 +85,17 @@ export default async function OverviewPage({
     }
   }
 
+  // 指令55-3：未报销超期提醒——与报销页顶栏计数、行内徽标同一判定（lib/expenses）。
+  // 老板按全部报销单、店员按本人创建范围统计；无超期则整条不渲染。
+  // 合伙人只看月度汇总、无逐单数据，不显示逐单提醒（口径见 /help 报销节）。
+  const overdueClaims =
+    hasAihuishou && user.role !== "partner"
+      ? (await getExpenseClaims(user)).filter((c) =>
+          isOverdueUnreimbursed(c.claim_date, c.status)
+        )
+      : [];
+  const overdueTotal = overdueClaims.reduce((s, c) => s + Number(c.amount ?? 0), 0);
+
   // 指令46 B8：月度目标 vs 实际（目标仅老板可设定；未设定显示「未设定」）。
   const siteTargets = hasAihuishou ? await getSiteTargets(user) : [];
   const targetActuals = rows.map((r) => ({
@@ -107,6 +120,17 @@ export default async function OverviewPage({
           <div className="notice">
             无权限：你未被授权进入该业务板块（或该板块尚未开放）。如需开通，请联系老板在「成员与权限」页为你勾选对应业务。
           </div>
+        ) : null}
+
+        {overdueClaims.length > 0 ? (
+          <Link href="/expenses?status=unreimbursed" className="alert-bar" role="alert">
+            <span>
+              报销超期提醒：<strong>{overdueClaims.length} 笔</strong>报销已超 14 天未报销，合计{" "}
+              <strong>{money2(overdueTotal)} 元</strong>
+              {user.role === "staff" ? "（仅统计你创建的报销单）" : ""}
+            </span>
+            <span className="alert-cta">去处理 →</span>
+          </Link>
         ) : null}
 
         {hasAihuishou ? (

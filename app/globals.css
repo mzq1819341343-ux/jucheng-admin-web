@@ -726,6 +726,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   font-size: 14.5px;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+/* ---------- 总览未报销超期提醒条（指令55-3）：可点直达报销未报销筛选 ---------- */
+.alert-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background: rgba(224, 85, 85, 0.1);
+  border: 1px solid rgba(224, 85, 85, 0.55);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 13px 18px;
+  margin-bottom: 20px;
+  font-size: 15px;
+  text-decoration: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.alert-bar:hover { background: rgba(224, 85, 85, 0.16); border-color: rgba(224, 85, 85, 0.8); }
+.alert-bar strong { color: #e05555; font-variant-numeric: tabular-nums; }
+.alert-bar .alert-cta { color: var(--gold); font-weight: 600; white-space: nowrap; }
 .empty { color: var(--muted); padding: 18px 4px; }
 ol.steps li, ul.plain li { margin-bottom: 7px; }
 .tag {
