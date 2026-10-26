@@ -324,6 +324,85 @@ export default async function HelpPage() {
           </ul>
         </div>
 
+        <h2 className="section-title">老板动线（日常巡店）</h2>
+        <div className="card">
+          <ol className="steps">
+            <li>
+              <strong>看总览（/）：</strong>先看英雄区「扣成本后净利」判断本月赚没赚，再看次级双利润率卡（分润 / 营收）。
+            </li>
+            <li>
+              <strong>拆成本：</strong>展开总览「成本拆解」，或进爱回收仪表盘（/business/aihuishou）看花费拆解下钻——工资、门店成本、报销各占多少，逐层展开到门店与类型。
+            </li>
+            <li>
+              <strong>比两店：</strong>进「两店对比」（/business/aihuishou/compare）切换月份，看友谊 vs 万达的分润、门店成本、净利与双利润率并排。
+            </li>
+            <li>
+              <strong>管报销：</strong>进「报销」（/expenses）新建报销单，点行内状态在已报销 / 未报销间切换；顶栏看未报销合计与超期笔数，需要留档时导出 CSV / Excel。
+            </li>
+            <li>
+              <strong>管工资：</strong>进「工资」（/salary）在工资体系配置里维护规则与生效起始月（先看「双版本预览」确认新旧规则切换月），
+              用月度工资导入录入并发布员工工资，再到「工资明细（实表导入）」看逐人实发与对账差额。
+            </li>
+            <li>
+              <strong>管成本：</strong>进「门店成本」（/business/aihuishou/costs）核对合同台账，用通用表单录入房租等成本、
+              用「电费实报」按月录入实际电费；录入即进入净利与花费拆解核算，未录入的月份按未取得、不计入。
+            </li>
+            <li>
+              <strong>定目标：</strong>回总览「月度目标」卡设定本月目标（当月分润 / 公司口径净利 / 当月单量三选一，卡面会标明所选口径），之后在同一张卡看目标、实际与达成率。
+            </li>
+            <li>
+              <strong>管成员与数据状态：</strong>在「成员与权限」（/members）邀请成员、设角色、勾选业务授权；在「数据刷新状态」（/status）看抓取日志、工资对账与配置更新时间。
+            </li>
+          </ol>
+        </div>
+
+        <h2 className="section-title">员工动线（只看自己的）</h2>
+        <div className="card">
+          <ol className="steps">
+            <li>
+              <strong>登录：</strong>点老板邀请邮件里的链接设置密码，之后用邮箱 + 密码登录。
+            </li>
+            <li>
+              <strong>看工资：</strong>进「我的薪酬」（/salary），只显示你自己已发布月份的实发与构成（底薪 / 提成 / 扣款），下方有历史月份；
+              显示「本月工资尚未发布」是正常状态，等老板录入并发布即可。
+            </li>
+            <li>
+              <strong>报报销：</strong>进「我的报销」（/expenses）新建自己的报销单，可编辑、删除，并切换自己单据的已报销 / 未报销状态；
+              未报销超过 14 天的行会带「超期」标记，顶栏未报销合计旁也会显示你的超期笔数。
+            </li>
+            <li>
+              <strong>看经营：</strong>总览与爱回收板块可看经营汇总（单量、分润、上门单量、趋势）与被授权业务的内容。
+            </li>
+            <li>
+              <strong>看不到什么、为什么：</strong>净利、工资成本与任何他人的工资、门店成本、成员管理，以及未被授权的业务板块——
+              这些入口不会出现在你的页面里，直接输入地址也会被拦回。这是权限设置，不是故障；需要开通请联系老板。
+            </li>
+          </ol>
+        </div>
+
+        <h2 className="section-title">合伙人动线（只读汇总）</h2>
+        <div className="card">
+          <ol className="steps">
+            <li>
+              <strong>看总览（/）：</strong>看公司经营摘要与爱回收板块——扣成本后净利、双利润率、年回报与成本拆解（默认折叠，展开看分项）。
+            </li>
+            <li>
+              <strong>看报表与两店对比：</strong>进爱回收「经营报表」（/business/aihuishou/reports）与「两店对比」（/business/aihuishou/compare），
+              看两店分润、门店成本、扣成本后净利与利润率并排和逐月走势。
+            </li>
+            <li>
+              <strong>看报销汇总：</strong>进「报销」（/expenses）只看汇总卡与按月汇总表（合计 / 已报销 / 未报销 / 笔数），可导出月度汇总 CSV / Excel。
+            </li>
+            <li>
+              <strong>看工资与成本汇总：</strong>「工资」（/salary）只看门店月度工资汇总（人数与合计）；「门店成本」（/business/aihuishou/costs）只读查看合同台账与月度成本。
+            </li>
+            <li>
+              <strong>看不到什么、为什么：</strong>报销明细行与报销人、任何人的工资明细与工资实表明细不会显示；
+              成本、工资规则、月度目标与成员权限也不能修改——合伙人是只读汇总口径，明细与写入归老板，员工自己的单据归员工本人。
+            </li>
+          </ol>
+        </div>
+
         <h2 className="section-title">常用操作</h2>
         <div className="card">
           <ol className="steps">
