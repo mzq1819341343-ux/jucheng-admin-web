@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import CountUp from "./CountUp";
 
 /**
@@ -21,13 +21,15 @@ export function kpiScaleFor(value: string): number {
 export function KpiValue({
   value,
   unit,
+  tone = "default",
 }: {
   value: string;
   unit?: string;
+  tone?: "default" | "negative" | "positive";
 }) {
   const style = { "--kpi-scale": kpiScaleFor(value) } as CSSProperties;
   return (
-    <div className="kpi-value" style={style}>
+    <div className={`kpi-value${tone !== "default" ? ` kpi-${tone}` : ""}`} style={style}>
       <CountUp value={value} />
       {unit ? <span className="kpi-unit">{unit}</span> : null}
     </div>
@@ -40,15 +42,19 @@ export default function KpiCard({
   unit,
   sub,
   locked,
+  className,
+  tone = "default",
 }: {
   label: string;
   value: string;
   unit?: string;
-  sub?: string;
+  sub?: ReactNode;
   locked?: boolean;
+  className?: string;
+  tone?: "default" | "negative" | "positive";
 }) {
   return (
-    <div className="kpi-card">
+    <div className={`kpi-card${className ? ` ${className}` : ""}`}>
       <div className="kpi-label">{label}</div>
       {locked ? (
         <>
@@ -57,7 +63,7 @@ export default function KpiCard({
         </>
       ) : (
         <>
-          <KpiValue value={value} unit={unit} />
+          <KpiValue value={value} unit={unit} tone={tone} />
           {sub ? <div className="kpi-sub">{sub}</div> : null}
         </>
       )}

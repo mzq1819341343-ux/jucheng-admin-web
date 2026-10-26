@@ -71,13 +71,26 @@ export default async function DashboardPage() {
             )}
           </div>
           <KpiCard
-            label={latestCostTotal > 0 ? "净利暂定（当月，已扣已录入成本）" : "净利暂定（当月，未扣房租水电）"}
+            className="net-kpi-card"
+            tone={sensitive && netAdjusted !== null && netAdjusted < 0 ? "negative" : "default"}
+            label={latestCostTotal > 0 ? "净利暂定（当月，已扣门店成本）" : "净利暂定（当月，未扣房租水电）"}
             value={sensitive ? money(netAdjusted) : ""}
             unit="元"
             sub={
-              sensitive && latestCostTotal > 0 && latestCostDesc
-                ? `已扣门店成本 ${money2(latestCostTotal)} 元（${latestCostDesc.items}）`
-                : undefined
+              sensitive ? (
+                <>
+                  <span className="net-breakdown-line">
+                    扣成本前 {money2(netBase)} 元（已扣工资分摊 {money2(latest?.wage_cost)} 元与已知扣款）
+                  </span>
+                  {latestCostTotal > 0 && latestCostDesc ? (
+                    <span className="net-breakdown-line">
+                      门店成本 −{money2(latestCostTotal)} 元（{latestCostDesc.items}）
+                    </span>
+                  ) : (
+                    <span className="net-breakdown-line">门店成本未取得，未计入</span>
+                  )}
+                </>
+              ) : undefined
             }
             locked={!sensitive}
           />

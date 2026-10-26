@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
+import { KpiValue } from "@/components/KpiCard";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, storeCostsTotalForMonth, describeMonthCosts } from "@/lib/data";
-import { money2, int, pct } from "@/lib/format";
+import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,9 @@ export default async function AihuishouReportPage() {
   const costs = sensitive ? await getStoreCosts(user) : [];
   const sepCostTotal = storeCostsTotalForMonth(costs, "2026-09");
   const sepCostDesc = describeMonthCosts(costs, "2026-09");
+  const sepCombined = rows.find((r) => r.month === "2026-09");
+  const sepNetBase = sepCombined?.net_profit_provisional ?? null;
+  const sepNetAdjusted = sepNetBase === null ? null : sepNetBase - sepCostTotal;
 
   return (
     <>
@@ -98,6 +102,39 @@ export default async function AihuishouReportPage() {
             </tbody>
           </table>
         </div>
+
+        {sensitive && sepNetAdjusted !== null ? (
+          <>
+            <h2 className="section-title">最新完整口径汇总（2026-09）</h2>
+            <section className="net-summary-card" aria-label="2026-09 扣门店成本后净利汇总">
+              <div>
+                <div className="net-panel-label">
+                  <span className="en">NET AFTER STORE COSTS</span> · 扣门店成本后净利
+                </div>
+                <KpiValue
+                  value={money(sepNetAdjusted)}
+                  unit="元"
+                  tone={sepNetAdjusted < 0 ? "negative" : "positive"}
+                />
+                <div className="kpi-sub">两店合计 · 与爱回收仪表盘同一口径</div>
+              </div>
+              <div className="net-panel-breakdown">
+                <div className="net-line">
+                  <span>扣成本前净利暂定</span>
+                  <strong>{money2(sepNetBase)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>工资分摊与已知扣款</span>
+                  <strong>已含在扣成本前净利中</strong>
+                </div>
+                <div className="net-line">
+                  <span>门店成本（{sepCostDesc.items}）</span>
+                  <strong className="negative-text">−{money2(sepCostTotal)} 元</strong>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : null}
 
         <h2 className="section-title">两店汇总（到店口径，2026-01~09）</h2>
         <div className="card table-wrap">
