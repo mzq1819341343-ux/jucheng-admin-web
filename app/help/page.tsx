@@ -23,7 +23,7 @@ export default async function HelpPage() {
           当前账号角色：{ROLE_LABEL[user.role]}。本页说明各角色的权限范围与常用操作。
         </p>
 
-        <h2 className="section-title">角色与权限</h2>
+        <h2 className="section-title">角色与权限矩阵</h2>
         <div className="card table-wrap">
           <table className="report">
             <thead>
@@ -38,8 +38,8 @@ export default async function HelpPage() {
               <tr>
                 <td>业务板块入口</td>
                 <td>全部板块</td>
-                <td>仅被授权的板块</td>
-                <td>仅被授权的板块</td>
+                <td>仅被授权的板块（未授权不渲染）</td>
+                <td>仅被授权的板块（未授权不渲染）</td>
               </tr>
               <tr>
                 <td>经营报表（单量 / 分润 / 上门等）</td>
@@ -48,34 +48,58 @@ export default async function HelpPage() {
                 <td>可见</td>
               </tr>
               <tr>
-                <td>工资占分润比 / 净利暂定等敏感指标</td>
+                <td>净利 / 利润率 / 年回报率 / 净利构成</td>
                 <td>可见</td>
                 <td>可见</td>
+                <td>不显示（净利构成页直进也会被拦回）</td>
+              </tr>
+              <tr>
+                <td>工资规则（工资怎么算）</td>
+                <td>可配置 / 可改生效起始月</td>
+                <td>只读可见</td>
+                <td>只读可见</td>
+              </tr>
+              <tr>
+                <td>工资录入与导入（月度工资行 / CSV 导入）</td>
+                <td>可操作</td>
+                <td>不显示</td>
                 <td>不显示</td>
               </tr>
               <tr>
-                <td>工资（我的薪酬 / 门店汇总）</td>
-                <td>录入后可见</td>
-                <td>仅门店汇总</td>
-                <td>仅自己已发布月份</td>
+                <td>个人工资明细</td>
+                <td>全员可见</td>
+                <td>不显示</td>
+                <td>仅自己已发布的月份</td>
               </tr>
               <tr>
-                <td>门店成本（房租 / 水电 / 其他）</td>
+                <td>门店工资汇总（人数 / 合计）</td>
+                <td>可见</td>
+                <td>可见（仅已发布数据的汇总）</td>
+                <td>不显示</td>
+              </tr>
+              <tr>
+                <td>门店成本与合同台账</td>
                 <td>可录入 / 可见</td>
                 <td>只读可见</td>
-                <td>不显示</td>
+                <td>不显示（导航无入口，直进拦回）</td>
               </tr>
               <tr>
-                <td>报销台账</td>
+                <td>报销明细</td>
                 <td>全部明细，可新建 / 编辑 / 删除 / 切换状态</td>
-                <td>仅汇总卡与按月汇总，不看明细</td>
+                <td>不显示明细</td>
                 <td>仅自己创建的单，可新建 / 编辑 / 删除 / 切换状态</td>
               </tr>
               <tr>
-                <td>成员管理（邀请 / 改角色 / 按板块授权）</td>
-                <td>可管理</td>
-                <td>不可</td>
-                <td>不可</td>
+                <td>报销汇总与导出</td>
+                <td>全量汇总，明细 CSV 可导出</td>
+                <td>仅按月汇总，可导出汇总 CSV</td>
+                <td>仅自己范围的汇总与导出</td>
+              </tr>
+              <tr>
+                <td>成员列表与业务授权</td>
+                <td>可见可改（邀请 / 改角色 / 按板块授权）</td>
+                <td>不显示</td>
+                <td>不显示</td>
               </tr>
               <tr>
                 <td>数据范围</td>
@@ -86,6 +110,9 @@ export default async function HelpPage() {
             </tbody>
           </table>
         </div>
+        <p className="page-desc" style={{ marginTop: 12 }}>
+          本矩阵与数据库行级权限（<span className="en">RLS</span>）和页面渲染保持一致：表里写「不显示」的，页面不渲染入口、数据库也不返回数据，不是仅靠前端隐藏。
+        </p>
         <div className="card" style={{ marginTop: 20 }}>
           <ul className="plain">
             <li>
