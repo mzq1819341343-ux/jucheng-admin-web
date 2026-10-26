@@ -39,6 +39,15 @@ export default function StoreCostManager({
   const [uNote, setUNote] = useState("智能电表自记、按实预付");
   const [uMsg, setUMsg] = useState<string | null>(null);
   const [uBusy, setUBusy] = useState(false);
+  // 指令56-3b：行内校验错误（挂在对应字段下方，报错不提交）+ 选中门店/月份的录入状态提示。
+  const [uErrMonth, setUErrMonth] = useState<string | null>(null);
+  const [uErrAmt, setUErrAmt] = useState<string | null>(null);
+
+  // 指令56-3b：当前所选门店+月份的电费录入状态（空态/已录入提示与提交时的既有行判定同源）。
+  const uMonthValid = /^\d{4}-\d{2}$/.test(uMonth);
+  const uExisting = uMonthValid
+    ? costs.find((c) => c.scope === uScope && c.month === uMonth && c.cost_type === "utilities")
+    : undefined;
 
   function onUScopeChange(s: StoreScope) {
     setUScope(s);
@@ -50,13 +59,15 @@ export default function StoreCostManager({
 
   async function onUtilitySubmit(e: React.FormEvent) {
     e.preventDefault();
+    setUErrMonth(null);
+    setUErrAmt(null);
     if (!/^\d{4}-\d{2}$/.test(uMonth)) {
-      setUMsg("请填写月份（格式 2026-09）");
+      setUErrMonth("请选择月份（格式 YYYY-MM）");
       return;
     }
     const amt = Number(uAmount);
     if (uAmount.trim() === "" || Number.isNaN(amt)) {
-      setUMsg("金额需为数字（按电表实际读数 / 预付金额填，不估算）");
+      setUErrAmt("金额为空或不是数字：按电表实际金额填，不估算；未取得就先不录");
       return;
     }
     const existing = costs.find(
@@ -290,17 +301,49 @@ export default function StoreCostManager({
             </div>
             <div className="field">
               <label htmlFor="uc-month">月份</label>
-              <input id="uc-month" type="month" value={uMonth} onChange={(e) => setUMonth(e.target.value)} />
+              <input
+                id="uc-month"
+                type="month"
+                value={uMonth}
+                aria-invalid={uErrMonth ? true : undefined}
+                onChange={(e) => {
+                  setUMonth(e.target.value);
+                  setUErrMonth(null);
+                }}
+              />
+              {uErrMonth ? (
+                <div className="form-error" role="alert">{uErrMonth}</div>
+              ) : null}
             </div>
             <div className="field">
               <label htmlFor="uc-amount">电费金额（元）</label>
-              <input id="uc-amount" value={uAmount} onChange={(e) => setUAmount(e.target.value)} inputMode="decimal" placeholder="按实际金额填" />
+              <input
+                id="uc-amount"
+                value={uAmount}
+                aria-invalid={uErrAmt ? true : undefined}
+                onChange={(e) => {
+                  setUAmount(e.target.value);
+                  setUErrAmt(null);
+                }}
+                inputMode="decimal"
+                placeholder="按实际金额填"
+              />
+              {uErrAmt ? (
+                <div className="form-error" role="alert">{uErrAmt}</div>
+              ) : null}
             </div>
             <div className="field">
               <label htmlFor="uc-note">备注</label>
               <input id="uc-note" value={uNote} onChange={(e) => setUNote(e.target.value)} placeholder="如：智能电表自记、按实预付" />
             </div>
           </div>
+          {uMonthValid ? (
+            <div className="access-msg" style={{ margin: "0 0 10px" }}>
+              {uExisting
+                ? `${STORE_LABEL[uScope]} ${uMonth} 已有电费 ${money2(uExisting.amount)} 元，本次提交将更新既有行。`
+                : `${STORE_LABEL[uScope]} ${uMonth} 电费尚未录入——未取得，未计入；录入后进入净利与花费拆解。`}
+            </div>
+          ) : null}
           <button type="submit" className="btn" disabled={uBusy}>
             录入电费
           </button>
