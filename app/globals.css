@@ -48,7 +48,7 @@ html[data-theme="light"] {
   --text: #141a26;
   --muted: #5c6577;
   --label: #46536b; /* 浅底上约 7.4:1，强于 #5A6478 基线 */
-  --faint: #9aa1b1;
+  --faint: #7c8496; /* 指令46 B7：原 #9aa1b1 在白底仅 2.59:1，页脚/占位符加深到达标装饰下限 */
   --gold: #c9a227;
   --gold-bright: #b28f1d;
   --gold-dim: rgba(201, 162, 39, 0.45);

@@ -85,8 +85,8 @@ export default async function NetBreakdownPage() {
                   s.kind === "start" || s.kind === "final"
                     ? "var(--gold)"
                     : s.kind === "total"
-                      ? "var(--text-secondary, #93A1B8)"
-                      : "rgba(201, 90, 90, 0.55)";
+                      ? "var(--muted)"
+                      : "var(--negative)";
                 return (
                   <div key={i}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -118,6 +118,7 @@ export default async function NetBreakdownPage() {
                           left: `${from}%`,
                           width: `${Math.max(1, width)}%`,
                           background: barColor,
+                          opacity: s.kind === "delta" ? 0.55 : 1,
                           borderRadius: 7,
                         }}
                       />
