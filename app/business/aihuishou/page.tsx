@@ -194,7 +194,7 @@ export default async function DashboardPage() {
                   value={money(latestOp.storeCosts + latestOp.expenseTotal + (latestOp.wageCost ?? 0))}
                   unit="元"
                 />
-                <div className="kpi-sub">当月四项花费合计（与经营核算同一来源）</div>
+                <div className="kpi-sub">当月三项花费合计：门店成本 + 报销 + 工资（与经营核算同一来源）</div>
               </div>
               <div className="net-panel-breakdown">
                 <details className="drill">
@@ -284,12 +284,19 @@ export default async function DashboardPage() {
                   </strong>
                 </div>
                 <div className="net-line">
-                  <span>年度拆分</span>
+                  <span>年度拆分 · 门店成本</span>
+                  <strong>{money2(operating.annual.storeCostsTotal)} 元</strong>
+                </div>
+                <div className="net-line">
+                  <span>年度拆分 · 报销（未报 / 已报）</span>
                   <strong>
-                    门店 {money2(operating.annual.storeCostsTotal)}｜报销未报{" "}
-                    {money2(operating.annual.expenseAllTotal - operating.annual.expenseReimbursedTotal)}｜报销已报{" "}
-                    {money2(operating.annual.expenseReimbursedTotal)}｜工资 {money2(operating.annual.wageTotal)}
+                    {money2(operating.annual.expenseAllTotal - operating.annual.expenseReimbursedTotal)} /{" "}
+                    {money2(operating.annual.expenseReimbursedTotal)} 元
                   </strong>
+                </div>
+                <div className="net-line">
+                  <span>年度拆分 · 工资实发</span>
+                  <strong>{money2(operating.annual.wageTotal)} 元</strong>
                 </div>
               </div>
             </section>

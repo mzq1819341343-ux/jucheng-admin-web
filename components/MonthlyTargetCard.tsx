@@ -151,7 +151,15 @@ export default function MonthlyTargetCard({
           })}
         </div>
       )}
-      {isOwner && (targets.length > 0 || formOpen) ? (
+      {/* 指令56-4：已设定时表单默认收起（点「调整目标」展开），首屏只留紧凑进度，与未设态一行 CTA 同一层级。 */}
+      {isOwner && targets.length > 0 && !formOpen ? (
+        <div style={{ marginTop: 12 }}>
+          <button type="button" className="btn btn-ghost" onClick={() => setFormOpen(true)}>
+            调整目标
+          </button>
+        </div>
+      ) : null}
+      {isOwner && formOpen ? (
         <form onSubmit={onSave} style={{ marginTop: 16 }}>
           <div className="form-row">
             <div className="field">

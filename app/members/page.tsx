@@ -12,8 +12,8 @@ const ROLE_DOCS: { key: string; role: React.ReactNode; can: React.ReactNode; can
         老板（<span className="en">owner</span>）
       </>
     ),
-    can: "全部页面与全部汇总数据；全部业务板块；成员管理（建号、改角色、按业务板块授权）；数据导入与抓取配置。",
-    cannot: "无（但本站不存任何个人工资明细，老板也看不到个人明细——源头即不入库）。",
+    can: "全部页面与汇总；成员管理（建号、改角色、按板块授权）；数据导入与抓取配置。",
+    cannot: "无（个人工资明细本站不入库，老板也看不到）。",
   },
   {
     key: "partner",
@@ -22,12 +22,8 @@ const ROLE_DOCS: { key: string; role: React.ReactNode; can: React.ReactNode; can
         合伙人（<span className="en">partner</span>）
       </>
     ),
-    can: (
-      <>
-        被授权业务板块的全部经营汇总：仪表盘、爱回收报表（含工资成本、工资占分润比、人均、净利暂定）、刷新状态。
-      </>
-    ),
-    cannot: "成员管理只读（能看角色说明，不能建号/改角色/改授权）；未被勾选的业务板块不可见、不可直进；不能改数据。",
+    can: "被授权板块的经营汇总：仪表盘、报表（含工资成本、净利暂定）、两店对比、刷新状态。",
+    cannot: "成员管理只读；未授权板块不可见、不可直进；不能改数据。",
   },
   {
     key: "staff",
@@ -38,10 +34,10 @@ const ROLE_DOCS: { key: string; role: React.ReactNode; can: React.ReactNode; can
     ),
     can: (
       <>
-        被授权业务板块的运营数据：单量、分润、上门单量、单均分润（<span className="en">v_ops_metrics</span> 视图口径）。
+        被授权板块的运营数据：单量、分润、上门、单均（<span className="en">v_ops_metrics</span> 口径）。
       </>
     ),
-    cannot: "工资成本、工资占分润比、人均分润、净利暂定不可见（数据层隔离，不只是页面隐藏）；未授权板块不可进；成员列表不可见。",
+    cannot: "工资成本、净利等敏感数据不可见（数据层隔离）；未授权板块不可进；成员列表不可见。",
   },
 ];
 
@@ -142,7 +138,7 @@ export default async function MembersPage() {
               </table>
             </div>
             <p className="page-desc" style={{ marginTop: 12 }}>
-              以上为演示示例成员，勾选仅本地演示、不落库。正式建号步骤见下方说明。
+              演示示例成员，勾选不落库。
             </p>
           </>
         ) : members.length === 0 ? (
@@ -154,21 +150,18 @@ export default async function MembersPage() {
             </p>
             <ol className="steps">
               <li>
-                老板在 <span className="en">Supabase</span> 控制台 → <span className="en">Authentication</span> →{" "}
-                <span className="en">Users</span> → <span className="en">Add user</span>，用成员邮箱建号（或发邀请）。
+                <span className="en">Supabase</span> 控制台 → <span className="en">Authentication</span> →{" "}
+                <span className="en">Users</span>，用成员邮箱建号或发邀请。
               </li>
               <li>
-                新账号首次登录后会自动生成 <span className="en">profiles</span> 记录（默认角色{" "}
-                <span className="en">staff</span>、显示名取邮箱）。
+                首次登录自动生成 <span className="en">profiles</span>（默认 <span className="en">staff</span>）。
               </li>
               <li>
-                老板在 <span className="en">Supabase</span> 控制台 → <span className="en">Table Editor</span> →{" "}
-                <span className="en">profiles</span>，把该成员 <span className="en">role</span> 改为{" "}
-                <span className="en">owner / partner / staff</span>，并按需设置 <span className="en">store_scope</span>（
-                <span className="en">all / wanda / friendship</span>）。
+                <span className="en">Table Editor</span> → <span className="en">profiles</span> 改{" "}
+                <span className="en">role</span> 与 <span className="en">store_scope</span>。
               </li>
-              <li>在本页成员列表里为该成员勾选可进入的业务板块（按业务单独授权，勾选即保存到授权表）。</li>
-              <li>改完后成员重新登录即按新角色与业务授权显示（未授权板块不可见、不可直进；敏感数据对 staff 自动隔离）。</li>
+              <li>回本页为成员勾选业务板块授权（勾选即保存）。</li>
+              <li>成员重新登录后按新角色与授权显示。</li>
             </ol>
           </div>
         ) : (
