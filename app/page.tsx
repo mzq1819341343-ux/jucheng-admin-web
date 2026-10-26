@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import KpiCard from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
+import CountUp from "@/components/CountUp";
 import { getCurrentUser, getMetrics, canSeeSensitive } from "@/lib/data";
 import { money, int, pct } from "@/lib/format";
 
@@ -37,11 +38,13 @@ export default async function DashboardPage() {
         </div>
 
         <div className="kpi-row" style={{ marginTop: 16 }}>
-          <div className="kpi-card kpi-wide">
+          <div className="kpi-card kpi-wide kpi-hero">
             <div className="kpi-label">工资占分润比（{latest?.month ?? "—"}，两店合计）</div>
             {sensitive ? (
               <>
-                <div className="kpi-value">{pct(latest?.wage_ratio)}</div>
+                <div className="kpi-value">
+                  <CountUp value={pct(latest?.wage_ratio)} />
+                </div>
                 <div className="kpi-sub">
                   2026-01 至 2026-09 月度走势：{wageTrend.length ? `${pct(wageTrend[0])} → ${pct(wageTrend[wageTrend.length - 1])}` : "—"}
                 </div>

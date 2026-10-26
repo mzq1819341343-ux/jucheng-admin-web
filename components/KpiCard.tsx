@@ -1,3 +1,5 @@
+import CountUp from "./CountUp";
+
 export default function KpiCard({
   label,
   value,
@@ -19,7 +21,9 @@ export default function KpiCard({
         </>
       ) : (
         <>
-          <div className="kpi-value">{value}</div>
+          <div className="kpi-value">
+            <CountUp value={value} />
+          </div>
           {sub ? <div className="kpi-sub">{sub}</div> : null}
         </>
       )}

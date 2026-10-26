@@ -13,6 +13,7 @@ export default function Nav({ user }: { user: CurrentUser }) {
             聚成
           </Link>
           <span className="brand-slogan">聚天下英豪，成全球唯一</span>
+          <span className="brand-en">JUCHENG</span>
         </div>
         <nav className="menu">
           <Link href="/">首页仪表盘</Link>

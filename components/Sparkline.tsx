@@ -29,10 +29,19 @@ export default function Sparkline({
       preserveAspectRatio="none"
       aria-label="月度趋势"
     >
-      <polyline points={line} fill="none" stroke="#1F3A5F" strokeWidth="2" />
-      {pts.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r="2.5" fill="#1F3A5F" />
-      ))}
+      <polyline points={line} fill="none" stroke="#C9A227" strokeWidth="2" />
+      {pts.map(([x, y], i) => {
+        const last = i === pts.length - 1;
+        return (
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={last ? 3.5 : 2.2}
+            fill={last ? "#C9A227" : "#5B6B8C"}
+          />
+        );
+      })}
     </svg>
   );
 }

@@ -43,13 +43,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="container">
-      <div className="card form-card">
-        <div className="brand" style={{ marginBottom: 6 }}>
-          <span className="brand-name">聚成</span>
-          <span className="brand-slogan">聚天下英豪，成全球唯一</span>
-        </div>
-        <h1 className="page-title" style={{ fontSize: 20 }}>登录公司后台</h1>
+    <main className="login-wrap">
+      <div className="login-brand">
+        <div className="login-brand-name">聚成</div>
+        <div className="login-brand-slogan">聚天下英豪，成全球唯一</div>
+        <div className="login-brand-en">JUCHENG</div>
+        <div className="login-brand-rule" aria-hidden="true" />
+      </div>
+      <div className="card form-card login-card">
+        <h1 className="page-title login-title">登录公司后台</h1>
         <p className="page-desc">使用老板分配的邮箱与密码登录（Supabase Auth）。</p>
 
         {!configured ? (
