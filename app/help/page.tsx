@@ -36,88 +36,146 @@ export default async function HelpPage() {
             <thead>
               <tr>
                 <th>事项</th>
-                <th>老板</th>
-                <th>合伙人</th>
-                <th>店员</th>
+                <th>老板 · 可见</th>
+                <th>老板 · 可写</th>
+                <th>合伙人 · 可见</th>
+                <th>合伙人 · 可写</th>
+                <th>店员 · 可见</th>
+                <th>店员 · 可写</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>业务板块入口</td>
                 <td>全部板块</td>
-                <td>仅被授权的板块（未授权不渲染）</td>
-                <td>仅被授权的板块（未授权不渲染）</td>
+                <td>可改授权</td>
+                <td>仅被授权板块（未授权不渲染）</td>
+                <td>—</td>
+                <td>仅被授权板块（未授权不渲染）</td>
+                <td>—</td>
               </tr>
               <tr>
-                <td>经营报表（单量 / 分润 / 上门等）</td>
+                <td>经营报表 / 两店对比（单量 / 分润 / 上门）</td>
                 <td>可见</td>
+                <td>—（汇总数据）</td>
                 <td>可见</td>
+                <td>—</td>
                 <td>可见</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>净利 / 利润率 / 年回报率 / 净利构成</td>
                 <td>可见</td>
+                <td>—（派生指标）</td>
                 <td>可见</td>
+                <td>—</td>
                 <td>不显示（净利构成页直进也会被拦回）</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>工资规则（工资怎么算）</td>
+                <td>可见</td>
                 <td>可配置 / 可改生效起始月</td>
                 <td>只读可见</td>
+                <td>—</td>
                 <td>只读可见</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>工资录入与导入（月度工资行 / CSV 导入）</td>
-                <td>可操作</td>
+                <td>可见</td>
+                <td>可录入 / 可导入</td>
                 <td>不显示</td>
+                <td>—</td>
                 <td>不显示</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>个人工资明细</td>
                 <td>全员可见</td>
+                <td>可录入 / 可发布</td>
                 <td>不显示</td>
+                <td>—</td>
                 <td>仅自己已发布的月份</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>门店工资汇总（人数 / 合计）</td>
                 <td>可见</td>
+                <td>—</td>
                 <td>可见（仅已发布数据的汇总）</td>
+                <td>—</td>
                 <td>不显示</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>工资实表明细（导入与对账校验）</td>
+                <td>可见</td>
+                <td>可导入维护</td>
+                <td>不显示</td>
+                <td>—</td>
+                <td>不显示</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>门店成本与合同台账</td>
-                <td>可录入 / 可见</td>
+                <td>可见</td>
+                <td>可录入 / 编辑 / 删除</td>
                 <td>只读可见</td>
+                <td>—</td>
                 <td>不显示（导航无入口，直进拦回）</td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>月度目标</td>
+                <td>可见</td>
+                <td>可设定</td>
+                <td>可见</td>
+                <td>—</td>
+                <td>可见</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>报销明细</td>
-                <td>全部明细，可新建 / 编辑 / 删除 / 切换状态</td>
+                <td>全部明细</td>
+                <td>可新建 / 编辑 / 删除 / 切换状态</td>
                 <td>不显示明细</td>
-                <td>仅自己创建的单，可新建 / 编辑 / 删除 / 切换状态</td>
+                <td>—</td>
+                <td>仅自己创建的单</td>
+                <td>仅自己的单可新建 / 编辑 / 删除 / 切换状态</td>
               </tr>
               <tr>
                 <td>报销汇总与导出</td>
-                <td>全量汇总，明细 CSV 可导出</td>
-                <td>仅按月汇总，可导出汇总 CSV</td>
-                <td>仅自己范围的汇总与导出</td>
+                <td>全量汇总</td>
+                <td>明细 CSV / Excel 可导出</td>
+                <td>仅按月汇总</td>
+                <td>汇总 CSV / Excel 可导出</td>
+                <td>仅自己范围的汇总</td>
+                <td>自己范围 CSV / Excel 可导出</td>
               </tr>
               <tr>
                 <td>成员列表与业务授权</td>
-                <td>可见可改（邀请 / 改角色 / 按板块授权）</td>
-                <td>不显示</td>
-                <td>不显示</td>
+                <td>可见</td>
+                <td>可改（邀请 / 改角色 / 按板块授权）</td>
+                <td>仅角色说明（列表不显示）</td>
+                <td>—</td>
+                <td>仅无权限提示</td>
+                <td>—</td>
               </tr>
               <tr>
                 <td>数据范围</td>
                 <td>全公司</td>
+                <td>—</td>
                 <td>被授权板块</td>
+                <td>—</td>
                 <td>被授权板块及所属门店范围</td>
+                <td>—</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="page-desc" style={{ marginTop: 12 }}>
+          「可写」指页内新增 / 编辑 / 删除 / 发布 / 导出等操作权限；「—」表示该角色无此操作。
           本矩阵与数据库行级权限（<span className="en">RLS</span>）和页面渲染保持一致：表里写「不显示」的，页面不渲染入口、数据库也不返回数据，不是仅靠前端隐藏。
         </p>
         <div className="card" style={{ marginTop: 20 }}>
