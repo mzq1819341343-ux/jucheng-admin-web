@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import KpiCard from "@/components/KpiCard";
 import ExpenseManager from "@/components/ExpenseManager";
+import ExpenseAggExport from "@/components/ExpenseAggExport";
 import {
   getCurrentUser,
   getExpenseClaims,
@@ -80,6 +81,7 @@ export default async function ExpensesPage() {
               </table>
             )}
           </div>
+          <ExpenseAggExport rows={agg} />
         </main>
       </>
     );

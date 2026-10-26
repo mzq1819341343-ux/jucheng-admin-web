@@ -70,6 +70,52 @@ export default function ExpenseManager({
     [claims, monthFilter]
   );
 
+  // 指令46 B3：分类统计（当前可见范围 + 当前月份筛选）与 CSV 导出。
+  const categoryStats = useMemo(() => {
+    const map = new Map<string, { total: number; count: number }>();
+    for (const c of visibleClaims) {
+      const key = c.category || "其他";
+      const cur = map.get(key) ?? { total: 0, count: 0 };
+      cur.total += Number(c.amount ?? 0);
+      cur.count += 1;
+      map.set(key, cur);
+    }
+    return [...map.entries()]
+      .map(([category, v]) => ({ category, total: v.total, count: v.count }))
+      .sort((a, b) => b.total - a.total);
+  }, [visibleClaims]);
+  const categoryMax = categoryStats.reduce((m, s) => Math.max(m, s.total), 0);
+
+  function exportCsv() {
+    const esc = (v: string | number | null | undefined) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [
+      ["日期", "事由", "类别", "金额（元）", "归属", "报销人", "状态", "备注"].join(","),
+      ...visibleClaims.map((c) =>
+        [
+          c.claim_date,
+          esc(c.title),
+          esc(c.category),
+          Number(c.amount ?? 0).toFixed(2),
+          c.scope ? EXPENSE_SCOPE_LABEL[c.scope] : "",
+          esc(c.claimant_name ?? ""),
+          c.status === "reimbursed" ? "已报销" : "未报销",
+          esc(c.note ?? ""),
+        ].join(",")
+      ),
+    ];
+    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `报销台账_${monthFilter === "all" ? "全部月份" : monthFilter}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setMsg("已导出当前筛选范围的 CSV");
+  }
+
   function resetForm() {
     setEditingId(null);
     setClaimDate("");
@@ -308,6 +354,47 @@ export default function ExpenseManager({
           {months.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </div>
+
+      {categoryStats.length > 0 ? (
+        <div style={{ margin: "18px 0 22px" }}>
+          <div className="net-panel-label">
+            <span className="en">BY CATEGORY</span> · 分类统计（{monthFilter === "all" ? "全部月份" : monthFilter} · 当前可见范围）
+          </div>
+          <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+            {categoryStats.map((s) => (
+              <div key={s.category} style={{ display: "grid", gridTemplateColumns: "72px 1fr 130px", gap: 10, alignItems: "center" }}>
+                <span>{s.category}</span>
+                <span
+                  aria-hidden
+                  style={{
+                    display: "block",
+                    height: 10,
+                    borderRadius: 5,
+                    background: "var(--border)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "block",
+                      height: "100%",
+                      width: `${categoryMax > 0 ? Math.max(2, (s.total / categoryMax) * 100) : 0}%`,
+                      background: "var(--gold)",
+                      borderRadius: 5,
+                    }}
+                  />
+                </span>
+                <span style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                  {money2(s.total)} 元 · {s.count} 笔
+                </span>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="btn btn-ghost" style={{ marginTop: 14 }} onClick={exportCsv}>
+            导出 CSV（当前筛选）
+          </button>
+        </div>
+      ) : null}
 
       {visibleClaims.length === 0 ? (
         <p className="empty">暂无报销记录。可先用上方表单新建；未报销也计入当月已发生公司花费。</p>
