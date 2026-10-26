@@ -13,6 +13,8 @@ import {
   describeMonthCosts,
 } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
+import MonthlyTargetCard from "@/components/MonthlyTargetCard";
+import { getSiteTargets } from "@/lib/data";
 import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +51,14 @@ export default async function OverviewPage({
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
   const netBase = latestOp?.baseNetProfit ?? null;
   const netAdjusted = latestOp?.storeNetProfit ?? null;
+  // 指令46 B8：月度目标 vs 实际（目标仅老板可设定；未设定显示「未设定」）。
+  const siteTargets = hasAihuishou ? await getSiteTargets(user) : [];
+  const targetActuals = rows.map((r) => ({
+    month: r.month,
+    profit: r.profit ?? null,
+    orders: r.orders ?? null,
+    net: operating.months.find((m) => m.month === r.month)?.companyNetProfit ?? null,
+  }));
 
   return (
     <>
@@ -162,6 +172,19 @@ export default async function OverviewPage({
             <p className="empty">暂未开通任何业务板块，请联系老板授权。开通后，这里会显示对应业务的经营摘要。</p>
           </div>
         )}
+
+        {hasAihuishou ? (
+          <>
+            <h2 className="section-title">月度目标</h2>
+            <MonthlyTargetCard
+              initialTargets={siteTargets}
+              actuals={targetActuals}
+              role={user.role}
+              demo={user.demo}
+              userId={user.id}
+            />
+          </>
+        ) : null}
 
         <h2 className="section-title">业务板块</h2>
         {visibleBusinesses.length === 0 ? (

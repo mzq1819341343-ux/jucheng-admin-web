@@ -352,6 +352,36 @@ function realMode(user: CurrentUser): boolean {
 return !user.demo && isSupabaseConfigured() && !!user.id;
 }
 
+// ============================================================
+// 月度目标（指令46 B8)：老板设定、其余角色只读；未设定即空，不预填。
+// ============================================================
+export type SiteTargetMetric = "profit" | "net_profit" | "orders";
+
+export interface SiteTarget {
+id: string;
+month: string;
+metric: SiteTargetMetric;
+target_value: number;
+note: string | null;
+updated_at: string;
+}
+
+export async function getSiteTargets(user: CurrentUser): Promise<SiteTarget[]> {
+if (user.demo) return [];
+if (!realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error } = await supabase
+.from("site_targets")
+.select("*")
+.order("month", { ascending: true });
+if (!error && data) return data as SiteTarget[];
+} catch {
+// 空态（表未建时按未设定处理）
+}
+return [];
+}
+
 /** 工资体系规则：仅老板（RLS 同样仅 owner 可写）。演示模式回兜底规则（与 migration_004 种子一致）。 */
 export async function getSalaryRules(user: CurrentUser): Promise<SalaryRule[]> {
 if (user.role !== "owner") return [];
