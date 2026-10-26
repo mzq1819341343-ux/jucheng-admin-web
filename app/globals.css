@@ -960,6 +960,62 @@ footer.site-footer {
   .cat-row .cat-value { font-size: 13px; }
 }
 
+/* ---------- 两店对比（指令52）：月份切换 chips + 双列大字卡 ---------- */
+.month-switch { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 6px; }
+a.chip { text-decoration: none; }
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.compare-card { animation: none; }
+.compare-store { font-size: 24px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 14px; }
+.compare-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding-bottom: 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 15px;
+}
+.compare-main strong {
+  color: var(--text);
+  font-size: 36px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+.compare-main .compare-unit { font-size: 15px; font-weight: 600; color: var(--label); }
+table.report tr.row-selected td { background: var(--notice-bg); }
+.th-note { display: block; font-size: 11.5px; font-weight: 500; color: var(--faint); letter-spacing: 0; margin-top: 2px; }
+@media (max-width: 720px) {
+  .compare-grid { grid-template-columns: 1fr; }
+  .compare-main strong { font-size: 30px; }
+}
+
+/* ---------- 花费拆解下钻（指令52）：仪表盘净利面板内的可展开层级 ---------- */
+.drill { border-bottom: 1px solid var(--border-soft); }
+.drill:last-child { border-bottom: none; }
+.drill > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 20px;
+  padding: 10px 0;
+  color: var(--muted);
+  font-size: 14.5px;
+  min-height: 44px;
+}
+.drill > summary::-webkit-details-marker { display: none; }
+.drill > summary .drill-name::after { content: "▸"; margin-left: 8px; color: var(--gold); font-size: 12px; }
+.drill[open ] > summary .drill-name::after { content: "▾"; }
+.drill > summary strong { color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.drill-children { padding: 0 0 8px 16px; border-left: 1px dashed var(--border-soft); margin: 0 0 8px 6px; }
+.drill-children .net-line { font-size: 13.5px; padding: 7px 0; }
+.drill .share, .net-line .share { color: var(--faint); font-size: 12.5px; font-variant-numeric: tabular-nums; margin-left: 10px; white-space: nowrap; }
+
 /* ---------- 动效降级（指令35：reduced-motion 下关闭/大幅减弱全部动画与过渡） ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

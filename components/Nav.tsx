@@ -47,6 +47,8 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           <details className="menu-more">
             <summary>更多</summary>
             <div className="menu-more-panel">
+              {showAihuishou ? <Link href="/business/aihuishou/reports">经营报表</Link> : null}
+              {showAihuishou ? <Link href="/business/aihuishou/compare">两店对比</Link> : null}
               {showBizTools ? <Link href="/business/aihuishou/costs">门店成本</Link> : null}
               {showBizTools ? <Link href="/business/aihuishou/breakdown">净利构成</Link> : null}
               <Link href="/members">成员与权限</Link>
