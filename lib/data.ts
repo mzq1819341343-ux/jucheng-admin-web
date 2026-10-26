@@ -393,7 +393,42 @@ updated_at: string;
 }
 
 export async function getSiteTargets(user: CurrentUser): Promise<SiteTarget[]> {
-if (user.demo) return [];
+if (user.demo) {
+  // 指令59 A2：演示态目标注入——仅演示会话读 demo_targets Cookie
+  // （base64url 编码的 JSON 数组：{month, metric, target_value}），供目标
+  // 复盘「已达成 / 未达成 / 待核算」三分支进回归实测。生产构建中演示
+  // 总开关关闭时 getCurrentUser 永不返回 demo 用户，此分支恒不达，
+  // 生产恒忽略该 Cookie（audit-online 有伪造注入仍 307 的断言）。
+  try {
+    const raw = (await cookies()).get("demo_targets")?.value;
+    if (raw) {
+      const parsed: unknown = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+      if (Array.isArray(parsed)) {
+        const metrics: SiteTargetMetric[] = ["profit", "net_profit", "orders"];
+        return parsed
+          .filter(
+            (t): t is { month: string; metric: SiteTargetMetric; target_value: number } =>
+              !!t &&
+              typeof t === "object" &&
+              typeof (t as { month?: unknown }).month === "string" &&
+              metrics.includes((t as { metric: SiteTargetMetric }).metric) &&
+              Number.isFinite(Number((t as { target_value?: unknown }).target_value))
+          )
+          .map((t) => ({
+            id: `demo-target-${t.month}-${t.metric}`,
+            month: t.month,
+            metric: t.metric,
+            target_value: Number(t.target_value),
+            note: "演示注入（仅回归实测，生产恒忽略）",
+            updated_at: "demo",
+          }));
+      }
+    }
+  } catch {
+    // 注入格式不对按未设定处理
+  }
+  return [];
+}
 if (!realMode(user)) return [];
 try {
 const supabase = await createServerSupabase();
