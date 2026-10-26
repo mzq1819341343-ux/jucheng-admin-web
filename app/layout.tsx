@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import HashAuthForwarder from "@/components/HashAuthForwarder";
 
 export const metadata: Metadata = {
   title: "聚成 · 公司业务总后台",
@@ -20,6 +21,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
+        <HashAuthForwarder />
         {children}
         <footer className="site-footer">
           聚成 · 聚天下英豪，成全球唯一 ｜ 数据口径：爱回收驾驶舱 <span className="en">v3.3</span> 汇总 ｜ 本站只展示汇总数据，不含个人明细
