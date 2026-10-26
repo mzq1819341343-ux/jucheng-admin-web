@@ -37,6 +37,27 @@ export default async function HelpPage() {
           </figure>
         </div>
 
+        <h2 className="section-title">手机上怎么看</h2>
+        <div className="card">
+          <p style={{ margin: 0 }}>
+            手机打开本站即同一套页面：导航收进右上角菜单，总览先看英雄区净利；宽表（两店对比、权限矩阵、成本明细）在卡片内左右滑动查看，不会撑破屏幕。
+          </p>
+          <figure className="help-shot">
+            <a href="/help-shots/mobile-overview.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/mobile-overview.png" alt="手机 390 宽总览：英雄净利、双利润率、年回报一行、月度目标与业务卡单列排布" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：手机上的总览——卡片单列、数字不溢出。点图看大图。</figcaption>
+          </figure>
+          <figure className="help-shot">
+            <a href="/help-shots/mobile-expenses.png" target="_blank" rel="noreferrer">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/help-shots/mobile-expenses.png" alt="手机 390 宽报销页：汇总卡、建单表单、状态筛选与台账单列排布" loading="lazy" />
+            </a>
+            <figcaption>示例截图（演示数据）：手机上的报销页——表单纵排、筛选 chips 同行、台账在卡片内滑动。点图看大图。</figcaption>
+          </figure>
+        </div>
+
         <h2 className="section-title">角色与权限矩阵</h2>
         <div className="card table-wrap">
           <table className="report">
