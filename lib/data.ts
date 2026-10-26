@@ -290,3 +290,181 @@ if (!error && data && data.length > 0) return { logs: data as FetchLog[], fromDb
 }
 return { logs: FALLBACK_FETCH_LOGS, fromDb: false};
 }
+
+// ============================================================
+// 工资体系 + 两店成本（指令41 / migration_003）
+// 骨架阶段：老板尚未提供工资规则与成本数字，查询为空属正常，页面走空态。
+// 权限由 RLS 收口（salary_monthly 店员仅自己已发布行；store_costs 店员不可见），
+// 这里再按角色分发查询，双保险。演示模式一律返回空（页面用本地状态演示表单）。
+// ============================================================
+// 门店 / 成本类型在 lib/stores（客户端安全模块）；此处 import 供本文件接口使用并转发导出
+import type { StoreScope, CostType } from "./stores";
+export type { StoreScope, CostType };
+
+export interface SalaryRule {
+id: string;
+title: string;
+base_salary: number | null;
+commission_rules: Record<string, unknown>;
+note: string | null;
+updated_at: string;
+}
+
+export interface SalaryMonthlyRow {
+id: string;
+user_id: string;
+month: string;
+scope: StoreScope;
+base_amount: number | null;
+commission_amount: number | null;
+deduction_amount: number | null;
+net_amount: number;
+note: string | null;
+published: boolean;
+updated_at: string;
+}
+
+export interface SalaryStoreAgg {
+scope: StoreScope;
+month: string;
+headcount: number;
+total_net: number | null;
+total_base: number | null;
+total_commission: number | null;
+}
+
+export interface StoreCost {
+id: string;
+scope: StoreScope;
+month: string;
+cost_type: CostType;
+amount: number;
+note: string | null;
+updated_at: string;
+}
+
+function realMode(user: CurrentUser): boolean {
+return !user.demo && isSupabaseConfigured() && !!user.id;
+}
+
+/** 工资体系规则：仅老板（RLS 同样仅 owner）。 */
+export async function getSalaryRules(user: CurrentUser): Promise<SalaryRule[]> {
+if (user.role !== "owner" || !realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("salary_rules")
+.select("id, title, base_salary, commission_rules, note, updated_at")
+.order("updated_at", { ascending: false});
+if (!error && data) return data as SalaryRule[];
+} catch {
+// 空态
+}
+return [];
+}
+
+/** 员工自己的月度工资：只按当前 user id 查（RLS 再兜底：仅自己 + 已发布）。 */
+export async function getMySalary(user: CurrentUser): Promise<SalaryMonthlyRow[]> {
+if (!realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("salary_monthly")
+.select("*")
+.eq("user_id", user.id as string)
+.eq("published", true)
+.order("month", { ascending: false});
+if (!error && data) return data as SalaryMonthlyRow[];
+} catch {
+// 空态
+}
+return [];
+}
+
+/** 全员月度工资行：仅老板（RLS 同样仅 owner 全权）。 */
+export async function getAllSalaryMonthly(user: CurrentUser): Promise<SalaryMonthlyRow[]> {
+if (user.role !== "owner" || !realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("salary_monthly")
+.select("*")
+.order("month", { ascending: false});
+if (!error && data) return data as SalaryMonthlyRow[];
+} catch {
+// 空态
+}
+return [];
+}
+
+/** 门店月度工资汇总（视图）：老板全量、合伙人按视图内行过滤；staff 恒空。 */
+export async function getSalaryStoreAgg(user: CurrentUser): Promise<SalaryStoreAgg[]> {
+if (user.role === "staff" || !realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("salary_store_monthly_agg")
+.select("*")
+.order("month", { ascending: false});
+if (!error && data) return data as SalaryStoreAgg[];
+} catch {
+// 空态
+}
+return [];
+}
+
+/** 两店成本：老板 / 合伙人可读（RLS 同步收口）；staff 直接返回空且不发查询。 */
+export async function getStoreCosts(user: CurrentUser): Promise<StoreCost[]> {
+if (user.role === "staff" || !realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("store_costs")
+.select("*")
+.order("month", { ascending: false})
+.order("scope", { ascending: true});
+if (!error && data) return data as StoreCost[];
+} catch {
+// 空态
+}
+return [];
+}
+
+/** 某月两店已录入成本合计（净利公式用；无录入 = 0，不影响现版数字）。 */
+export function storeCostsTotalForMonth(costs: StoreCost[], month: string): number {
+return costs
+.filter((c) => c.month === month)
+.reduce((s, c) => s + (c.amount ?? 0), 0);
+}
+
+/** 工资体系 / 门店成本配置最近更新时间（状态页用）。 */
+export async function getConfigFreshness(
+user: CurrentUser
+): Promise<{ salaryRules: string | null; storeCosts: string | null; demo: boolean}> {
+if (user.demo) return { salaryRules: null, storeCosts: null, demo: true };
+if (!realMode(user)) return { salaryRules: null, storeCosts: null, demo: false };
+let salaryRules: string | null = null;
+let storeCosts: string | null = null;
+try {
+const supabase = await createServerSupabase();
+if (user.role === "owner") {
+const { data } = await supabase
+.from("salary_rules")
+.select("updated_at")
+.order("updated_at", { ascending: false})
+.limit(1);
+salaryRules = (data?.[0]?.updated_at as string) ?? null;
+}
+if (user.role !== "staff") {
+const { data } = await supabase
+.from("store_costs")
+.select("updated_at")
+.order("updated_at", { ascending: false})
+.limit(1);
+storeCosts = (data?.[0]?.updated_at as string) ?? null;
+}
+} catch {
+// 按暂无录入处理
+}
+return { salaryRules, storeCosts, demo: false };
+}

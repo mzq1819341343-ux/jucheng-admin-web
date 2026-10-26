@@ -451,6 +451,26 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
   color: var(--text);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
 }
+.field select, .field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 16px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease, color 0.3s ease;
+}
+.field textarea { resize: vertical; min-height: 84px; line-height: 1.55; }
+.field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+}
+/* 并排表单行（工资规则 / 门店成本录入，指令41） */
+.form-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.form-row .field { flex: 1 1 160px; }
 .field input::placeholder { color: var(--faint); font-weight: 600; }
 .field input:focus {
   outline: none;

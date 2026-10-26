@@ -1,5 +1,5 @@
 import Nav from "@/components/Nav";
-import { getCurrentUser, getFetchLogs, canSeeSensitive } from "@/lib/data";
+import { getCurrentUser, getFetchLogs, canSeeSensitive, getConfigFreshness } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +14,13 @@ export default async function StatusPage() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
   const { logs } = await getFetchLogs();
+  const freshness = await getConfigFreshness(user);
+  const fmtTime = (v: string | null) => (v ? v.replace("T", " ").slice(0, 16) : null);
+  const configUpdated =
+    [fmtTime(freshness.salaryRules), fmtTime(freshness.storeCosts)]
+      .filter((v): v is string => !!v)
+      .sort()
+      .pop() ?? null;
 
   return (
     <>
@@ -71,6 +78,28 @@ export default async function StatusPage() {
                 <td>手动导入（仅汇总）</td>
                 <td style={{ textAlign: "left", whiteSpace: "normal" }}>
                   只存按月汇总（工资成本、占比、人均），工资原表与个人明细不进本站、不进仓库。
+                </td>
+              </tr>
+              <tr>
+                <td>工资体系 / 门店成本配置</td>
+                <td>
+                  {freshness.demo ? (
+                    <span className="tag tag-pending">演示数据</span>
+                  ) : configUpdated ? (
+                    <span className="tag tag-ok">已录入</span>
+                  ) : (
+                    <span className="tag tag-pending">暂无录入</span>
+                  )}
+                </td>
+                <td>老板人工录入</td>
+                <td style={{ textAlign: "left", whiteSpace: "normal" }}>
+                  最近更新：
+                  {freshness.demo
+                    ? "演示数据"
+                    : user.role === "staff"
+                      ? "仅老板 / 合伙人可见"
+                      : configUpdated ?? "暂无录入"}
+                  。工资体系在「工资」页配置、门店成本在「门店成本」页录入；无自动抓取，更新时间以人工录入为准。
                 </td>
               </tr>
             </tbody>

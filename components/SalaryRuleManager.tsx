@@ -1,0 +1,200 @@
+"use client";
+
+import { useState } from "react";
+import type { SalaryRule } from "@/lib/data";
+import { money2 } from "@/lib/format";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+
+/**
+ * 工资体系规则配置（指令41，仅老板）：
+ * - 真实模式：新增 / 删除直接写 salary_rules（RLS 仅 owner 可写），updated_by 记当前用户；
+ * - 演示模式：仅本地状态演示，不落库。
+ * 规则结构（岗位/底薪/提成 JSON）是可配置骨架，老板发来正式体系后在此录入。
+ */
+export default function SalaryRuleManager({
+  initialRules,
+  demo,
+  userId,
+}: {
+  initialRules: SalaryRule[];
+  demo: boolean;
+  userId: string | null;
+}) {
+  const [rules, setRules] = useState<SalaryRule[]>(initialRules);
+  const [title, setTitle] = useState("");
+  const [baseSalary, setBaseSalary] = useState("");
+  const [commissionJson, setCommissionJson] = useState("");
+  const [note, setNote] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function onAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) {
+      setMsg("请填写岗位 / 职级名称");
+      return;
+    }
+    let commission: Record<string, unknown> = {};
+    if (commissionJson.trim()) {
+      try {
+        const parsed = JSON.parse(commissionJson);
+        if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+          setMsg("提成规则需为 JSON 对象（{ ... }）");
+          return;
+        }
+        commission = parsed as Record<string, unknown>;
+      } catch {
+        setMsg("提成规则 JSON 格式不正确，请检查");
+        return;
+      }
+    }
+    const base = baseSalary.trim() === "" ? null : Number(baseSalary);
+    if (base !== null && Number.isNaN(base)) {
+      setMsg("底薪需为数字");
+      return;
+    }
+    const draft: SalaryRule = {
+      id: `local-${Date.now()}`,
+      title: title.trim(),
+      base_salary: base,
+      commission_rules: commission,
+      note: note.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (demo || !isSupabaseConfigured()) {
+      setRules([draft, ...rules]);
+      setMsg("演示：已加入本地列表，未落库");
+      setTitle("");
+      setBaseSalary("");
+      setCommissionJson("");
+      setNote("");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("salary_rules")
+        .insert({
+          title: draft.title,
+          base_salary: draft.base_salary,
+          commission_rules: draft.commission_rules,
+          note: draft.note,
+          updated_by: userId,
+        })
+        .select("id, title, base_salary, commission_rules, note, updated_at")
+        .single();
+      if (error) {
+        setMsg(`保存失败：${error.message}`);
+      } else {
+        setRules([data as SalaryRule, ...rules]);
+        setMsg("已保存");
+        setTitle("");
+        setBaseSalary("");
+        setCommissionJson("");
+        setNote("");
+      }
+    } catch (err) {
+      setMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDelete(id: string) {
+    if (demo || !isSupabaseConfigured() || id.startsWith("local-")) {
+      setRules(rules.filter((r) => r.id !== id));
+      setMsg("演示：已从本地列表移除");
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("salary_rules").delete().eq("id", id);
+      if (error) {
+        setMsg(`删除失败：${error.message}`);
+      } else {
+        setRules(rules.filter((r) => r.id !== id));
+        setMsg("已删除");
+      }
+    } catch (err) {
+      setMsg(`删除失败：${err instanceof Error ? err.message : "未知错误"}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      {rules.length === 0 ? (
+        <p className="empty">工资体系待老板提供后录入：下方表单先行就位，规则落库后即在此列示。</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="report">
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left" }}>岗位 / 职级</th>
+                <th>底薪（元）</th>
+                <th style={{ textAlign: "left" }}>提成规则</th>
+                <th style={{ textAlign: "left" }}>备注</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rules.map((r) => (
+                <tr key={r.id}>
+                  <td style={{ textAlign: "left" }}>{r.title}</td>
+                  <td>{r.base_salary === null ? "待定" : money2(r.base_salary)}</td>
+                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>
+                    <code className="en">{JSON.stringify(r.commission_rules)}</code>
+                  </td>
+                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>{r.note ?? "—"}</td>
+                  <td>
+                    <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => onDelete(r.id)}>
+                      删除
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <form onSubmit={onAdd} style={{ marginTop: 20 }}>
+        <div className="form-row">
+          <div className="field">
+            <label htmlFor="sr-title">岗位 / 职级</label>
+            <input id="sr-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="如：店长 / 高级业务员" />
+          </div>
+          <div className="field">
+            <label htmlFor="sr-base">底薪（元，可空）</label>
+            <input id="sr-base" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} inputMode="decimal" placeholder="待老板提供" />
+          </div>
+        </div>
+        <div className="field">
+          <label htmlFor="sr-json">
+            提成规则（<span className="en">JSON</span>，可空）
+          </label>
+          <textarea
+            id="sr-json"
+            value={commissionJson}
+            onChange={(e) => setCommissionJson(e.target.value)}
+            placeholder='如 {"到店分润提成率": 0.05, "上门单提成": 10}'
+            rows={3}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="sr-note">备注（可空）</label>
+          <input id="sr-note" value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+        <button type="submit" className="btn" disabled={busy}>
+          新增规则
+        </button>
+        {msg ? <div className="access-msg">{msg}</div> : null}
+      </form>
+    </div>
+  );
+}

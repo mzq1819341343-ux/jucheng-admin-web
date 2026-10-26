@@ -54,6 +54,18 @@ export default async function HelpPage() {
                 <td>不显示</td>
               </tr>
               <tr>
+                <td>工资（我的薪酬 / 门店汇总）</td>
+                <td>录入后可见</td>
+                <td>仅门店汇总</td>
+                <td>仅自己已发布月份</td>
+              </tr>
+              <tr>
+                <td>门店成本（房租 / 水电 / 其他）</td>
+                <td>可录入 / 可见</td>
+                <td>只读可见</td>
+                <td>不显示</td>
+              </tr>
+              <tr>
                 <td>成员管理（邀请 / 改角色 / 按板块授权）</td>
                 <td>可管理</td>
                 <td>不可</td>
@@ -85,6 +97,29 @@ export default async function HelpPage() {
           </ul>
         </div>
 
+        <h2 className="section-title">工资与成本</h2>
+        <div className="card">
+          <ul className="plain">
+            <li>
+              <strong>老板：</strong>在「工资」页配置工资体系规则（岗位 / 职级、底薪、提成规则），
+              按人按月录入员工工资并发布；查看全员工资行与两店汇总；在「门店成本」页录入两店每月的房租、水电、其他成本，
+              已录入成本会进入爱回收仪表盘的净利暂定核算。
+            </li>
+            <li>
+              <strong>合伙人：</strong>在「工资」页只看被授权门店的月度工资汇总（人数与合计），看不到他人的工资明细；
+              「门店成本」可只读查看，不能修改。
+            </li>
+            <li>
+              <strong>店员：</strong>在「我的薪酬」只看自己已发布月份的实发与构成（底薪 / 提成 / 扣款），
+              看不到门店成本，也看不到任何他人的工资数据。
+            </li>
+            <li>
+              工资数字由老板提供后录入：录入时员工与登录账号一一对应；本站只展示按角色该看的口径，
+              <strong>不展示工资原表</strong>，也没有原表导出。工资尚未发布时，「我的薪酬」会显示尚未发布，属正常状态。
+            </li>
+          </ul>
+        </div>
+
         <h2 className="section-title">常用操作</h2>
         <div className="card">
           <ol className="steps">
@@ -100,6 +135,10 @@ export default async function HelpPage() {
             </li>
             <li>
               <strong>查看数据更新情况：</strong>「数据刷新状态」页列出各数据源的最近更新时间与状态。
+            </li>
+            <li>
+              <strong>查看工资与成本：</strong>顶部导航「工资」（店员显示为「我的薪酬」）查看与自己相关的工资；
+              门店成本在爱回收板块的「门店成本」页（仅老板 / 合伙人可见）。
             </li>
           </ol>
         </div>

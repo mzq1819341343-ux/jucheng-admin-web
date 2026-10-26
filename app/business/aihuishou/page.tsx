@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
-import { getCurrentUser, getMetrics, canSeeSensitive } from "@/lib/data";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, storeCostsTotalForMonth } from "@/lib/data";
 import { money, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,13 @@ export default async function DashboardPage() {
   const wageTrend = rows
     .map((r) => r.wage_ratio)
     .filter((v): v is number => typeof v === "number");
+
+  // 指令41：净利暂定再扣除当月已录入的门店成本（store_costs 两店合计）。
+  // 无成本录入时 latestCostTotal = 0，数字与现版完全一致；staff 不查成本（RLS 亦不可见）。
+  const costs = sensitive ? await getStoreCosts(user) : [];
+  const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
+  const netBase = latest?.net_profit_provisional ?? null;
+  const netAdjusted = netBase === null ? null : netBase - latestCostTotal;
 
   return (
     <>
@@ -62,9 +69,14 @@ export default async function DashboardPage() {
             )}
           </div>
           <KpiCard
-            label="净利暂定（当月，未扣房租水电）"
-            value={sensitive ? money(latest?.net_profit_provisional) : ""}
+            label={latestCostTotal > 0 ? "净利暂定（当月，已扣已录入成本）" : "净利暂定（当月，未扣房租水电）"}
+            value={sensitive ? money(netAdjusted) : ""}
             unit="元"
+            sub={
+              sensitive && latestCostTotal > 0
+                ? `已扣门店成本 ${money(latestCostTotal)} 元（房租/水电/其他按已录入项）`
+                : undefined
+            }
             locked={!sensitive}
           />
           <KpiCard
@@ -103,7 +115,10 @@ export default async function DashboardPage() {
           </table>
         </div>
         <p className="page-desc" style={{ marginTop: 12 }}>
-          口径：上门只看两店合计，不算单店业绩；净利暂定 = 到店分润 − 分摊工资 − 已知扣款，房租水电未取得，未计入。
+          口径：上门只看两店合计，不算单店业绩；净利暂定 = 到店分润 − 分摊工资 − 已知扣款
+          {latestCostTotal > 0
+            ? " − 已录入门店成本；未录入的成本类型未取得，未计入。"
+            : "，房租水电未取得，未计入。"}
         </p>
       </main>
     </>
