@@ -21,6 +21,15 @@ export default async function OverviewPage({
   const { businesses, grantedIds } = await getMyBusinesses(user);
   const hasAihuishou = canAccessBusiness(grantedIds, "aihuishou");
 
+  // 指令37：无权限板块「完全不可见」——未授权板块不渲染（DOM 里不存在），
+  // 不是灰显；「更多业务」占位仅老板可见（演示「无授权」组合下连占位也不出现，走空状态）。
+  const visibleBusinesses = businesses.filter((b) => {
+    if (b.status === "coming_soon") {
+      return user.role === "owner" && grantedIds.length > 0;
+    }
+    return canAccessBusiness(grantedIds, b.id);
+  });
+
   const { rows } = await getMetrics("combined", user.role);
   const latest = rows[rows.length - 1];
   const totalProfit = rows.reduce((s, r) => s + (r.profit ?? 0), 0);
@@ -46,7 +55,9 @@ export default async function OverviewPage({
           </div>
         ) : null}
 
-        <h2 className="section-title">经营摘要（爱回收 · 最新月 {latest?.month ?? "—"}）</h2>
+        <h2 className="section-title">
+          {hasAihuishou ? `经营摘要（爱回收 · 最新月 ${latest?.month ?? "—"}）` : "经营摘要"}
+        </h2>
         {hasAihuishou ? (
           <div className="kpi-row">
             <KpiCard label="当月总单量（两店合计）" value={int(latest?.orders)} sub="单" />
@@ -60,47 +71,43 @@ export default async function OverviewPage({
           </div>
         ) : (
           <div className="card">
-            <p className="empty">无权限：当前账号未开通任何业务板块，摘要不可见。请联系老板开通。</p>
+            <p className="empty">暂未开通任何业务板块，请联系老板授权。开通后，这里会显示对应业务的经营摘要。</p>
           </div>
         )}
 
         <h2 className="section-title">业务板块</h2>
-        <div className="biz-grid">
-          {businesses.map((b) => {
-            if (b.status === "coming_soon") {
+        {visibleBusinesses.length === 0 ? (
+          <div className="card">
+            <p className="empty">暂未开通任何业务板块，请联系老板授权。</p>
+          </div>
+        ) : (
+          <div className="biz-grid">
+            {visibleBusinesses.map((b) => {
+              if (b.status === "coming_soon") {
+                // 占位卡只会渲染给老板（过滤逻辑见上方 visibleBusinesses）
+                return (
+                  <div key={b.id} className="biz-card biz-card-off" aria-disabled="true">
+                    <div className="biz-en en">{b.en}</div>
+                    <div className="biz-name">{b.name}</div>
+                    <p className="biz-summary">新业务筹备中，敬请期待。</p>
+                    <span className="biz-badge">即将开放</span>
+                  </div>
+                );
+              }
               return (
-                <div key={b.id} className="biz-card biz-card-off" aria-disabled="true">
+                <Link key={b.id} href={`/business/${b.id}`} className="biz-card">
                   <div className="biz-en en">{b.en}</div>
                   <div className="biz-name">{b.name}</div>
-                  <p className="biz-summary">新业务筹备中，敬请期待。</p>
-                  <span className="biz-badge">即将开放</span>
-                </div>
+                  <p className="biz-summary">
+                    二手数码回收 · 两家门店经营数据。最新月（{latest?.month ?? "—"}）：分润{" "}
+                    {money(latest?.profit)} 元 · 单量 {int(latest?.orders)} 单 · 上门 {int(latest?.door_orders)} 单。
+                  </p>
+                  <div className="biz-cta">进入板块 →</div>
+                </Link>
               );
-            }
-            const granted = canAccessBusiness(grantedIds, b.id);
-            if (!granted) {
-              return (
-                <div key={b.id} className="biz-card biz-card-off" aria-disabled="true">
-                  <div className="biz-en en">{b.en}</div>
-                  <div className="biz-name">{b.name}</div>
-                  <p className="biz-summary">当前账号未被授权进入该板块。</p>
-                  <span className="biz-badge">未授权 · 请联系老板开通</span>
-                </div>
-              );
-            }
-            return (
-              <Link key={b.id} href={`/business/${b.id}`} className="biz-card">
-                <div className="biz-en en">{b.en}</div>
-                <div className="biz-name">{b.name}</div>
-                <p className="biz-summary">
-                  二手数码回收 · 两家门店经营数据。最新月（{latest?.month ?? "—"}）：分润{" "}
-                  {money(latest?.profit)} 元 · 单量 {int(latest?.orders)} 单 · 上门 {int(latest?.door_orders)} 单。
-                </p>
-                <div className="biz-cta">进入板块 →</div>
-              </Link>
-            );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </main>
     </>
   );

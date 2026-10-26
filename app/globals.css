@@ -68,6 +68,7 @@ html[data-theme="light"] {
 html, body {
   margin: 0;
   padding: 0;
+  overflow-x: clip; /* 页面本身不出现横向滚动（宽表格在容器内滚动）；clip 不破坏 sticky 顶栏 */
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
   font-size: 16px;
@@ -152,6 +153,28 @@ a:hover { text-decoration: none; }
 .user-email { color: var(--muted); font-size: 13.5px; }
 .theme-toggle { white-space: nowrap; padding: 8px 14px; font-size: 13.5px; }
 
+/* 汉堡按钮（指令37）：仅小屏出现，44×44 触控区，定位在顶栏右上角 */
+.nav-burger {
+  display: none;
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 60;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.3s ease;
+}
+.nav-burger:hover { border-color: var(--gold); color: var(--gold); }
+
 .demo-bar {
   max-width: 1280px;
   margin: 0 auto 14px;
@@ -171,7 +194,10 @@ a:hover { text-decoration: none; }
   background: transparent;
   color: var(--muted);
   border-radius: 999px;
-  padding: 5px 14px;
+  padding: 8px 16px;
+  min-height: 44px; /* 触控友好（指令37） */
+  display: inline-flex;
+  align-items: center;
   cursor: pointer;
   font-size: 13px;
   transition: color 0.2s ease, border-color 0.2s ease, background-color 0.25s ease;
@@ -282,7 +308,7 @@ h1.page-title {
 /* ---------- 业务板块入口卡 ---------- */
 .biz-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 26px;
 }
 .biz-card {
@@ -361,12 +387,15 @@ table.report thead th {
 table.report tbody tr { transition: background-color 0.15s ease; }
 table.report tbody tr:hover { background: var(--card-hover); }
 table.report tr.total td { font-weight: 700; background: var(--card-hover); border-top: 1px solid var(--border); }
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
 .locked-cell { color: var(--red); }
 
 /* ---------- buttons / forms ---------- */
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* 触控友好（指令37） */
   background: var(--gold);
   color: var(--on-gold);
   border: 1px solid var(--gold);
@@ -455,11 +484,13 @@ footer.site-footer {
   align-items: center;
   gap: 8px;
   margin-right: 16px;
+  padding: 8px 6px;
+  min-height: 44px; /* 触控友好（指令37） */
   cursor: pointer;
   font-size: 14px;
   color: var(--text);
 }
-.access-toggle input { width: 17px; height: 17px; accent-color: var(--gold); cursor: pointer; }
+.access-toggle input { width: 19px; height: 19px; accent-color: var(--gold); cursor: pointer; flex: none; }
 .access-toggle input:disabled { cursor: not-allowed; }
 .access-toggle-off { color: var(--faint); cursor: not-allowed; }
 .access-msg { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
@@ -534,19 +565,72 @@ footer.site-footer {
 }
 .login-title { font-size: 24px; }
 
-/* ---------- 响应式降档（指令34：移动端按比例缩放，不溢出） ---------- */
+/* ---------- 响应式 · 导航收起（指令37：≤900px 汉堡 + 抽屉） ---------- */
+@media (max-width: 900px) {
+  .nav-burger { display: inline-flex; }
+  .topbar-inner { padding: 12px 60px 12px 18px; gap: 14px; }
+  .brand-en { display: none; }
+  .brand-slogan { letter-spacing: 1.5px; font-size: 12.5px; }
+  /* 菜单 / 用户区 / 演示条默认收起，.nav-open 时展开为抽屉面板 */
+  .menu, .userbox, .demo-bar { display: none; }
+  .topbar.nav-open .menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 0 0 100%;
+    order: 5;
+    padding: 8px 0 4px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .topbar.nav-open .menu a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 10px 6px;
+    font-size: 16px;
+    border-bottom: none;
+    border-radius: 8px;
+  }
+  .topbar.nav-open .menu a:hover { background: var(--card-hover); }
+  .topbar.nav-open .userbox {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 100%;
+    order: 6;
+    padding: 10px 0 12px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .topbar.nav-open .demo-bar {
+    display: flex;
+    max-width: none;
+    margin: 0;
+    padding: 12px 18px 16px;
+  }
+  .demo-note { font-size: 14px; }
+}
+
+/* ---------- 响应式降档（指令34/37：小屏单列、字号不挤、不溢出） ---------- */
 @media (max-width: 720px) {
+  .kpi-row { grid-template-columns: 1fr; } /* KPI 卡纵向堆叠 */
+  .biz-grid { grid-template-columns: 1fr; }
   .kpi-wide { grid-column: span 1; }
   .kpi-value { font-size: 46px; }
   .kpi-hero .kpi-value { font-size: 58px; }
   .kpi-card { padding: 26px 24px 22px; }
+  .kpi-sub { font-size: 14.5px; }
+  .card { padding: 22px 18px; }
+  .card.table-wrap { padding: 14px 12px; }
   h1.page-title { font-size: 30px; }
+  .section-title { font-size: 20px; margin: 40px 0 16px; }
   .container { padding: 36px 18px 56px; }
-  .topbar-inner { padding: 14px 18px; gap: 18px; }
   .biz-name { font-size: 25px; }
   .biz-card { padding: 26px 24px 24px; }
+  .login-wrap { padding: 40px 18px 48px; }
   .login-brand-name { font-size: 52px; }
   .login-card { padding: 26px 22px 22px; }
+  table.report th, table.report td { padding: 11px 12px; }
 }
 @media (max-width: 400px) {
   .kpi-value { font-size: 38px; }

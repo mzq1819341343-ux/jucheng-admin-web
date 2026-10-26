@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import type { CurrentUser } from "@/lib/data";
-import { ROLE_LABEL } from "@/lib/data";
+import { ROLE_LABEL, getMyBusinesses, canAccessBusiness } from "@/lib/data";
 import LogoutButton from "./LogoutButton";
 import DemoRoleSwitcher from "./DemoRoleSwitcher";
 import DemoBizSwitcher, { type DemoBiz } from "./DemoBizSwitcher";
 import ThemeToggle from "./ThemeToggle";
+import NavShell from "./NavShell";
 
 export default async function Nav({ user }: { user: CurrentUser }) {
   let demoBiz: DemoBiz = "all";
@@ -13,9 +14,12 @@ export default async function Nav({ user }: { user: CurrentUser }) {
     const v = (await cookies()).get("demo_biz")?.value;
     if (v === "aihuishou" || v === "none") demoBiz = v;
   }
+  // 指令37：无权限板块入口完全不渲染——导航里的业务链接同样按授权显隐
+  const { grantedIds } = await getMyBusinesses(user);
+  const showAihuishou = canAccessBusiness(grantedIds, "aihuishou");
 
   return (
-    <header className="topbar">
+    <NavShell>
       <div className="topbar-inner">
         <div className="brand">
           <Link href="/" className="brand-name">
@@ -26,7 +30,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
         </div>
         <nav className="menu">
           <Link href="/">公司总览</Link>
-          <Link href="/business/aihuishou">爱回收</Link>
+          {showAihuishou ? <Link href="/business/aihuishou">爱回收</Link> : null}
           <Link href="/members">成员与权限</Link>
           <Link href="/status">数据刷新状态</Link>
         </nav>
@@ -49,6 +53,6 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           </span>
         </div>
       ) : null}
-    </header>
+    </NavShell>
   );
 }
