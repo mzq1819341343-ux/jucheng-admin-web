@@ -76,7 +76,12 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
     <>
       <h2 className="section-title">工资体系配置</h2>
       <div className="card">
-        <SalaryRuleManager initialRules={rules} demo={user.demo} userId={user.id} />
+        <SalaryRuleManager
+          initialRules={rules}
+          demo={user.demo}
+          userId={user.id}
+          months={combined.rows.map((r) => r.month)}
+        />
       </div>
 
       <h2 className="section-title">月度工资导入</h2>

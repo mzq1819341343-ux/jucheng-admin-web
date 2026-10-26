@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { SalaryRule } from "@/lib/data";
 import { money2 } from "@/lib/format";
+import SalaryRuleVersionPreview from "@/components/SalaryRuleVersionPreview";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 /**
@@ -15,12 +16,16 @@ export default function SalaryRuleManager({
   initialRules,
   demo,
   userId,
+  months = [],
 }: {
   initialRules: SalaryRule[];
   demo: boolean;
   userId: string | null;
+  months?: string[];
 }) {
   const [rules, setRules] = useState<SalaryRule[]>(initialRules);
+  // 指令53 D2：双版本预览跟随最近编辑生效月的规则（默认第一条），保存后即时翻转。
+  const [previewRuleId, setPreviewRuleId] = useState<string | null>(initialRules[0]?.id ?? null);
   const [title, setTitle] = useState("");
   const [baseSalary, setBaseSalary] = useState("");
   const [commissionJson, setCommissionJson] = useState("");
@@ -31,6 +36,7 @@ export default function SalaryRuleManager({
 
   function onEffectiveSaved(id: string, value: string | null) {
     setRules((prev) => prev.map((r) => (r.id === id ? { ...r, effective_from: value } : r)));
+    setPreviewRuleId(id);
     setMsg(value ? `生效起始月已设为 ${value}` : "生效起始月已清空（待老板确认）");
   }
 
@@ -75,6 +81,7 @@ export default function SalaryRuleManager({
     };
     if (demo || !isSupabaseConfigured()) {
       setRules([draft, ...rules]);
+      setPreviewRuleId(draft.id);
       setMsg("演示：已加入本地列表，未落库");
       setTitle("");
       setBaseSalary("");
@@ -103,6 +110,7 @@ export default function SalaryRuleManager({
         setMsg(`保存失败：${error.message}`);
       } else {
         setRules([data as SalaryRule, ...rules]);
+        setPreviewRuleId((data as SalaryRule).id);
         setMsg("已保存");
         setTitle("");
         setBaseSalary("");
@@ -184,6 +192,11 @@ export default function SalaryRuleManager({
           </table>
         </div>
       )}
+
+      <SalaryRuleVersionPreview
+        rule={rules.find((r) => r.id === previewRuleId) ?? rules[0] ?? null}
+        months={months}
+      />
 
       <form onSubmit={onAdd} style={{ marginTop: 20 }}>
         <div className="form-row">
