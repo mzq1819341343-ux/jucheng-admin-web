@@ -36,8 +36,8 @@ export default async function StoreCostsPage() {
         </div>
         <h1 className="page-title">门店成本</h1>
         <p className="page-desc">
-          两店分月成本（房租 / 水电 / 其他）{isOwner ? "，老板可录入与修改" : "，合伙人只读"}；
-          已录入月份的成本合计会进入爱回收仪表盘的净利暂定核算，未录入的类型未取得、不计入。
+          两店分月成本（房租 / 水电 / 其他）{isOwner ? "，可录入与修改" : "，只读"}。
+          已录入成本进入仪表盘净利核算，未录入的类型未取得、不计入。
           {user.demo ? " 当前为演示模式，表单仅本地演示。" : ""}
         </p>
 

@@ -265,7 +265,7 @@ export default async function OverviewPage({
           </>
         ) : (
           <div className="card">
-            <p className="empty">暂未开通任何业务板块，请联系老板授权。开通后，这里会显示对应业务的经营摘要。</p>
+            <p className="empty">暂未开通任何业务板块，请联系老板授权。</p>
           </div>
         )}
 

@@ -44,7 +44,7 @@ export default async function SalaryPage() {
         <p className="page-desc">
           当前角色：{ROLE_LABEL[user.role]}
           {user.demo ? "｜演示模式（表单仅本地演示，不落库）" : ""}
-          ｜工资数字由老板提供后录入，本站不展示工资原表。
+          ｜工资由老板录入，本站不展示工资原表。
         </p>
 
         <h2 className="section-title">工资怎么算</h2>
@@ -93,7 +93,7 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
       <div className="card">
         {rows.length === 0 ? (
           <p className="empty">
-            暂无已发布的月度工资：老板提供工资数字后，在此按人按月录入并发布，员工即可在「我的薪酬」看到自己的一行。
+            暂无已发布的月度工资。录入并发布后，员工可在「我的薪酬」看到自己的一行。
           </p>
         ) : (
           <div className="table-wrap">

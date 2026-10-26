@@ -67,7 +67,7 @@ export default async function ExpensesPage({
           </div>
           <h1 className="page-title">报销台账</h1>
           <p className="page-desc">
-            合伙人仅看公司汇总，不显示报销明细、报销人或录入表单。未报销也属于已经发生的公司花费。
+            仅看公司汇总（无明细、报销人与录入表单）。未报销也计入已发生花费。
           </p>
           <SummaryCards
             rows={agg}
@@ -128,9 +128,9 @@ export default async function ExpensesPage({
         <h1 className="page-title">{isStaff ? "我的报销" : "报销台账"}</h1>
         <p className="page-desc">
           {isStaff
-            ? "这里只显示你自己创建的报销单；他人的记录不会出现。你可以新建、编辑、删除并切换自己单据的状态。"
-            : "老板可查看全部报销单，并新建、编辑、删除和切换状态。"}
-          未报销只表示尚未打款，仍计入当月已发生公司花费。
+            ? "只显示你创建的报销单，可新建、编辑、删除与切换状态。"
+            : "全部报销单，可新建、编辑、删除与切换状态。"}
+          未报销也计入当月已发生花费。
           {user.demo ? " 当前为演示模式：本地样例数据，不写库。" : ""}
         </p>
 
