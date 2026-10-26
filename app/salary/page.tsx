@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleManager from "@/components/SalaryRuleManager";
@@ -11,6 +12,8 @@ import {
   getAllSalaryMonthly,
   getSalaryStoreAgg,
   getAllMembers,
+  getSalaryDetailImport,
+  getMetrics,
   ROLE_LABEL,
 } from "@/lib/data";
 import { STORE_LABEL } from "@/lib/stores";
@@ -60,10 +63,12 @@ export default async function SalaryPage() {
 }
 
 async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
-  const [rules, rows, { members }] = await Promise.all([
+  const [rules, rows, { members }, detailRows, combined] = await Promise.all([
     getSalaryRules(user),
     getAllSalaryMonthly(user),
     getAllMembers(),
+    getSalaryDetailImport(user),
+    getMetrics("combined", user.role),
   ]);
   const nameById = new Map(members.map((m) => [m.id, m.display_name ?? "—"]));
 
@@ -127,7 +132,164 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
           按人明细仅老板可见，本站不提供工资原表导出；员工只看到自己已发布月份的一行。
         </p>
       </div>
+
+      <h2 className="section-title">工资明细（实表导入）</h2>
+      <SalaryDetailSection user={user} detailRows={detailRows} combinedRows={combined.rows} />
     </>
+  );
+}
+
+/**
+ * 工资实表明细只读区（指令47）：数据来自 salary_detail_import（老板提供的
+ * 2026 年 1–9 月工资实表按锁定口径导入），仅老板渲染本区，RLS 同步只有
+ * owner 策略；合伙人 / 员工页面不出现本区。逐月与 monthly_metrics 的
+ * 月度工资汇总自动对账，差额逐行列明（应为 0.00）。
+ */
+function SalaryDetailSection({
+  user,
+  detailRows,
+  combinedRows,
+}: {
+  user: Awaited<ReturnType<typeof getCurrentUser>>;
+  detailRows: Awaited<ReturnType<typeof getSalaryDetailImport>>;
+  combinedRows: Awaited<ReturnType<typeof getMetrics>>["rows"];
+}) {
+  if (user.demo) {
+    return (
+      <div className="card">
+        <p className="empty">
+          演示模式不显示实表明细：明细来自工资实表导入，仅老板真实登录后可见；员工与合伙人均不可见，也不在演示中出现。
+        </p>
+      </div>
+    );
+  }
+  if (detailRows.length === 0) {
+    return (
+      <div className="card">
+        <p className="empty">
+          尚未导入工资实表明细：导入完成后，这里按月列示逐人实发，并与月度工资汇总自动对账。
+        </p>
+      </div>
+    );
+  }
+
+  const months = [...new Set(detailRows.map((r) => r.month))].sort().reverse();
+  const wageByMonth = new Map(combinedRows.map((r) => [r.month, r.wage_cost ?? null]));
+  const detailSum = (m: string) =>
+    detailRows.filter((r) => r.month === m).reduce((s, r) => s + Number(r.net_amount ?? 0), 0);
+  const detailGrand = detailRows.reduce((s, r) => s + Number(r.net_amount ?? 0), 0);
+  const metricsGrand = months.reduce((s, m) => s + Number(wageByMonth.get(m) ?? 0), 0);
+  const SECTION_LABEL: Record<string, string> = { store: "门店", door: "上门" };
+
+  return (
+    <div className="card">
+      <div className="table-wrap">
+        <table className="report">
+          <thead>
+            <tr>
+              <th>月份</th>
+              <th style={{ textAlign: "left" }}>员工</th>
+              <th>段</th>
+              <th>固定（元）</th>
+              <th>提成（元）</th>
+              <th>调整（元）</th>
+              <th>实发（元）</th>
+              <th style={{ textAlign: "left" }}>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            {months.map((m) => (
+              <Fragment key={m}>
+                {detailRows
+                  .filter((r) => r.month === m)
+                  .map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.month}</td>
+                      <td style={{ textAlign: "left" }}>{r.employee_name}</td>
+                      <td>{SECTION_LABEL[r.section] ?? r.section}</td>
+                      <td>{money2(r.base_amount)}</td>
+                      <td>{money2(r.commission_amount)}</td>
+                      <td>{money2(r.deduction_amount)}</td>
+                      <td>{money2(r.net_amount)}</td>
+                      <td style={{ textAlign: "left" }}>{r.note ?? "—"}</td>
+                    </tr>
+                  ))}
+                <tr key={`${m}-subtotal`}>
+                  <td colSpan={6} style={{ textAlign: "right" }}>
+                    {m} 明细合计
+                  </td>
+                  <td>{money2(detailSum(m))}</td>
+                  <td />
+                </tr>
+              </Fragment>
+            ))}
+            <tr>
+              <td colSpan={6} style={{ textAlign: "right" }}>
+                全部月份明细总计
+              </td>
+              <td>{money2(detailGrand)}</td>
+              <td />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="section-title" style={{ marginTop: 20 }}>与月度汇总对账</h3>
+      <div className="table-wrap">
+        <table className="report">
+          <thead>
+            <tr>
+              <th>月份</th>
+              <th>明细实发合计（元）</th>
+              <th>月度汇总（元）</th>
+              <th>差额（元）</th>
+            </tr>
+          </thead>
+          <tbody>
+            {months.map((m) => {
+              const d = detailSum(m);
+              const w = wageByMonth.get(m) ?? null;
+              const diff = w === null ? null : Math.round((d - w) * 100) / 100;
+              return (
+                <tr key={m}>
+                  <td>{m}</td>
+                  <td>{money2(d)}</td>
+                  <td>{money2(w)}</td>
+                  <td>
+                    {diff === null ? (
+                      "—"
+                    ) : diff === 0 ? (
+                      <span className="tag tag-ok">0.00</span>
+                    ) : (
+                      <span className="tag tag-pending">{money2(diff)}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td>总计</td>
+              <td>{money2(detailGrand)}</td>
+              <td>{money2(metricsGrand)}</td>
+              <td>
+                {Math.round((detailGrand - metricsGrand) * 100) / 100 === 0 ? (
+                  <span className="tag tag-ok">0.00</span>
+                ) : (
+                  <span className="tag tag-pending">
+                    {money2(Math.round((detailGrand - metricsGrand) * 100) / 100)}
+                  </span>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="page-desc" style={{ marginTop: 12 }}>
+        明细口径：实发取工资表最终打款列（2 月合计、3 月实际工资、4–9 月去除公费实际打款、1 月银行代发）；
+        李东浩与李冬浩为同一人，已合并。年回报率的工资实发合计以本明细为准，与月度汇总交叉校验。
+        员工账号建立后，可按姓名把明细晋升为员工可见的月度工资行（先未发布，核对后发布）。
+      </p>
+    </div>
   );
 }
 

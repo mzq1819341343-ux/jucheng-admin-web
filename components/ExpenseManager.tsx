@@ -8,6 +8,16 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 const DEMO_OWN_ID = "demo-current-user";
 
+/** 未报销超期阈值（指令46 B9 / 指令D7）：发生日距今超过 14 天仍未报销 → 站内「超期」标记（不发通知）。 */
+const OVERDUE_DAYS = 14;
+
+function isOverdueUnreimbursed(claim: ExpenseClaim): boolean {
+  if (claim.status !== "unreimbursed") return false;
+  const claimedAt = new Date(`${claim.claim_date}T00:00:00`).getTime();
+  if (Number.isNaN(claimedAt)) return false;
+  return Math.floor((Date.now() - claimedAt) / 86_400_000) > OVERDUE_DAYS;
+}
+
 function localMode(claim: ExpenseClaim | null, demo: boolean): boolean {
   return demo || !isSupabaseConfigured() || !claim || claim.id.startsWith("local-") || claim.id.startsWith("demo-");
 }
@@ -429,6 +439,14 @@ export default function ExpenseManager({
                     <span className={`status-badge ${claim.status === "reimbursed" ? "is-done" : "is-pending"}`}>
                       {claim.status === "reimbursed" ? "已报销" : "未报销"}
                     </span>
+                    {isOverdueUnreimbursed(claim) ? (
+                      <>
+                        {" "}
+                        <span className="status-badge is-overdue" title={`发生日距今超过 ${OVERDUE_DAYS} 天仍未报销`}>
+                          超期
+                        </span>
+                      </>
+                    ) : null}
                   </td>
                   <td style={{ whiteSpace: "normal" }}>
                     <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => void toggleStatus(claim)}>
