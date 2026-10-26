@@ -1,0 +1,200 @@
+import { cookies} from "next/headers";
+import { createClient as createServerSupabase, isSupabaseConfigured} from "./supabase/server";
+
+export type Role = "owner" | "partner" | "staff";
+export type Scope = "combined" | "wanda" | "friendship";
+
+export interface MetricRow {
+month: string;
+scope: Scope;
+orders: number | null;
+profit: number | null;
+door_orders: number | null;
+avg_profit: number | null;
+wage_cost?: number | null; // 敏感：staff 视图里不存在
+wage_ratio?: number | null; // 敏感
+per_capita_profit?: number | null; // 敏感
+per_capita_orders?: number | null;
+net_profit_provisional?: number | null; // 敏感
+note?: string | null;
+}
+
+export interface Profile {
+id: string;
+role: Role;
+display_name: string | null;
+store_scope: string;
+}
+
+export interface FetchLog {
+source: string;
+status: string;
+message: string | null;
+created_at: string;
+}
+
+export const ROLE_LABEL: Record<Role, string> = {
+owner: "老板",
+partner: "合伙人",
+staff: "店员",
+};
+
+/** 敏感字段（净利 / 工资类）：staff 不可见。页面一律按此判断 + 服务端数据层双保险。 */
+export function canSeeSensitive(role: Role) {
+return role === "owner" || role === "partner";
+}
+
+// ============================================================
+// 兜底汇总数据：与 supabase/seed.sql 完全一致（爱回收驾驶舱 v3.3 汇总口径）。
+// 仅当 Supabase 未配置或查询失败时使用，保证预览链接可打开、可演示。
+// 全部数字来自 v3.3 已锁定台账汇总，不含任何个人数据。
+// ============================================================
+export const FALLBACK_COMBINED: MetricRow[] = [
+{ month: "2026-01", scope: "combined", orders: 71, profit: 6458.52, door_orders: 37, avg_profit: 90.96, wage_cost: 5474.73, wage_ratio: 84.8, per_capita_profit: 1614.63, per_capita_orders: 17.75, net_profit_provisional: null, note: "1 月工资仅银行代发汇总，无拆分"},
+{ month: "2026-02", scope: "combined", orders: 349, profit: 30700.77, door_orders: 204, avg_profit: 87.97, wage_cost: 24826.79, wage_ratio: 80.9, per_capita_profit: 7675.19, per_capita_orders: 87.25, net_profit_provisional: null},
+{ month: "2026-03", scope: "combined", orders: 600, profit: 61455.03, door_orders: 274, avg_profit: 102.43, wage_cost: 31961.53, wage_ratio: 52.0, per_capita_profit: 10242.51, per_capita_orders: 100.0, net_profit_provisional: null},
+{ month: "2026-04", scope: "combined", orders: 524, profit: 51465.39, door_orders: 259, avg_profit: 98.22, wage_cost: 29411.15, wage_ratio: 57.1, per_capita_profit: 6433.17, per_capita_orders: 65.5, net_profit_provisional: null},
+{ month: "2026-05", scope: "combined", orders: 452, profit: 47899.44, door_orders: 227, avg_profit: 105.96, wage_cost: 32051.8, wage_ratio: 66.9, per_capita_profit: 5987.43, per_capita_orders: 56.5, net_profit_provisional: null},
+{ month: "2026-06", scope: "combined", orders: 679, profit: 64866.45, door_orders: 356, avg_profit: 95.53, wage_cost: 31259.0, wage_ratio: 48.2, per_capita_profit: 9266.64, per_capita_orders: 97.0, net_profit_provisional: null},
+{ month: "2026-07", scope: "combined", orders: 433, profit: 45630.56, door_orders: 207, avg_profit: 105.38, wage_cost: 28998.0, wage_ratio: 63.5, per_capita_profit: 6518.65, per_capita_orders: 61.86, net_profit_provisional: null},
+{ month: "2026-08", scope: "combined", orders: 437, profit: 54962.6, door_orders: 180, avg_profit: 125.77, wage_cost: 30510.0, wage_ratio: 55.5, per_capita_profit: 7851.8, per_capita_orders: 62.43, net_profit_provisional: null, note: "8 月工资以门店工资表汇总为准"},
+{ month: "2026-09", scope: "combined", orders: 413, profit: 53220.6, door_orders: 189, avg_profit: 128.86, wage_cost: 30264.0, wage_ratio: 56.9, per_capita_profit: 6652.58, per_capita_orders: 51.63, net_profit_provisional: 4870.86, note: "净利暂定，未扣房租水电"},
+];
+
+export const FALLBACK_STORES: MetricRow[] = [
+{ month: "2026-01", scope: "wanda", orders: 34, profit: 4482.52, door_orders: null, avg_profit: 131.84},
+{ month: "2026-02", scope: "wanda", orders: 181, profit: 21575.77, door_orders: null, avg_profit: 119.2},
+{ month: "2026-03", scope: "wanda", orders: 214, profit: 31218.73, door_orders: null, avg_profit: 145.88},
+{ month: "2026-04", scope: "wanda", orders: 149, profit: 24738.43, door_orders: null, avg_profit: 166.03},
+{ month: "2026-05", scope: "wanda", orders: 130, profit: 21818.45, door_orders: null, avg_profit: 167.83},
+{ month: "2026-06", scope: "wanda", orders: 168, profit: 26323.87, door_orders: null, avg_profit: 156.69},
+{ month: "2026-07", scope: "wanda", orders: 127, profit: 21393.85, door_orders: null, avg_profit: 168.46},
+{ month: "2026-08", scope: "wanda", orders: 152, profit: 29172.53, door_orders: null, avg_profit: 191.92},
+{ month: "2026-09", scope: "wanda", orders: 124, profit: 27111.21, door_orders: null, avg_profit: 218.64, net_profit_provisional: 3290.59},
+{ month: "2026-01", scope: "friendship", orders: 0, profit: 0, door_orders: null, avg_profit: null},
+{ month: "2026-02", scope: "friendship", orders: 1, profit: 35.0, door_orders: null, avg_profit: 35.0},
+{ month: "2026-03", scope: "friendship", orders: 112, profit: 15646.24, door_orders: null, avg_profit: 139.7},
+{ month: "2026-04", scope: "friendship", orders: 116, profit: 13486.42, door_orders: null, avg_profit: 116.26},
+{ month: "2026-05", scope: "friendship", orders: 95, profit: 14656.58, door_orders: null, avg_profit: 154.28},
+{ month: "2026-06", scope: "friendship", orders: 155, profit: 18634.05, door_orders: null, avg_profit: 120.22},
+{ month: "2026-07", scope: "friendship", orders: 99, profit: 13797.71, door_orders: null, avg_profit: 139.37},
+{ month: "2026-08", scope: "friendship", orders: 105, profit: 15149.57, door_orders: null, avg_profit: 144.28},
+{ month: "2026-09", scope: "friendship", orders: 100, profit: 15684.39, door_orders: null, avg_profit: 156.84, net_profit_provisional: 1580.27},
+];
+
+export const FALLBACK_FETCH_LOGS: FetchLog[] = [
+{ source: "aihuishou_cockpit_v3_3", status: "success", message: "手动导入爱回收驾驶舱 v3.3 汇总（2026-01~09）：3,958 单 / 分润 416,661.32 元", created_at: "2026-10-26 18:00"},
+{ source: "aihuishou_auto_fetch", status: "pending", message: "自动抓取未启用：待老板登录爱回收后台并恢复 10 月续抓后启用", created_at: "2026-10-26 18:00"},
+];
+
+// ============================================================
+// 当前用户与角色
+// - 已配置 Supabase 且有登录会话：从 profiles 表读真实角色；
+// - 否则进入：角色取 Cookie demo_role（成员页可切换），默认 owner。
+// ============================================================
+export interface CurrentUser {
+role: Role;
+demo: boolean;
+email: string | null;
+displayName: string | null;
+}
+
+export async function getCurrentUser(): Promise<CurrentUser> {
+if (isSupabaseConfigured()) {
+try {
+const supabase = await createServerSupabase();
+const {
+data: { user},
+} = await supabase.auth.getUser();
+if (user) {
+const { data: profile} = await supabase
+.from("profiles")
+.select("role, display_name")
+.eq("id", user.id)
+.single();
+return {
+role: (profile?.role as Role)?? "staff",
+demo: false,
+email: user.email?? null,
+displayName: profile?.display_name?? null,
+};
+}
+} catch {
+// 落到演示模式
+}
+}
+const cookieStore = await cookies();
+const demoRole = cookieStore.get("demo_role")?.value;
+const role: Role =
+demoRole === "partner" || demoRole === "staff"? demoRole: "owner";
+return { role, demo: true, email: null, displayName: "演示用户"};
+}
+
+/** staff 在数据层就拿不到敏感列（真实模式查 v_ops_metrics 视图；兜底模式在此剥离）。 */
+function stripSensitive(rows: MetricRow[]): MetricRow[] {
+return rows.map((r) => ({
+month: r.month,
+scope: r.scope,
+orders: r.orders,
+profit: r.profit,
+door_orders: r.door_orders,
+avg_profit: r.avg_profit,
+}));
+}
+
+export async function getMetrics(
+scope: Scope,
+role: Role
+): Promise<{ rows: MetricRow[]; fromDb: boolean}> {
+if (isSupabaseConfigured()) {
+try {
+const supabase = await createServerSupabase();
+const table = role === "staff"? "v_ops_metrics": "monthly_metrics";
+const { data, error} = await supabase
+.from(table)
+.select("*")
+.eq("scope", scope)
+.order("month", { ascending: true});
+if (!error && data && data.length > 0) {
+return { rows: data as MetricRow[], fromDb: true};
+}
+} catch {
+// 用兜底数据
+}
+}
+const rows = scope === "combined"? FALLBACK_COMBINED: FALLBACK_STORES.filter((r) => r.scope === scope);
+return { rows: role === "staff"? stripSensitive(rows): rows, fromDb: false};
+}
+
+export async function getAllMembers(): Promise<{ members: Profile[]; fromDb: boolean}> {
+if (isSupabaseConfigured()) {
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("profiles")
+.select("id, role, display_name, store_scope")
+.order("created_at", { ascending: true});
+if (!error && data) return { members: data as Profile[], fromDb: true};
+} catch {
+// 空态
+}
+}
+return { members: [], fromDb: false};
+}
+
+export async function getFetchLogs(): Promise<{ logs: FetchLog[]; fromDb: boolean}> {
+if (isSupabaseConfigured()) {
+try {
+const supabase = await createServerSupabase();
+const { data, error} = await supabase
+.from("fetch_logs")
+.select("source, status, message, created_at")
+.order("created_at", { ascending: false})
+.limit(20);
+if (!error && data && data.length > 0) return { logs: data as FetchLog[], fromDb: true};
+} catch {
+// 兜底
+}
+}
+return { logs: FALLBACK_FETCH_LOGS, fromDb: false};
+}
