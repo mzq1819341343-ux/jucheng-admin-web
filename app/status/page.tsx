@@ -93,6 +93,45 @@ export default async function StatusPage() {
           请老板点：在 Muse 浏览器里本人登录一次爱回收后台（或更新保存的密码），登录恢复并成功续抓一次 10 月数据后，再按 <span className="en">auto_fetch</span> 待启用配置开启定时抓取。不要把密码发到聊天里。
         </div>
 
+        <h2 className="section-title">10 月对账（待抓取）</h2>
+        <div className="card">
+          <div className="table-wrap">
+            <table className="report">
+              <tbody>
+                <tr>
+                  <td style={{ textAlign: "left", whiteSpace: "nowrap" }}>应抓区间</td>
+                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>
+                    订单按回收完成时间 2026-10-01 00:00:00 ~ 2026-10-25 23:59:59（万达 4594 / 友谊 5511 两店原生导出）；
+                    加盟商对账单账单时间 2026-10（两店）。
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: "left", whiteSpace: "nowrap" }}>基线（不变）</td>
+                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>
+                    2026-01~09 已锁定台账：3,958 单 / 分润 416,661.32 元（跨月去重口径）；10 月只追加新行，不改基线。
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ textAlign: "left", whiteSpace: "nowrap" }}>当前状态</td>
+                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>
+                    <span className="tag tag-pending">待登录 need_user_login</span>{" "}
+                    拍机堂会话未在 Muse 浏览器恢复，抓数管道已备未启用，未建定时任务；本卡只展示状态，不写假进度。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="page-desc" style={{ margin: "14px 0 8px" }}>一键启用步骤（登录恢复后按序执行）：</p>
+          <ol className="steps">
+            <li>老板在 Muse 浏览器面板本人登录一次拍机堂（密码只在登录页输入，不经聊天）。</li>
+            <li>
+              按仓库 <span className="en">docs/fetch-pipeline/10月抓取运行单.md</span> 首抓 10 月订单与对账单，落盘并更新 asof=2026-10-25 后重跑驾驶舱。
+            </li>
+            <li>对账校验：10 月单量 / 分润与后台一致；台账只新增 10 月行；7 单跨月重复只记待财务核对、不重复计入。</li>
+            <li>首抓对账通过后，再启用两条定时任务：每日 09:30 增量、每月 3 日 10:00 抓上月整月（Asia/Shanghai）。</li>
+          </ol>
+        </div>
+
         <h2 className="section-title">数据源</h2>
         <FetchRefreshMarkerLine marker={refreshMarker} />
         <div className="card table-wrap">
