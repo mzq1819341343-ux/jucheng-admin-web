@@ -259,6 +259,7 @@ h1.page-title {
 .kpi-card {
   position: relative;
   overflow: hidden;
+  min-width: 0; /* 栅格内可收缩，配合主数字分档缩放防溢出（指令39） */
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -288,21 +289,32 @@ h1.page-title {
   box-shadow: var(--shadow-lift), inset 0 1px 0 var(--card-highlight);
   border-color: var(--gold-dim);
 }
-.kpi-label { color: var(--muted); font-size: 15px; margin-bottom: 12px; letter-spacing: 0.5px; }
+/* 三级层级（指令39 · IBCS）：标签（小而清晰）→ 主数字（绝对主导）→ 单位后缀 / 说明行 */
+.kpi-label { color: var(--muted); font-size: 13px; font-weight: 600; margin-bottom: 10px; letter-spacing: 0.04em; }
 .kpi-value {
-  font-size: 64px;
-  font-weight: 800;
+  --kpi-fs: clamp(40px, 4.6vw, 64px); /* 流体基准字号：桌面大场、窄屏自动收 */
+  font-size: calc(var(--kpi-fs) * var(--kpi-scale, 1)); /* × 长度分档（组件按字符数给） */
+  font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  line-height: 1.08;
-  letter-spacing: 0.5px;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+/* 单位：主数字的基线对齐后缀，与主值同视线（不再缩到角落当小字） */
+.kpi-unit {
+  font-size: 0.34em;
+  font-weight: 600;
+  color: var(--muted);
+  margin-left: 0.16em;
+  letter-spacing: 0.02em;
 }
 .kpi-value.locked { font-size: 28px; color: var(--red); padding: 12px 0; }
-.kpi-sub { color: var(--muted); font-size: 14px; margin-top: 12px; }
+.kpi-sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 10px; }
 .kpi-wide { grid-column: span 2; }
 .kpi-hero { background: var(--card); }
 .kpi-hero::before { width: 56px; }
-.kpi-hero .kpi-value { font-size: 80px; }
+.kpi-hero .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); }
 .sparkline { margin-top: 14px; }
 
 /* ---------- 业务板块入口卡 ---------- */
@@ -616,10 +628,10 @@ footer.site-footer {
   .kpi-row { grid-template-columns: 1fr; } /* KPI 卡纵向堆叠 */
   .biz-grid { grid-template-columns: 1fr; }
   .kpi-wide { grid-column: span 1; }
-  .kpi-value { font-size: 46px; }
-  .kpi-hero .kpi-value { font-size: 58px; }
+  .kpi-value { --kpi-fs: 46px; }
+  .kpi-hero .kpi-value { --kpi-fs: 58px; }
   .kpi-card { padding: 26px 24px 22px; }
-  .kpi-sub { font-size: 14.5px; }
+  .kpi-sub { font-size: 13px; }
   .card { padding: 22px 18px; }
   .card.table-wrap { padding: 14px 12px; }
   h1.page-title { font-size: 30px; }
@@ -633,8 +645,8 @@ footer.site-footer {
   table.report th, table.report td { padding: 11px 12px; }
 }
 @media (max-width: 400px) {
-  .kpi-value { font-size: 38px; }
-  .kpi-hero .kpi-value { font-size: 46px; }
+  .kpi-value { --kpi-fs: 38px; }
+  .kpi-hero .kpi-value { --kpi-fs: 46px; }
   .biz-grid { grid-template-columns: 1fr; }
 }
 

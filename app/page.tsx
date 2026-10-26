@@ -60,13 +60,14 @@ export default async function OverviewPage({
         </h2>
         {hasAihuishou ? (
           <div className="kpi-row">
-            <KpiCard label="当月总单量（两店合计）" value={int(latest?.orders)} sub="单" />
-            <KpiCard label="当月总分润" value={money(latest?.profit)} sub="元" />
-            <KpiCard label="当月上门单量（两店合计）" value={int(latest?.door_orders)} sub="单" />
+            <KpiCard label="当月总单量（两店合计）" value={int(latest?.orders)} unit="单" />
+            <KpiCard label="当月总分润" value={money(latest?.profit)} unit="元" />
+            <KpiCard label="当月上门单量（两店合计）" value={int(latest?.door_orders)} unit="单" />
             <KpiCard
-              label="覆盖期累计（2026-01~09）"
+              label="覆盖期累计分润（2026-01~09）"
               value={money(totalProfit)}
-              sub={`元分润｜共 ${int(totalOrders)} 单`}
+              unit="元"
+              sub={`共 ${int(totalOrders)} 单`}
             />
           </div>
         ) : (

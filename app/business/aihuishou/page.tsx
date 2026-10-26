@@ -1,7 +1,6 @@
 import Nav from "@/components/Nav";
-import KpiCard from "@/components/KpiCard";
+import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
-import CountUp from "@/components/CountUp";
 import { getCurrentUser, getMetrics, canSeeSensitive } from "@/lib/data";
 import { money, int, pct } from "@/lib/format";
 
@@ -35,10 +34,10 @@ export default async function DashboardPage() {
         </p>
 
         <div className="kpi-row">
-          <KpiCard label={`当月总单量（${latest?.month ?? "—"}）`} value={int(latest?.orders)} sub="单" />
-          <KpiCard label="当月总分润" value={money(latest?.profit)} sub="元" />
-          <KpiCard label="当月单均分润" value={money(latest?.avg_profit)} sub="元 / 单" />
-          <KpiCard label="当月上门单量（两店合计）" value={int(latest?.door_orders)} sub="单" />
+          <KpiCard label={`当月总单量（${latest?.month ?? "—"}）`} value={int(latest?.orders)} unit="单" />
+          <KpiCard label="当月总分润" value={money(latest?.profit)} unit="元" />
+          <KpiCard label="当月单均分润" value={money(latest?.avg_profit)} unit="元/单" />
+          <KpiCard label="当月上门单量（两店合计）" value={int(latest?.door_orders)} unit="单" />
         </div>
 
         <div className="kpi-row" style={{ marginTop: 16 }}>
@@ -46,9 +45,10 @@ export default async function DashboardPage() {
             <div className="kpi-label">工资占分润比（{latest?.month ?? "—"}，两店合计）</div>
             {sensitive ? (
               <>
-                <div className="kpi-value">
-                  <CountUp value={pct(latest?.wage_ratio)} />
-                </div>
+                <KpiValue
+                  value={pct(latest?.wage_ratio).replace(/%$/, "")}
+                  unit={pct(latest?.wage_ratio).endsWith("%") ? "%" : undefined}
+                />
                 <div className="kpi-sub">
                   2026-01 至 2026-09 月度走势：{wageTrend.length ? `${pct(wageTrend[0])} → ${pct(wageTrend[wageTrend.length - 1])}` : "—"}
                 </div>
@@ -64,13 +64,14 @@ export default async function DashboardPage() {
           <KpiCard
             label="净利暂定（当月，两店合计，未扣房租水电）"
             value={sensitive ? money(latest?.net_profit_provisional) : ""}
-            sub="元"
+            unit="元"
             locked={!sensitive}
           />
           <KpiCard
             label="覆盖期累计（2026-01~09）"
             value={int(totalOrders)}
-            sub={`单｜分润 ${money(totalProfit)} 元｜上门 ${int(totalDoor)} 单`}
+            unit="单"
+            sub={`分润 ${money(totalProfit)} 元｜上门 ${int(totalDoor)} 单`}
           />
         </div>
 
