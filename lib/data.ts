@@ -274,8 +274,73 @@ return { members: data as Profile[], accessByUser, fromDb: true};
 return { members: [], accessByUser: {}, fromDb: false};
 }
 
-export async function getFetchLogs(): Promise<{ logs: FetchLog[]; fromDb: boolean}> {
-if (isSupabaseConfigured()) {
+// ============================================================
+// 成员待邀请名单（指令59 A6 / migration_008）：仅老板读写（RLS 同步
+// 只有 owner 策略）。演示模式用虚构兜底意向；真实模式表未建
+// （migration_008 未执行）时 tableReady=false，页面优雅降级提示。
+// ============================================================
+import { type MemberInvite } from "./invites";
+export type { MemberInvite };
+
+export const FALLBACK_MEMBER_INVITES: MemberInvite[] = [
+  {
+    id: "demo-invite-registered",
+    email: "staff-demo@example.com",
+    intended_role: "partner",
+    intended_businesses: ["aihuishou"],
+    note: "演示意向：对方已注册（显示名即邮箱），可一键对齐",
+    status: "pending",
+    created_by: null,
+    created_at: "2026-10-27T09:00:00+08:00",
+    aligned_at: null,
+    aligned_user_id: null,
+  },
+  {
+    id: "demo-invite-unregistered",
+    email: "partner-demo@example.com",
+    intended_role: "partner",
+    intended_businesses: ["aihuishou"],
+    note: "演示意向：对方尚未注册，先去控制台发邀请",
+    status: "pending",
+    created_by: null,
+    created_at: "2026-10-27T09:05:00+08:00",
+    aligned_at: null,
+    aligned_user_id: null,
+  },
+  {
+    id: "demo-invite-aligned",
+    email: "aligned-demo@example.com",
+    intended_role: "staff",
+    intended_businesses: [],
+    note: "演示意向：已对齐示例",
+    status: "aligned",
+    created_by: null,
+    created_at: "2026-10-26T18:00:00+08:00",
+    aligned_at: "2026-10-26T18:30:00+08:00",
+    aligned_user_id: "demo-staff",
+  },
+];
+
+export async function getMemberInvites(
+  user: CurrentUser
+): Promise<{ invites: MemberInvite[]; tableReady: boolean }> {
+  if (user.role !== "owner") return { invites: [], tableReady: true };
+  if (user.demo) return { invites: FALLBACK_MEMBER_INVITES, tableReady: true };
+  if (!realMode(user)) return { invites: [], tableReady: true };
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase
+      .from("member_invites")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) return { invites: data as MemberInvite[], tableReady: true };
+  } catch {
+    // 表未建时落到降级提示
+  }
+  return { invites: [], tableReady: false };
+}
+
+export async function getFetchLogs(): Promise<{ logs: FetchLog[]; fromDb: boolean}> {if (isSupabaseConfigured()) {
 try {
 const supabase = await createServerSupabase();
 const { data, error} = await supabase

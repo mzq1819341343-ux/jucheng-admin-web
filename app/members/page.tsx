@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import BusinessAccessToggles from "@/components/BusinessAccessToggles";
-import { getCurrentUser, getAllMembers, ROLE_LABEL, type Profile } from "@/lib/data";
+import MemberInvites from "@/components/MemberInvites";
+import { getCurrentUser, getAllMembers, getMemberInvites, ROLE_LABEL, type Profile } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -45,10 +46,13 @@ const ROLE_DOCS: { key: string; role: React.ReactNode; can: React.ReactNode; can
 const DEMO_MEMBERS: Profile[] = [
   { id: "demo-partner", role: "partner", display_name: "演示合伙人", store_scope: "all" },
   { id: "demo-staff", role: "staff", display_name: "演示店员", store_scope: "all" },
+  // 显示名即邮箱 = 新注册账号的默认形态（handle_new_user 触发器），供待邀请名单演示按邮箱匹配
+  { id: "demo-new-staff", role: "staff", display_name: "staff-demo@example.com", store_scope: "all" },
 ];
 const DEMO_GRANTS: Record<string, string[]> = {
   "demo-partner": ["aihuishou"],
   "demo-staff": [],
+  "demo-new-staff": [],
 };
 
 export default async function MembersPage() {
@@ -58,6 +62,14 @@ export default async function MembersPage() {
     ? await getAllMembers()
     : { members: [] as Profile[], accessByUser: {} as Record<string, string[]>, fromDb: false };
   const showDemoMembers = isOwner && user.demo && members.length === 0;
+  // 指令59 A6：待邀请名单仅老板拉取与渲染（合伙人/店员整节不渲染）。
+  const { invites, tableReady } = isOwner
+    ? await getMemberInvites(user)
+    : { invites: [], tableReady: true };
+  const matchMembers = (showDemoMembers ? DEMO_MEMBERS : members).map((m) => ({
+    id: m.id,
+    display_name: m.display_name,
+  }));
 
   return (
     <>
@@ -203,6 +215,20 @@ export default async function MembersPage() {
             </table>
           </div>
         )}
+
+        {/* 指令59 A6：待邀请名单仅老板渲染；合伙人/店员整节不渲染（58 A3 最严口径）。 */}
+        {isOwner ? (
+          <>
+            <h2 className="section-title">待邀请名单</h2>
+            <MemberInvites
+              initialInvites={invites}
+              members={matchMembers}
+              demo={user.demo}
+              tableReady={tableReady}
+              userId={user.id}
+            />
+          </>
+        ) : null}
       </main>
     </>
   );

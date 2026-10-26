@@ -184,7 +184,7 @@ export default async function HelpPage() {
               <tr>
                 <td>成员列表与业务授权</td>
                 <td>可见</td>
-                <td>可改（邀请 / 改角色 / 按板块授权）</td>
+                <td>可改（待邀请名单登记意向 / 一键对齐 / 改角色 / 按板块授权；发邀邮件走 Supabase 控制台）</td>
                 <td>仅角色说明（列表不显示）</td>
                 <td>—</td>
                 <td>仅角色说明（本节不渲染）</td>
@@ -210,7 +210,7 @@ export default async function HelpPage() {
           <ul className="plain">
             <li>
               <strong>老板（<span className="en">Owner</span>）：</strong>
-              管理全部业务板块与全部指标（含工资占分润比、净利暂定）；在「成员与权限」页邀请成员、调整角色、按业务板块逐个授权。
+              管理全部业务板块与全部指标（含工资占分润比、净利暂定）；在「成员与权限」页用「待邀请名单」登记邀请意向并一键对齐、调整角色、按业务板块逐个授权（发邀邮件走 Supabase 控制台）。
             </li>
             <li>
               <strong>合伙人（<span className="en">Partner</span>）：</strong>
@@ -412,7 +412,9 @@ export default async function HelpPage() {
               <strong>定目标：</strong>回总览「月度目标」卡设定本月目标（当月分润 / 公司口径净利 / 当月单量三选一，卡面会标明所选口径），之后在同一张卡看目标、实际与达成率。
             </li>
             <li>
-              <strong>管成员与数据状态：</strong>在「成员与权限」（/members）邀请成员、设角色、勾选业务授权；在「数据刷新状态」（/status）看抓取日志、工资对账与配置更新时间。
+              <strong>管成员与数据状态：</strong>邀请新成员先在「成员与权限」（/members）的「待邀请名单」登记邮箱、意向角色与意向授权，
+              再去 <span className="en">Supabase</span> 控制台只做发邀请一个动作；对方点邮件链接设密注册后，回名单点「一键对齐」即按意向写入角色与授权
+              （发邀不在本站内发送）。已注册成员的角色与授权也在同页直接维护。在「数据刷新状态」（/status）看抓取日志、工资对账与配置更新时间。
             </li>
           </ol>
           <figure className="help-shot">
