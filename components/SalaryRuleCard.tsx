@@ -110,6 +110,9 @@ export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
           : "（确认后支持新旧双版本规则按月回算）"}
         {rule.note ? `｜${rule.note}` : ""}
       </p>
+      <p className="page-desc" style={{ marginTop: 8, marginBottom: 0 }}>
+        历史双版本按生效起始月切换：新规则自生效月起算，之前月份按旧规则回算。
+      </p>
     </div>
   );
 }
