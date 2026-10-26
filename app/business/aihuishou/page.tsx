@@ -3,7 +3,7 @@ import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
-import { STORE_SHORT_LABEL } from "@/lib/stores";
+import { STORE_SHORT_LABEL, COST_TYPE_LABEL, type CostType, type StoreScope } from "@/lib/stores";
 import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +39,33 @@ export default async function DashboardPage() {
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
   const netBase = latestOp?.baseNetProfit ?? null;
   const netAdjusted = latestOp?.storeNetProfit ?? null;
+
+  // 指令52-2：花费拆解下钻——门店成本按店、按类型（store_costs 原始行）分层，
+  // 报销拆已报/未报，工资当月合计；占比统一以当月总花费为分母，与上方合计同源。
+  const spendTotal = latestOp
+    ? latestOp.storeCosts + latestOp.expenseTotal + (latestOp.wageCost ?? 0)
+    : 0;
+  const shareOf = (v: number) =>
+    spendTotal > 0 ? `${((v / spendTotal) * 100).toFixed(1)}%` : "—";
+  const scopeDrill = latestOp
+    ? (Object.keys(STORE_SHORT_LABEL) as StoreScope[]).map((scope) => {
+        const rows = costs.filter((c) => c.month === latestOp.month && c.scope === scope);
+        const byType = (Object.keys(COST_TYPE_LABEL) as CostType[])
+          .map((t) => ({
+            type: t,
+            amount: rows
+              .filter((c) => c.cost_type === t)
+              .reduce((s, c) => s + Number(c.amount ?? 0), 0),
+          }))
+          .filter((x) => x.amount !== 0);
+        return {
+          scope,
+          total: rows.reduce((s, c) => s + Number(c.amount ?? 0), 0),
+          byType,
+          recorded: rows.length > 0,
+        };
+      })
+    : [];
 
   return (
     <>
@@ -173,21 +200,80 @@ export default async function DashboardPage() {
                 <div className="kpi-sub">当月四项花费合计（与经营核算同一来源）</div>
               </div>
               <div className="net-panel-breakdown">
+                <details className="drill">
+                  <summary>
+                    <span className="drill-name">门店成本</span>
+                    <span>
+                      <strong>{money2(latestOp.storeCosts)} 元</strong>
+                      <span className="share">占 {shareOf(latestOp.storeCosts)}</span>
+                    </span>
+                  </summary>
+                  <div className="drill-children">
+                    {scopeDrill.map((s) =>
+                      s.recorded ? (
+                        <details key={s.scope} className="drill">
+                          <summary>
+                            <span className="drill-name">{STORE_SHORT_LABEL[s.scope]}店</span>
+                            <span>
+                              <strong>{money2(s.total)} 元</strong>
+                              <span className="share">占 {shareOf(s.total)}</span>
+                            </span>
+                          </summary>
+                          <div className="drill-children">
+                            {s.byType.map((t) => (
+                              <div className="net-line" key={t.type}>
+                                <span>{COST_TYPE_LABEL[t.type]}</span>
+                                <span>
+                                  <strong>{money2(t.amount)} 元</strong>
+                                  <span className="share">占 {shareOf(t.amount)}</span>
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      ) : (
+                        <div className="net-line" key={s.scope}>
+                          <span>{STORE_SHORT_LABEL[s.scope]}店</span>
+                          <span>
+                            <strong>未录入</strong>
+                            <span className="share">占 {shareOf(0)}</span>
+                          </span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </details>
+                <details className="drill">
+                  <summary>
+                    <span className="drill-name">报销花费</span>
+                    <span>
+                      <strong>{money2(latestOp.expenseTotal)} 元</strong>
+                      <span className="share">占 {shareOf(latestOp.expenseTotal)}</span>
+                    </span>
+                  </summary>
+                  <div className="drill-children">
+                    <div className="net-line">
+                      <span>已报销</span>
+                      <span>
+                        <strong>{money2(latestOp.expenseReimbursed)} 元</strong>
+                        <span className="share">占 {shareOf(latestOp.expenseReimbursed)}</span>
+                      </span>
+                    </div>
+                    <div className="net-line">
+                      <span>未报销（已发生未打款）</span>
+                      <span>
+                        <strong>{money2(latestOp.expenseUnreimbursed)} 元</strong>
+                        <span className="share">占 {shareOf(latestOp.expenseUnreimbursed)}</span>
+                      </span>
+                    </div>
+                  </div>
+                </details>
                 <div className="net-line">
-                  <span>门店成本（房租 / 物业等）</span>
-                  <strong>{money2(latestOp.storeCosts)} 元</strong>
-                </div>
-                <div className="net-line">
-                  <span>报销 · 未报销（已发生未打款）</span>
-                  <strong>{money2(latestOp.expenseUnreimbursed)} 元</strong>
-                </div>
-                <div className="net-line">
-                  <span>报销 · 已报销</span>
-                  <strong>{money2(latestOp.expenseReimbursed)} 元</strong>
-                </div>
-                <div className="net-line">
-                  <span>工资实发</span>
-                  <strong>{money2(latestOp.wageCost)} 元</strong>
+                  <span>工资实发（当月合计）</span>
+                  <span>
+                    <strong>{money2(latestOp.wageCost)} 元</strong>
+                    <span className="share">占 {shareOf(latestOp.wageCost ?? 0)}</span>
+                  </span>
                 </div>
                 <div className="net-line">
                   <span>年度合计（投入覆盖 {coverageRange(operating.annual.investedCoverageMonths)}）</span>
