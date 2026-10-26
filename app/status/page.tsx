@@ -1,5 +1,15 @@
+import type { ReactNode } from "react";
 import Nav from "@/components/Nav";
-import { getCurrentUser, getFetchLogs, canSeeSensitive, getConfigFreshness } from "@/lib/data";
+import {
+  getCurrentUser,
+  getFetchLogs,
+  canSeeSensitive,
+  getConfigFreshness,
+  getSalaryDetailImport,
+  getMetrics,
+  salaryDetailByMonth,
+} from "@/lib/data";
+import { money2 } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +31,47 @@ export default async function StatusPage() {
       .filter((v): v is string => !!v)
       .sort()
       .pop() ?? null;
+
+  // 指令51：工资 0.01 校验从首页移到状态页——按 salary_detail_import 与月度汇总
+  // 的实际对账结果生成（明细仅老板可读；差额月份逐个列出，不写死任何数字）。
+  let wageRecon: { tag: ReactNode; desc: string } | null = null;
+  if (freshness.demo) {
+    wageRecon = { tag: <span className="tag tag-pending">演示数据</span>, desc: "演示模式不做实际对账。" };
+  } else if (user.role !== "owner") {
+    wageRecon = { tag: <span className="tag">仅老板可见</span>, desc: "工资明细仅老板可读，对账结果不对合伙人 / 店员展示。" };
+  } else {
+    const detailRows = await getSalaryDetailImport(user);
+    if (detailRows.length === 0) {
+      wageRecon = {
+        tag: <span className="tag tag-pending">明细未导入</span>,
+        desc: "工资实表明细尚未导入，暂无对账结果；年回报工资项按月度汇总。",
+      };
+    } else {
+      const { rows: combined } = await getMetrics("combined", user.role);
+      const wageMap = new Map(combined.map((r) => [r.month, r.wage_cost ?? null]));
+      const byMonth = salaryDetailByMonth(detailRows);
+      let totalDiff = 0;
+      const diffMonths: string[] = [];
+      for (const [m, v] of Object.entries(byMonth)) {
+        const w = wageMap.get(m);
+        if (w === null || w === undefined) continue;
+        const d = Math.round((v - w) * 100) / 100;
+        totalDiff = Math.round((totalDiff + d) * 100) / 100;
+        if (d !== 0) diffMonths.push(m);
+      }
+      const monthCount = Object.keys(byMonth).length;
+      wageRecon =
+        totalDiff === 0
+          ? {
+              tag: <span className="tag tag-ok">已对平</span>,
+              desc: `实表明细覆盖 ${monthCount} 个月，与月度工资汇总逐月对账，差额 0.00 元。`,
+            }
+          : {
+              tag: <span className="tag tag-pending">有差额</span>,
+              desc: `实表明细覆盖 ${monthCount} 个月，与月度工资汇总差额 ${money2(totalDiff)} 元（差异月份：${diffMonths.join("、") || "—"}）；明细逐行与差额来源见「工资」页对账表。`,
+            };
+    }
+  }
 
   return (
     <>
@@ -80,6 +131,14 @@ export default async function StatusPage() {
                   只存按月汇总（工资成本、占比、人均），工资原表与个人明细不进本站、不进仓库。
                 </td>
               </tr>
+              {wageRecon ? (
+                <tr>
+                  <td>工资明细对账（实表 vs 月度汇总）</td>
+                  <td>{wageRecon.tag}</td>
+                  <td>导入后自动对账</td>
+                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>{wageRecon.desc}</td>
+                </tr>
+              ) : null}
               <tr>
                 <td>工资体系 / 门店成本配置</td>
                 <td>

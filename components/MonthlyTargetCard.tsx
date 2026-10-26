@@ -37,6 +37,7 @@ export default function MonthlyTargetCard({
   userId: string | null;
 }) {
   const [targets, setTargets] = useState<SiteTarget[]>(initialTargets);
+  const [formOpen, setFormOpen] = useState(false);
   const [month, setMonth] = useState(actuals[actuals.length - 1]?.month ?? "");
   const [metric, setMetric] = useState<SiteTargetMetric>("profit");
   const [value, setValue] = useState("");
@@ -107,41 +108,50 @@ export default function MonthlyTargetCard({
   return (
     <div className="card">
       {targets.length === 0 ? (
-        <p className="empty">
-          目标未设定。{isOwner ? "用下方表单设定月度目标后，这里会显示目标 vs 实际与达成率。" : "老板设定后显示。"}
-        </p>
+        /* 指令51：未设定时只占一行 CTA，点开才出表单，不让空表单占满首屏 */
+        <div className="target-cta-row">
+          <span className="empty" style={{ padding: 0 }}>
+            月度目标未设定{isOwner ? "" : "（老板设定后显示）"}
+          </span>
+          {isOwner ? (
+            <button type="button" className="btn btn-ghost" onClick={() => setFormOpen((v) => !v)}>
+              设定本月目标
+            </button>
+          ) : null}
+        </div>
       ) : (
-        <div className="table-wrap">
-          <table className="report">
-            <thead>
-              <tr>
-                <th>月份</th>
-                <th>指标</th>
-                <th>目标</th>
-                <th>实际</th>
-                <th>达成率</th>
-              </tr>
-            </thead>
-            <tbody>
-              {targets.map((t) => {
-                const actual = actualOf(t);
-                const rate =
-                  actual === null || t.target_value === 0 ? null : (actual / t.target_value) * 100;
-                return (
-                  <tr key={`${t.month}-${t.metric}`}>
-                    <td>{t.month}</td>
-                    <td>{TARGET_METRIC_LABEL[t.metric]}</td>
-                    <td>{fmt(t, t.target_value)}</td>
-                    <td>{actual === null ? "实际待核算" : fmt(t, actual)}</td>
-                    <td>{rate === null ? "—" : `${rate.toFixed(1)}%`}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        /* 已设定：紧凑进度行（目标 / 实际 / 达成率一行 + 细进度条） */
+        <div className="target-rows">
+          {targets.map((t) => {
+            const actual = actualOf(t);
+            const rate =
+              actual === null || t.target_value === 0 ? null : (actual / t.target_value) * 100;
+            return (
+              <div key={`${t.month}-${t.metric}`} className="target-row">
+                <div className="target-row-head">
+                  <span>
+                    {t.month} · {TARGET_METRIC_LABEL[t.metric]}
+                  </span>
+                  <span>
+                    目标 <strong>{fmt(t, t.target_value)}</strong> · 实际{" "}
+                    <strong>{actual === null ? "待核算" : fmt(t, actual)}</strong> · 达成率{" "}
+                    <strong>{rate === null ? "—" : `${rate.toFixed(1)}%`}</strong>
+                  </span>
+                </div>
+                {rate !== null ? (
+                  <div className="target-bar">
+                    <div
+                      className="target-bar-fill"
+                      style={{ width: `${Math.max(0, Math.min(100, rate))}%` }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       )}
-      {isOwner ? (
+      {isOwner && (targets.length > 0 || formOpen) ? (
         <form onSubmit={onSave} style={{ marginTop: 16 }}>
           <div className="form-row">
             <div className="field">

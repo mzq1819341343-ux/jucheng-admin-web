@@ -356,6 +356,110 @@ h1.page-title {
 .kpi-hero .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); }
 .sparkline { margin-top: 14px; }
 
+/* ---------- 总览改版（指令51）：英雄 / 紧凑档 / 年回报条 / 折叠成本 ---------- */
+.kpi-card-hero .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); } /* hero = 现有阶梯最大档 */
+.kpi-card-hero::before { width: 56px; }
+.kpi-card-sm { padding: 18px 20px 16px; }
+.kpi-card-sm::before { left: 20px; width: 24px; }
+.kpi-card-sm .kpi-label { margin-bottom: 6px; }
+.kpi-card-sm .kpi-value { --kpi-fs: clamp(24px, 2vw, 30px); }
+.kpi-row-sm { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+
+.hero-net {
+  position: relative;
+  overflow: hidden;
+  margin-top: 6px;
+  background: var(--card);
+  border: 1px solid var(--gold-dim);
+  border-radius: 18px;
+  padding: 34px 36px 30px;
+  box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.hero-net::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 36px;
+  width: 56px;
+  height: 3px;
+  background: var(--gold);
+  border-radius: 0 0 3px 3px;
+}
+.hero-net-label { color: var(--faint); font-size: 14px; font-weight: 600; letter-spacing: 0.16em; margin-bottom: 10px; }
+.hero-net .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); }
+.hero-net-mom { color: var(--muted); font-size: 14px; margin-top: 12px; }
+
+.annual-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 28px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: var(--bg-2);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 14.5px;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.annual-strip strong { color: var(--text); font-size: 17px; font-variant-numeric: tabular-nums; }
+.annual-strip .annual-note { font-size: 12.5px; color: var(--faint); }
+
+.cost-details {
+  margin-top: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 24px 2px;
+  box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+.cost-details summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--label);
+}
+.cost-details summary::-webkit-details-marker { display: none; }
+.cost-details summary::after { content: "▸"; margin-left: 9px; color: var(--gold); font-size: 13px; }
+.cost-details[open ] summary::after { content: "▾"; }
+.cost-details .net-panel-breakdown { padding-bottom: 14px; }
+
+/* 月度目标（指令51）：未设一行 CTA / 已设紧凑进度 */
+.target-cta-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.target-rows { display: grid; gap: 16px; }
+.target-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 14.5px;
+}
+.target-row-head strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.target-bar { height: 6px; border-radius: 3px; background: var(--border-soft); margin-top: 8px; overflow: hidden; }
+.target-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; }
+
+/* 业务卡小数字（指令51：一句话 + 最多三个小数字） */
+.biz-nums { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 16px; }
+.biz-num b { display: block; font-size: 19px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.biz-num span { font-size: 12.5px; color: var(--faint); }
+.biz-card-weak { padding: 26px 28px 22px; }
+.biz-card-weak .biz-name { font-size: 23px; }
+.biz-card-weak .biz-summary { margin-top: 8px; }
+
+/* 首页动效降噪（指令51）：.calm 容器内区块取消逐个入场动画与悬停抬升，
+   只剩 .container 自带的一次极轻整页入场 */
+.calm .kpi-card, .calm .biz-card, .calm .card { animation: none; }
+.calm .kpi-card:hover, .calm a.biz-card:hover { transform: none; }
+
 /* ---------- 业务板块入口卡 ---------- */
 .biz-grid {
   display: grid;
@@ -742,6 +846,12 @@ footer.site-footer {
 /* ---------- 响应式降档（指令34/37：小屏单列、字号不挤、不溢出） ---------- */
 @media (max-width: 720px) {
   .kpi-row { grid-template-columns: 1fr; } /* KPI 卡纵向堆叠 */
+  .kpi-row.kpi-row-sm { grid-template-columns: repeat(2, 1fr); } /* 紧凑运营行小屏保持两列 */
+  .hero-net { padding: 26px 22px 24px; }
+  .hero-net::before { left: 22px; }
+  .hero-net .kpi-value { --kpi-fs: 58px; }
+  .cost-details { padding: 4px 16px 2px; }
+  .annual-strip { gap: 4px 18px; padding: 12px 16px; }
   .biz-grid { grid-template-columns: 1fr; }
   .kpi-wide { grid-column: span 1; }
   .kpi-value { --kpi-fs: 48px; }
@@ -767,6 +877,7 @@ footer.site-footer {
 @media (max-width: 400px) {
   .kpi-value { --kpi-fs: 42px; }
   .kpi-hero .kpi-value { --kpi-fs: 50px; }
+  .hero-net .kpi-value { --kpi-fs: 52px; }
   .biz-grid { grid-template-columns: 1fr; }
 }
 
