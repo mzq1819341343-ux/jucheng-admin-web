@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { FALLBACK_BUSINESSES } from "@/lib/businesses";
+import { runOptimistic } from "@/lib/optimistic";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 
 /**
  * 成员业务板块授权勾选（指令33B）：
  * - 真实模式（老板）：勾选即写 user_business_access（受 RLS 约束，仅 owner 可写）；
+ *   指令76 起与全站统一走 lib/optimistic 乐观更新（先改勾选、失败回滚并标「已回滚」）；
  * - 演示模式：仅本地状态演示并标注「演示」，不落库。
  * coming_soon 板块灰显不可勾。
  */
@@ -34,28 +36,27 @@ export default function BusinessAccessToggles({
     }
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { error } = checked
-        ? await supabase
-            .from("user_business_access")
-            .insert({ user_id: userId, business_id: businessId })
-        : await supabase
-            .from("user_business_access")
-            .delete()
-            .eq("user_id", userId)
-            .eq("business_id", businessId);
-      if (error) {
-        setMsg(`保存失败：${error.message}`);
-      } else {
-        setGranted(next);
-        setMsg("已保存");
-      }
-    } catch (err) {
-      setMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
-    }
+    const prev = granted;
+    const ok = await runOptimistic<null>({
+      apply: () => setGranted(next),
+      rollback: () => setGranted(prev),
+      request: async () => {
+        const supabase = createClient();
+        const { error } = checked
+          ? await supabase
+              .from("user_business_access")
+              .insert({ user_id: userId, business_id: businessId })
+          : await supabase
+              .from("user_business_access")
+              .delete()
+              .eq("user_id", userId)
+              .eq("business_id", businessId);
+        return { data: null, error };
+      },
+      onError: (m) => setMsg(`保存失败，已回滚：${m}`),
+    });
+    if (ok) setMsg("已保存");
+    setBusy(false);
   }
 
   return (
