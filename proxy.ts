@@ -39,9 +39,18 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 指令133 A2 中间件验签：项目 JWT 已切非对称签名（JWKS 实测 ES256 EC 公钥在册），
+  // 优先 getClaims() 本地验签（签名 + 过期校验走项目公钥，暖实例零网络往返）；
+  // 取不到 claims（无会话 / 对称旧令牌 / JWKS 不可达）时回落 getUser() 权威校验，
+  // 与原行为逐路一致——会话刷新仍由 ssr 客户端在会话读取阶段完成并回写 Cookie。
+  const { data: claimsData } = await supabase.auth.getClaims();
+  let authed = Boolean(claimsData?.claims);
+  if (!authed) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    authed = Boolean(user);
+  }
 
   // 指令40-2：生产环境忽略演示 Cookie（proxy 同步收口）
   const hasDemo = isDemoAllowed() && request.cookies.has("demo_role");
@@ -49,12 +58,12 @@ export async function proxy(request: NextRequest) {
   // 设密码承接页：会话来自 URL hash（服务端看不到），未登录也要放行到页面由浏览器端承接
   const isAuthPage = pathname.startsWith("/auth/");
 
-  if (!user && !hasDemo && !isLoginPage && !isAuthPage) {
+  if (!authed && !hasDemo && !isLoginPage && !isAuthPage) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/login";
     return NextResponse.redirect(redirect);
   }
-  if (user && isLoginPage) {
+  if (authed && isLoginPage) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/";
     return NextResponse.redirect(redirect);
