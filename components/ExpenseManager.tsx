@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ExpenseClaim, Role } from "@/lib/data";
 import { EXPENSE_SCOPE_LABEL, isOverdueUnreimbursed, EXPENSE_OVERDUE_DAYS, type ExpenseScope, type ExpenseStatus } from "@/lib/expenses";
 import { money2 } from "@/lib/format";
@@ -38,6 +39,7 @@ export default function ExpenseManager({
   initialStatusFilter?: "all" | ExpenseStatus;
 }) {
   const currentUserKey = userId ?? DEMO_OWN_ID;
+  const router = useRouter();
   const [claims, setClaims] = useState<ExpenseClaim[]>(() => {
     if (demo && role === "staff" && initialClaims.length === 0) {
       return [
@@ -266,6 +268,8 @@ export default function ExpenseManager({
     if (ok) {
       setMsg("已保存");
       resetForm();
+      // 指令166：顶卡（未报销/已报销/本月花费）为服务端渲染，写成功后刷新使其与列表三面一致
+      router.refresh();
     }
     setBusy(false);
   }
@@ -303,7 +307,10 @@ export default function ExpenseManager({
       commit: (data) => setClaims((prev) => prev.map((c) => (c.id === claim.id ? data : c))),
       onError: (m) => setMsg(`状态切换失败，已回滚：${m}`),
     });
-    if (ok) setMsg("状态已更新");
+    if (ok) {
+      setMsg("状态已更新");
+      router.refresh();
+    }
     setBusy(false);
   }
 
@@ -327,7 +334,10 @@ export default function ExpenseManager({
       },
       onError: (m) => setMsg(`删除失败，已回滚：${m}`),
     });
-    if (ok) setMsg("已删除");
+    if (ok) {
+      setMsg("已删除");
+      router.refresh();
+    }
     setBusy(false);
   }
 
