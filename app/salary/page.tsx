@@ -1,9 +1,20 @@
 import { Fragment } from "react";
+import loadable from "next/dynamic";
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
-import SalaryRuleManager from "@/components/SalaryRuleManager";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
-import SalaryMonthlyImporter from "@/components/SalaryMonthlyImporter";
+
+/**
+ * 指令170 C1/C6：老板区两个重型客户端组件（规则管理器含双版本预览、CSV 导入器）
+ * 改路由内动态 import——不再同步进工资页导航关键 chunk，页头与「工资怎么算」
+ * 先渲染可交互，这两块到达后回填（占位高度与卡片一致，避免跳版）。
+ */
+const SalaryRuleManager = loadable(() => import("@/components/SalaryRuleManager"), {
+  loading: () => <div className="skel skel-block" aria-hidden="true" />,
+});
+const SalaryMonthlyImporter = loadable(() => import("@/components/SalaryMonthlyImporter"), {
+  loading: () => <div className="skel skel-block" aria-hidden="true" />,
+});
 import {
   getCurrentUser,
   getPublicSalaryRule,

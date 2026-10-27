@@ -516,3 +516,15 @@ table.report tr.row-selected td { background: var(--notice-bg); }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- 导航骨架（指令170 C5：loading.tsx 即时壳） ---------- */
+.skel { background: var(--card-2, #1a2438); border-radius: 10px; animation: skelPulse 1.4s ease-in-out infinite; }
+.skel-eyebrow { width: 120px; height: 14px; margin: 6px 0 14px; }
+.skel-title { width: 240px; max-width: 60%; height: 34px; margin-bottom: 12px; }
+.skel-line { width: 420px; max-width: 85%; height: 14px; margin-bottom: 26px; }
+.skel-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+.skel-card { height: 108px; border-radius: 16px; }
+.skel-block { height: 220px; border-radius: 16px; }
+.skel-note { display: inline-block; margin-top: 14px; color: var(--faint); font-size: 13px; }
+@keyframes skelPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+@media (max-width: 720px) { .skel-row { grid-template-columns: 1fr; } }
