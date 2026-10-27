@@ -155,10 +155,17 @@ export async function getMyBusinesses(user: CurrentUser): Promise<MyBusinesses> 
 if (!user.demo && isSupabaseConfigured() && user.id) {
 try {
 const supabase = await createServerSupabase();
-const { data: bizRows } = await supabase
+// 指令132 A3：板块表与授权行互相独立（授权行只需要 user.id），并行取，
+// 不再串行等两次往返；owner 不查授权行，行为与原实现一致。
+const bizPromise = supabase
 .from("businesses")
 .select("id, name, status, sort")
 .order("sort", { ascending: true});
+const accPromise =
+user.role === "owner"
+? Promise.resolve({ data: null as null | { business_id: string }[] })
+: supabase.from("user_business_access").select("business_id").eq("user_id", user.id);
+const [{ data: bizRows }, accRes] = await Promise.all([bizPromise, accPromise]);
 const businesses: BusinessDef[] =
 bizRows && bizRows.length > 0
 ? (bizRows as Omit<BusinessDef, "en">[]).map((b) => ({
@@ -172,11 +179,7 @@ businesses,
 grantedIds: businesses.filter((b) => b.status === "active").map((b) => b.id),
 };
 }
-const { data: accRows } = await supabase
-.from("user_business_access")
-.select("business_id")
-.eq("user_id", user.id);
-return { businesses, grantedIds: (accRows ?? []).map((r) => r.business_id as string) };
+return { businesses, grantedIds: (accRes.data ?? []).map((r) => r.business_id as string) };
 } catch {
 // 落到兜底：owner 给全部 active，其他角色不给（页面会被守卫拦下并提示）
 return {

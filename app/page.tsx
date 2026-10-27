@@ -14,6 +14,10 @@ import {
   describeMonthCosts,
   getSalaryDetailImport,
   salaryDetailByMonth,
+  type StoreCost,
+  type ExpenseClaim,
+  type SalaryDetailImportRow,
+  type SiteTarget,
 } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange } from "@/lib/operating";
 import { isOverdueUnreimbursed } from "@/lib/expenses";
@@ -48,15 +52,30 @@ export default async function OverviewPage({
     return canAccessBusiness(grantedIds, b.id);
   });
 
-  const { rows } = await getMetrics("combined", user.role);
+  const sensitive = canSeeSensitive(user.role);
+  // 指令132 A3：六路取数互相独立，一次并行发完。原为逐个串行 await，每路
+  // 都是一次跨区往返（函数区与库区相隔太平洋时单路约 200ms），串起来就是
+  // 总览「顿一下很久」的主因。取数条件与角色口径与原串行版逐条一致。
+  const withData = hasAihuishou && sensitive;
+  const [{ rows }, costs, expenseInput, detailRows, allClaims, siteTargets] =
+    await Promise.all([
+      getMetrics("combined", user.role),
+      withData ? getStoreCosts(user) : Promise.resolve<StoreCost[]>([]),
+      withData
+        ? getExpenseOperatingInput(user)
+        : Promise.resolve<ExpenseClaim[]>([]),
+      // 指令47：工资实发明细仅老板可读，传入核算函数与月度汇总交叉校验（其余角色不传 = 不校验）。
+      user.role === "owner" && withData
+        ? getSalaryDetailImport(user)
+        : Promise.resolve<SalaryDetailImportRow[] | null>(null),
+      hasAihuishou && user.role !== "partner"
+        ? getExpenseClaims(user)
+        : Promise.resolve<ExpenseClaim[]>([]),
+      hasAihuishou ? getSiteTargets(user) : Promise.resolve<SiteTarget[]>([]),
+    ]);
   const latest = rows[rows.length - 1];
   const totalProfit = rows.reduce((s, r) => s + (r.profit ?? 0), 0);
   const totalOrders = rows.reduce((s, r) => s + (r.orders ?? 0), 0);
-  const sensitive = canSeeSensitive(user.role);
-  const costs = hasAihuishou && sensitive ? await getStoreCosts(user) : [];
-  const expenseInput = hasAihuishou && sensitive ? await getExpenseOperatingInput(user) : [];
-  // 指令47：工资实发明细仅老板可读，传入核算函数与月度汇总交叉校验（其余角色不传 = 不校验）。
-  const detailRows = user.role === "owner" && hasAihuishou && sensitive ? await getSalaryDetailImport(user) : null;
   const operating = buildOperatingMetrics({
     metrics: rows,
     storeCosts: costs,
@@ -88,16 +107,13 @@ export default async function OverviewPage({
   // 指令55-3：未报销超期提醒——与报销页顶栏计数、行内徽标同一判定（lib/expenses）。
   // 老板按全部报销单、店员按本人创建范围统计；无超期则整条不渲染。
   // 合伙人只看月度汇总、无逐单数据，不显示逐单提醒（口径见 /help 报销节）。
-  const overdueClaims =
-    hasAihuishou && user.role !== "partner"
-      ? (await getExpenseClaims(user)).filter((c) =>
-          isOverdueUnreimbursed(c.claim_date, c.status)
-        )
-      : [];
+  const overdueClaims = allClaims.filter((c) =>
+    isOverdueUnreimbursed(c.claim_date, c.status)
+  );
   const overdueTotal = overdueClaims.reduce((s, c) => s + Number(c.amount ?? 0), 0);
 
-  // 指令46 B8：月度目标 vs 实际（目标仅老板可设定；未设定显示「未设定」）。
-  const siteTargets = hasAihuishou ? await getSiteTargets(user) : [];
+  // 指令46 B8：月度目标 vs 实际（目标仅老板可设定；未设定显示「未设定」；
+  // siteTargets 已随 132 A3 批次与其余取数并行取回）。
   const targetActuals = rows.map((r) => ({
     month: r.month,
     profit: r.profit ?? null,

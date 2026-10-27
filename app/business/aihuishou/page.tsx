@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import Sparkline from "@/components/Sparkline";
-import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth, getFetchRefreshMarker } from "@/lib/data";
+import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth, getFetchRefreshMarker, type StoreCost, type ExpenseClaim, type SalaryDetailImportRow } from "@/lib/data";
 import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
 import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import { STORE_SHORT_LABEL, COST_TYPE_LABEL, type CostType, type StoreScope } from "@/lib/stores";
@@ -11,8 +11,23 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  const { rows } = await getMetrics("combined", user.role);
   const sensitive = canSeeSensitive(user.role);
+  // 指令132 A3：五路取数互相独立，一次并行发完（原为串行逐个 await，
+  // 每路一次跨区往返）；取数条件与角色口径与原串行版逐条一致。
+  // 指令47：工资实发明细仅老板可读，传入核算函数与月度汇总交叉校验（其余角色不传 = 不校验）。
+  // 指令53 C2：数据刷新标记只读 fetch_logs，随本批次并行取回。
+  const [{ rows }, costs, expenseInput, detailRows, refreshMarker] =
+    await Promise.all([
+      getMetrics("combined", user.role),
+      sensitive ? getStoreCosts(user) : Promise.resolve<StoreCost[]>([]),
+      sensitive
+        ? getExpenseOperatingInput(user)
+        : Promise.resolve<ExpenseClaim[]>([]),
+      user.role === "owner" && sensitive
+        ? getSalaryDetailImport(user)
+        : Promise.resolve<SalaryDetailImportRow[] | null>(null),
+      getFetchRefreshMarker(user),
+    ]);
 
   const latest = rows[rows.length - 1];
   const totalOrders = rows.reduce((s, r) => s + (r.orders ?? 0), 0);
@@ -24,10 +39,6 @@ export default async function DashboardPage() {
 
   // 指令41/42：净利暂定再扣除当月已录入的门店成本（store_costs 两店合计）。
   // 无成本录入时 latestCostTotal = 0，数字与现版完全一致；staff 不查成本（RLS 亦不可见）。
-  const costs = sensitive ? await getStoreCosts(user) : [];
-  const expenseInput = sensitive ? await getExpenseOperatingInput(user) : [];
-  // 指令47：工资实发明细仅老板可读，传入核算函数与月度汇总交叉校验（其余角色不传 = 不校验）。
-  const detailRows = user.role === "owner" && sensitive ? await getSalaryDetailImport(user) : null;
   const operating = buildOperatingMetrics({
     metrics: rows,
     storeCosts: costs,
@@ -40,9 +51,6 @@ export default async function DashboardPage() {
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
   const netBase = latestOp?.baseNetProfit ?? null;
   const netAdjusted = latestOp?.storeNetProfit ?? null;
-  // 指令53 C2：数据刷新标记（只读 fetch_logs）。
-  const refreshMarker = await getFetchRefreshMarker(user);
-
   // 指令52-2：花费拆解下钻——门店成本按店、按类型（store_costs 原始行）分层，
   // 报销拆已报/未报，工资当月合计；占比统一以当月总花费为分母，与上方合计同源。
   const spendTotal = latestOp
