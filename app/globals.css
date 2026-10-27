@@ -6,12 +6,12 @@
    ============================================================ */
 :root {
   color-scheme: dark;
-  --bg: #0c1220;
-  --bg-2: #0e1526;
-  --card: #131c30;
-  --card-hover: #16233c;
-  --border: #22304d;
-  --border-soft: #1b2740;
+  --bg: #0b1120;
+  --bg-2: #0d1425;
+  --card: #121a2c;
+  --card-hover: #17223a;
+  --border: #24314e;
+  --border-soft: #1c2946;
   --text: #f2f5fa;
   --muted: #93a1b8;
   --label: #a9b8cf; /* KPI 标签/单位专用（指令39 第2轮）：比 muted 更亮，对比达标 */
@@ -24,9 +24,9 @@
   --negative: #e8837a;
   --negative-bg: rgba(224, 101, 90, 0.12);
   --green: #43b581;
-  --on-gold: #0c1220;
+  --on-gold: #0b1120;
   --topbar-bg: rgba(14, 21, 38, 0.94);
-  --input-bg: #0a0f1d;
+  --input-bg: #090e1a;
   --thead-text: #b9c6dc;
   --notice-bg: rgba(201, 162, 39, 0.07);
   --notice-text: #e6d193;
@@ -39,12 +39,12 @@
 
 html[data-theme="light"] {
   color-scheme: light;
-  --bg: #f5f3ee;
-  --bg-2: #efeade;
+  --bg: #f6f5f1;
+  --bg-2: #efeee8;
   --card: #ffffff;
-  --card-hover: #faf6ec;
-  --border: #dcd3be;
-  --border-soft: #e8e2d1;
+  --card-hover: #faf9f5;
+  --border: #ddd9cf;
+  --border-soft: #e7e4db;
   --text: #141a26;
   --muted: #5c6577;
   --label: #46536b; /* 浅底上约 7.4:1，强于 #5A6478 基线 */
@@ -84,13 +84,13 @@ html, body {
 }
 body {
   background:
-    radial-gradient(1200px 520px at 50% -140px, #152542 0%, rgba(12, 18, 32, 0) 60%),
+    radial-gradient(1200px 520px at 50% -140px, #13223f 0%, rgba(11, 17, 32, 0) 60%),
     var(--bg);
   background-color: var(--bg);
 }
 html[data-theme="light"] body {
   background:
-    radial-gradient(1200px 520px at 50% -140px, rgba(201, 162, 39, 0.14) 0%, rgba(245, 243, 238, 0) 60%),
+    radial-gradient(1200px 520px at 50% -140px, rgba(201, 162, 39, 0.08) 0%, rgba(246, 245, 241, 0) 60%),
     var(--bg);
   background-color: var(--bg);
 }
@@ -303,13 +303,15 @@ h1.page-title {
   gap: 24px;
 }
 .kpi-card {
+  display: flex;
+  flex-direction: column;
   position: relative;
   overflow: hidden;
   min-width: 0; /* 栅格内可收缩，配合主数字分档缩放防溢出（指令39） */
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 30px 28px 26px; /* 第2轮：横向内距 32→28，给主数字多留 8px 安全余量 */
+  padding: 28px; /* 指令68-P0-4：与 .card 统一内距 28px */
   box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.3s ease, color 0.3s ease;
   animation: fadeUp 0.6s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
@@ -320,16 +322,7 @@ h1.page-title {
 .kpi-row .kpi-card:nth-child(4) { animation-delay: 0.21s; }
 .kpi-row .kpi-card:nth-child(5) { animation-delay: 0.28s; }
 .kpi-row .kpi-card:nth-child(6) { animation-delay: 0.35s; }
-.kpi-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 32px;
-  width: 34px;
-  height: 3px;
-  background: var(--gold);
-  border-radius: 0 0 3px 3px;
-}
+/* 指令68-P0-4：卡片顶部金线已去除（.kpi-card::before 等一族），金色只留文字/边框强调。 */
 .kpi-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lift), inset 0 1px 0 var(--card-highlight);
@@ -355,7 +348,7 @@ h1.page-title {
   margin-left: 0.18em;
   letter-spacing: 0.02em;
 }
-.kpi-sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: 10px; }
+.kpi-sub { color: var(--muted); font-size: 13px; line-height: 1.5; margin-top: auto; padding-top: 10px; }
 .kpi-negative { color: var(--negative); }
 .kpi-positive { color: var(--green); }
 .net-kpi-card { border-color: var(--gold-dim); }
@@ -369,8 +362,8 @@ h1.page-title {
   align-items: center;
   background: var(--card);
   border: 1px solid var(--gold-dim);
-  border-radius: 18px;
-  padding: 30px 32px;
+  border-radius: 16px;
+  padding: 28px;
   box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
 }
 .net-panel { animation: fadeUp 0.6s 0.18s cubic-bezier(0.22, 0.8, 0.32, 1) backwards; }
@@ -391,15 +384,12 @@ h1.page-title {
 .net-line .negative-text { color: var(--negative); }
 .kpi-wide { grid-column: span 2; }
 .kpi-hero { background: var(--card); }
-.kpi-hero::before { width: 56px; }
 .kpi-hero .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); }
 .sparkline { margin-top: 14px; }
 
 /* ---------- 总览改版（指令51）：英雄 / 紧凑档 / 年回报条 / 折叠成本 ---------- */
 .kpi-card-hero .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); } /* hero = 现有阶梯最大档 */
-.kpi-card-hero::before { width: 56px; }
 .kpi-card-sm { padding: 18px 20px 16px; }
-.kpi-card-sm::before { left: 20px; width: 24px; }
 .kpi-card-sm .kpi-label { margin-bottom: 6px; }
 .kpi-card-sm .kpi-value { --kpi-fs: clamp(24px, 2vw, 30px); }
 .kpi-row-sm { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
@@ -410,20 +400,10 @@ h1.page-title {
   margin-top: 6px;
   background: var(--card);
   border: 1px solid var(--gold-dim);
-  border-radius: 18px;
-  padding: 34px 36px 30px;
+  border-radius: 16px;
+  padding: 32px 28px 28px;
   box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
   transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-.hero-net::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 36px;
-  width: 56px;
-  height: 3px;
-  background: var(--gold);
-  border-radius: 0 0 3px 3px;
 }
 .hero-net-label { color: var(--faint); font-size: 14px; font-weight: 600; letter-spacing: 0.16em; margin-bottom: 10px; }
 .hero-net .kpi-value { --kpi-fs: clamp(56px, 5.6vw + 8px, 80px); }
@@ -487,7 +467,7 @@ h1.page-title {
 .target-bar-fill { height: 100%; background: var(--gold); border-radius: 3px; }
 
 /* 业务卡小数字（指令51：一句话 + 最多三个小数字） */
-.biz-nums { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 16px; }
+.biz-nums { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 16px; }
 .biz-num b { display: block; font-size: 19px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.3; }
 .biz-num span { font-size: 12.5px; color: var(--faint); }
 .biz-card-weak { padding: 26px 28px 22px; }
@@ -511,31 +491,20 @@ h1.page-title {
   display: block;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 34px 34px 30px;
+  border-radius: 16px;
+  padding: 28px;
   box-shadow: var(--shadow), inset 0 1px 0 var(--card-highlight);
   animation: fadeUp 0.6s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.3s ease, color 0.3s ease;
 }
 .biz-grid .biz-card:nth-child(2) { animation-delay: 0.1s; }
 .biz-grid .biz-card:nth-child(3) { animation-delay: 0.2s; }
-.biz-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 34px;
-  width: 40px;
-  height: 3px;
-  background: var(--gold);
-  border-radius: 0 0 3px 3px;
-}
 a.biz-card:hover {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lift), inset 0 1px 0 var(--card-highlight);
   border-color: var(--gold-dim);
 }
 .biz-card-off { opacity: 0.52; filter: grayscale(0.35); cursor: not-allowed; }
-.biz-card-off::before { background: var(--faint); }
 .biz-en { color: var(--faint); font-size: 12px; letter-spacing: 5px; }
 .biz-name { font-size: 30px; font-weight: 800; color: var(--text); margin-top: 8px; letter-spacing: 1px; }
 .biz-summary { color: var(--muted); font-size: 15px; margin-top: 14px; line-height: 1.65; }
