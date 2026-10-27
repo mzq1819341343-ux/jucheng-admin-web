@@ -7,7 +7,7 @@ import {
   matchInviteByEmail,
   type MemberInvite,
 } from "@/lib/invites";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
 
 /**
@@ -95,7 +95,7 @@ export default function MemberInvites({
       apply: () => setInvites((xs) => [row, ...xs]),
       rollback: () => setInvites((xs) => xs.filter((i) => i.id !== row.id)),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = await supabase
           .from("member_invites")
           .insert({
@@ -152,7 +152,7 @@ export default function MemberInvites({
         ),
       rollback: () => setInvites(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error: roleErr } = await supabase
           .from("profiles")
           .update({ role: invite.intended_role })
@@ -198,7 +198,7 @@ export default function MemberInvites({
       apply: () => setInvites((xs) => xs.filter((i) => i.id !== invite.id)),
       rollback: () => setInvites(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error } = await supabase.from("member_invites").delete().eq("id", invite.id);
         return { data: null, error };
       },

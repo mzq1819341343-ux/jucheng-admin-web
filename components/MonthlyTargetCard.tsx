@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Role, SiteTarget, SiteTargetMetric } from "@/lib/data";
 import { TARGET_METRIC_LABEL } from "@/lib/targets";
 import { money2, int } from "@/lib/format";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
 
 export { TARGET_METRIC_LABEL };
@@ -114,7 +114,7 @@ export default function MonthlyTargetCard({
         }),
       rollback: () => setTargets(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = await supabase
           .from("site_targets")
           .upsert(

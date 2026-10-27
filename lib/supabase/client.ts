@@ -8,10 +8,5 @@ export function createClient() {
   );
 }
 
-/** 是否已配置 Supabase 环境变量（未配置时站点走演示模式） */
-export function isSupabaseConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  );
-}
+/** 是否已配置 Supabase 环境变量（未配置时站点走演示模式）；实现已移至零依赖的 ./config，本处转发保持既有导入路径不变。 */
+export { isSupabaseConfigured } from "./config";

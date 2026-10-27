@@ -5,7 +5,7 @@ import type { ExpenseClaim, Role } from "@/lib/data";
 import { EXPENSE_SCOPE_LABEL, isOverdueUnreimbursed, EXPENSE_OVERDUE_DAYS, type ExpenseScope, type ExpenseStatus } from "@/lib/expenses";
 import { money2 } from "@/lib/format";
 import { downloadExcel } from "@/lib/excel";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
 
 const DEMO_OWN_ID = "demo-current-user";
@@ -253,7 +253,7 @@ export default function ExpenseManager({
       },
       rollback: () => setClaims(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = editingId
           ? await supabase.from("expense_claims").update({ ...payload, updated_at: now }).eq("id", editingId).select("*").single()
           : await supabase.from("expense_claims").insert({ ...payload, created_by: userId }).select("*").single();
@@ -291,7 +291,7 @@ export default function ExpenseManager({
       apply: () => setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...patch } : c))),
       rollback: () => setClaims(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = await supabase
           .from("expense_claims")
           .update(patch)
@@ -321,7 +321,7 @@ export default function ExpenseManager({
       apply: () => setClaims((prev) => prev.filter((c) => c.id !== claim.id)),
       rollback: () => setClaims(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error } = await supabase.from("expense_claims").delete().eq("id", claim.id);
         return { data: null, error };
       },

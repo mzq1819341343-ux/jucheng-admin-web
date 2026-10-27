@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { StoreCost } from "@/lib/data";
 import { STORE_LABEL, COST_TYPE_LABEL, type StoreScope, type CostType } from "@/lib/stores";
 import { money2 } from "@/lib/format";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
 
 /**
@@ -147,7 +147,7 @@ export default function StoreCostManager({
       },
       rollback: () => setCosts(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = existing
           ? await supabase.from("store_costs").update({ amount: amt, note: noteVal, updated_at: new Date().toISOString() }).eq("id", existing.id).select("*").single()
           : await supabase.from("store_costs").insert({ scope: uScope, month: uMonth, cost_type: "utilities", amount: amt, note: noteVal, created_by: userId }).select("*").single();
@@ -245,7 +245,7 @@ export default function StoreCostManager({
       },
       rollback: () => setCosts(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = editingId
           ? await supabase.from("store_costs").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", editingId).select("*").single()
           : await supabase.from("store_costs").insert({ ...payload, created_by: userId }).select("*").single();
@@ -280,7 +280,7 @@ export default function StoreCostManager({
       apply: () => setCosts((prev) => prev.filter((c) => c.id !== id)),
       rollback: () => setCosts(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error } = await supabase.from("store_costs").delete().eq("id", id);
         return { data: null, error };
       },

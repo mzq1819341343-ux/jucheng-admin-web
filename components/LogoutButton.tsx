@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -12,7 +12,7 @@ export default function LogoutButton() {
     document.cookie = "demo_biz=; path=/; max-age=0";
     if (isSupabaseConfigured()) {
       try {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         await supabase.auth.signOut();
       } catch {
         // 忽略，仍跳登录页

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { FALLBACK_BUSINESSES } from "@/lib/businesses";
 import { runOptimistic } from "@/lib/optimistic";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 
 /**
  * 成员业务板块授权勾选（指令33B）：
@@ -41,7 +41,7 @@ export default function BusinessAccessToggles({
       apply: () => setGranted(next),
       rollback: () => setGranted(prev),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error } = checked
           ? await supabase
               .from("user_business_access")

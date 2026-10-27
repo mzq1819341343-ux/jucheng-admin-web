@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { SalaryRule } from "@/lib/data";
 import { money2 } from "@/lib/format";
 import SalaryRuleVersionPreview from "@/components/SalaryRuleVersionPreview";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
 
 /**
@@ -101,7 +101,7 @@ export default function SalaryRuleManager({
       },
       rollback: () => setRules(rules),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { data, error } = await supabase
           .from("salary_rules")
           .insert({
@@ -147,7 +147,7 @@ export default function SalaryRuleManager({
       apply: () => setRules(rules.filter((r) => r.id !== id)),
       rollback: () => setRules(snapshot),
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error } = await supabase.from("salary_rules").delete().eq("id", id);
         return { data: null, error };
       },
@@ -299,7 +299,7 @@ function EffectiveFromEditor({
         setValue(rule.effective_from ?? "");
       },
       request: async () => {
-        const supabase = createClient();
+        const supabase = await createBrowserSupabase();
         const { error } = await supabase
           .from("salary_rules")
           .update({ effective_from: next })

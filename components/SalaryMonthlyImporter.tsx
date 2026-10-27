@@ -6,7 +6,7 @@ import type { Profile } from "@/lib/data";
 import type { StoreScope } from "@/lib/stores";
 import { STORE_LABEL } from "@/lib/stores";
 import { money2 } from "@/lib/format";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 
 const TEMPLATE_HEADER = "员工邮箱或账号标识,月份,门店,底薪,提成,扣款,实发,备注";
 
@@ -208,7 +208,7 @@ export default function SalaryMonthlyImporter({
     let success = 0;
     const failures: string[] = [];
     try {
-      const supabase = createClient();
+      const supabase = await createBrowserSupabase();
       for (const row of readyRows) {
         const { error } = await supabase.from("salary_monthly").insert({
           user_id: row.matchedUserId,
