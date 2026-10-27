@@ -26,7 +26,12 @@ const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
 export default async function StatusPage() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
-  const { logs } = await getFetchLogs();
+  const { logs, fromDb } = await getFetchLogs();
+  // 指令74 A4 督工裁定（方向①）：真实模式下库里无抓取记录
+  // （!fromDb 且非演示）时，记录节显式呈空态，与同页刷新标记的
+  // 「暂无抓取记录」口径一致，不再渲染 FALLBACK 两行兜底；
+  // 演示模式与 fromDb 为真时仍按 logs 原样渲染，不误伤。
+  const fetchLogsEmpty = !fromDb && !user.demo;
   const refreshMarker = await getFetchRefreshMarker(user);
   const freshness = await getConfigFreshness(user);
   const fmtTime = (v: string | null) => (v ? v.replace("T", " ").slice(0, 16) : null);
@@ -217,6 +222,11 @@ export default async function StatusPage() {
         {sensitive ? (
           <>
           <h2 className="section-title">最近抓取 / 导入日志</h2>
+          {fetchLogsEmpty ? (
+            <div className="card">
+              <p className="empty">暂无抓取记录（管道已备未启用）</p>
+            </div>
+          ) : (
           <div className="card table-wrap">
             <table className="report">
               <thead>
@@ -243,6 +253,7 @@ export default async function StatusPage() {
               </tbody>
             </table>
           </div>
+          )}
           </>
         ) : null}
       </main>
