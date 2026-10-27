@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { preconnect } from "react-dom";
+import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { isDemoAllowed } from "@/lib/demo";
 
 export default function LoginPage() {
   const router = useRouter();
   const configured = isSupabaseConfigured();
+  if (configured) {
+    // 指令165 P0：supabase-js 改为提交时才懒加载（见 onSubmit），登录页首屏
+    // 不再背约 259KB（未压缩）的 supabase chunk；先对鉴权域名预连接，抵消
+    // 点击登录时懒加载建客户端现建 TLS 的一次往返。仅连接提示，无行为变化。
+    preconnect(process.env.NEXT_PUBLIC_SUPABASE_URL!, {
+      crossOrigin: "anonymous",
+    });
+  }
   const demoAllowed = isDemoAllowed();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,7 +36,7 @@ export default function LoginPage() {
     }
     setBusy(true);
     try {
-      const supabase = createClient();
+      const supabase = await createBrowserSupabase();
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError(`登录失败：${error.message}`);
