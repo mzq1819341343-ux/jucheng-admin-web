@@ -108,7 +108,7 @@ export default async function ComparePage({
         </div>
         <h1 className="page-title">两店对比</h1>
         <p className="page-desc">
-          友谊 vs 万达同月并排（到店口径）。数字与报表页同一核算来源；营收暂无数据源，利润率（营收）整列「—」，不以分润冒充。
+          友谊 vs 万达同月并排（到店口径）。数字与报表页同一核算来源；营收口径待接入（订单金额数据缺失），利润率（营收）整列「—」，接入后自动出数，不以分润冒充。
         </p>
 
         <div className="month-switch" role="navigation" aria-label="月份切换">
