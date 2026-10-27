@@ -108,7 +108,7 @@ export default async function OverviewPage({
   return (
     <>
       <Nav user={user} />
-      <main className="container calm">
+      <main className="container calm no-enter">
         <div className="eyebrow">
           <span className="eyebrow-cn">
             {hasAihuishou ? `爱回收 · 最新月 ${latest?.month ?? "—"}` : "公司总览"}
@@ -138,11 +138,12 @@ export default async function OverviewPage({
             {sensitive && heroOp && heroNet !== null ? (
               <section className="hero-net" aria-label="扣成本后净利">
                 <div className="hero-net-label">扣成本后净利 · {heroOp.month}（两店合计）</div>
+                {/* 指令68-P1-T1（(b) 改良形，67 裁定）：英雄数字终值直出，动画不挂数字本体，
+                    消除 CountUp 文本逐帧变更造成的 LCP 落点双簇；卡片入场淡入保留在容器层。 */}
                 <KpiValue
                   value={money(heroNet)}
                   unit="元"
                   tone={heroNet < 0 ? "negative" : "positive"}
-                  animate
                 />
                 {heroMom ? <div className="hero-net-mom">{heroMom}</div> : null}
               </section>

@@ -260,6 +260,10 @@ a:hover { text-decoration: none; }
   padding: 56px 32px 84px;
   animation: fadeUp 0.55s ease backwards;
 }
+/* 指令68-P1-T1（(b) 改良形）：总览页容器免入场动画——容器 fadeUp 会把英雄数字的
+   有效绘制钉到动画末端（实测 LCP−FCP ~570ms）；免除后英雄终值与首帧同绘（实测 0ms 单簇）。
+   仅总览使用 .no-enter，其余页面与总览内次级卡的阶梯淡入不变。 */
+.container.no-enter { animation: none; }
 h1.page-title {
   font-size: 40px;
   font-weight: 800;
