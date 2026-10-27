@@ -43,6 +43,29 @@ export default function MonthlyTargetCard({
   const [busy, setBusy] = useState(false);
   const isOwner = role === "owner";
 
+  // 指令71 A5：月份选项 = 数据月 ∪ 已设目标月 ∪ 本月/下月——无数据的新月份（如
+  // 刚进入的本月）也能先设目标，实际到位前显示「待核算」；此前只有数据月可选，
+  // 老板在总览设不了当月目标。
+  const nowD = new Date();
+  const ymOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  const monthOptions = Array.from(
+    new Set([
+      ...actuals.map((a) => a.month),
+      ...targets.map((t) => t.month),
+      ymOf(nowD),
+      ymOf(new Date(nowD.getFullYear(), nowD.getMonth() + 1, 1)),
+    ])
+  ).sort();
+  // 指令71 A5：切月/切指标或打开表单时，已有目标预填现值——「调整」是改现值，不用重打。
+  const prefill = (m: string, mt: SiteTargetMetric) => {
+    const ex = targets.find((t) => t.month === m && t.metric === mt);
+    setValue(ex ? String(ex.target_value) : "");
+  };
+  const openForm = () => {
+    prefill(month, metric);
+    setFormOpen(true);
+  };
+
   const actualOf = (t: SiteTarget): number | null => {
     const a = actuals.find((x) => x.month === t.month);
     if (!a) return null;
@@ -125,7 +148,7 @@ export default function MonthlyTargetCard({
             月度目标未设定{isOwner ? "" : "（老板设定后显示）"}
           </span>
           {isOwner ? (
-            <button type="button" className="btn btn-ghost" onClick={() => setFormOpen((v) => !v)}>
+            <button type="button" className="btn btn-ghost" onClick={openForm}>
               设定本月目标
             </button>
           ) : null}
@@ -165,7 +188,7 @@ export default function MonthlyTargetCard({
       {/* 指令56-4：已设定时表单默认收起（点「调整目标」展开），首屏只留紧凑进度，与未设态一行 CTA 同一层级。 */}
       {isOwner && targets.length > 0 && !formOpen ? (
         <div style={{ marginTop: 12 }}>
-          <button type="button" className="btn btn-ghost" onClick={() => setFormOpen(true)}>
+          <button type="button" className="btn btn-ghost" onClick={openForm}>
             调整目标
           </button>
         </div>
@@ -175,10 +198,17 @@ export default function MonthlyTargetCard({
           <div className="form-row">
             <div className="field">
               <label htmlFor="target-month">月份</label>
-              <select id="target-month" value={month} onChange={(e) => setMonth(e.target.value)}>
-                {actuals.map((a) => (
-                  <option key={a.month} value={a.month}>
-                    {a.month}
+              <select
+                id="target-month"
+                value={month}
+                onChange={(e) => {
+                  setMonth(e.target.value);
+                  prefill(e.target.value, metric);
+                }}
+              >
+                {monthOptions.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
                   </option>
                 ))}
               </select>
@@ -188,7 +218,11 @@ export default function MonthlyTargetCard({
               <select
                 id="target-metric"
                 value={metric}
-                onChange={(e) => setMetric(e.target.value as SiteTargetMetric)}
+                onChange={(e) => {
+                  const mt = e.target.value as SiteTargetMetric;
+                  setMetric(mt);
+                  prefill(month, mt);
+                }}
               >
                 <option value="profit">当月分润</option>
                 <option value="net_profit">公司口径净利</option>
@@ -208,6 +242,14 @@ export default function MonthlyTargetCard({
           </div>
           <button type="submit" className="btn" disabled={busy}>
             保存目标
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            style={{ marginLeft: 10 }}
+            onClick={() => setFormOpen(false)}
+          >
+            收起
           </button>
           {msg ? (
             <div className="access-msg" role="status">
