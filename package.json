@@ -28,7 +28,8 @@
     "regression:status": "node scripts/regression/audit-status-consistency.mjs",
     "regression:review": "node scripts/regression/audit-review-export.mjs",
     "regression:online": "node scripts/regression/audit-online.mjs",
-    "shots": "node scripts/regression/capture-help-shots.mjs"
+    "shots": "node scripts/regression/capture-help-shots.mjs",
+    "salary:verify": "node scripts/salary-promotion/verify-expectations.mjs"
   },
   "version": "0.1.0"
 }
