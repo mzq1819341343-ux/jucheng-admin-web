@@ -1,6 +1,15 @@
 import Nav from "@/components/Nav";
 import KpiCard from "@/components/KpiCard";
-import ExpenseManager from "@/components/ExpenseManager";
+import loadable from "next/dynamic";
+
+/**
+ * 指令173（模块C）：ExpenseManager（表单+台账+导出，全站最重客户端组件之一）
+ * 改动态 import——移出报销页导航关键 chunk，页头与汇总卡先渲染，管理器到达后
+ * 回填（.skel 占位与卡片同高，避免跳版）。props 与口径不变。
+ */
+const ExpenseManager = loadable(() => import("@/components/ExpenseManager"), {
+  loading: () => <div className="skel skel-block" aria-hidden="true" />,
+});
 import ExpenseAggExport from "@/components/ExpenseAggExport";
 import {
   getCurrentUser,
@@ -60,7 +69,7 @@ export default async function ExpensesPage({
     return (
       <>
         <Nav user={user} />
-        <main className="container">
+        <main className="container calm no-enter">
           <div className="eyebrow">
             <span className="en">EXPENSES</span>
             <span className="eyebrow-cn">公司报销</span>
@@ -120,7 +129,7 @@ export default async function ExpensesPage({
   return (
     <>
       <Nav user={user} />
-      <main className="container">
+      <main className="container calm no-enter">
         <div className="eyebrow">
           <span className="en">EXPENSES</span>
           <span className="eyebrow-cn">公司报销</span>

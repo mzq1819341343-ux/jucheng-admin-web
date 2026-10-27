@@ -46,7 +46,7 @@ export default async function SalaryPage() {
   return (
     <>
       <Nav user={user} />
-      <main className="container">
+      <main className="container calm no-enter">
         <div className="eyebrow">
           <span className="en">SALARY</span>
           <span className="eyebrow-cn">工资</span>
