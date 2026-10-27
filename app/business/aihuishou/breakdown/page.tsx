@@ -146,7 +146,7 @@ export default async function NetBreakdownPage() {
           </div>
         ) : (
           <div className="card">
-            <p className="empty">暂无可展示的净利构成。</p>
+            <p className="empty">暂无可展示的净利构成：完整口径月份核算后自动生成。</p>
           </div>
         )}
       </main>

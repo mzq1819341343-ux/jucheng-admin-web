@@ -44,7 +44,7 @@ export default async function StoreCostsPage() {
         <h2 className="section-title">合同台账</h2>
         {contracts.length === 0 ? (
           <div className="card">
-            <p className="empty">合同台账待录入：两店合同要点落库后在此列示。</p>
+            <p className="empty">暂无合同记录：两店合同要点录入后在此列示。</p>
           </div>
         ) : (
           <div className="biz-grid" style={{ marginBottom: 8 }}>
@@ -77,7 +77,7 @@ export default async function StoreCostsPage() {
 }
 
 function EmptyCosts() {
-  return <p className="empty">待老板提供成本数字后录入：录入后按月在此列示，并进入净利核算。</p>;
+  return <p className="empty">暂无成本记录：录入后按月在此列示，并进入净利核算。</p>;
 }
 
 /** 合同卡片（指令42）：门店、点位、期限、月费与构成、支付方式、保证金（不进月成本）、备注。 */

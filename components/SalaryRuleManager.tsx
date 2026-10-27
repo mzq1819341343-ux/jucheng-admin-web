@@ -168,7 +168,7 @@ export default function SalaryRuleManager({
         历史双版本按生效起始月切换：新规则自生效月起算，之前月份按旧规则回算。
       </div>
       {rules.length === 0 ? (
-        <p className="empty">工资体系待老板提供后录入：下方表单先行就位，规则落库后即在此列示。</p>
+        <p className="empty">暂无工资规则：使用下方表单新增，保存后即在此列示。</p>
       ) : (
         <div className="table-wrap">
           <table className="report">
@@ -219,7 +219,7 @@ export default function SalaryRuleManager({
           </div>
           <div className="field">
             <label htmlFor="sr-base">底薪（元，可空）</label>
-            <input id="sr-base" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} inputMode="decimal" placeholder="待老板提供" />
+            <input id="sr-base" value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} inputMode="decimal" placeholder="请输入金额" />
           </div>
           <div className="field">
             <label htmlFor="sr-eff">生效起始月（<span className="en">YYYY-MM</span>，可空）</label>

@@ -158,8 +158,8 @@ export default async function MembersPage() {
           <div className="card">
             <p className="empty">
               {fromDb
-                ? "profiles 表暂无成员记录。"
-                : "尚未连接 Supabase（或表中暂无数据），先按下面步骤建号。"}
+                ? "暂无成员记录。"
+                : "暂无成员记录：按下方步骤建号后在此列示。"}
             </p>
             <ol className="steps">
               <li>

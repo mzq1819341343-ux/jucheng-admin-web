@@ -251,7 +251,7 @@ export default function MemberInvites({
       {msg ? <p className="access-msg">{msg}</p> : null}
 
       {invites.length === 0 ? (
-        <p className="empty">暂无意向记录，先登记第一条。</p>
+        <p className="empty">暂无待邀请记录：使用上方表单登记第一条。</p>
       ) : (
         <div className="table-wrap" style={{ marginTop: 14 }}>
           <table className="report">

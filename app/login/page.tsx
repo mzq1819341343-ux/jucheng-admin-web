@@ -58,7 +58,7 @@ export default function LoginPage() {
       </div>
       <div className="card form-card login-card">
         <h1 className="page-title login-title">登录公司后台</h1>
-        <p className="page-desc">使用老板分配的邮箱与密码登录（<span className="en">Supabase Auth</span>）。</p>
+        <p className="page-desc">使用分配的邮箱与密码登录。</p>
 
         {!configured ? (
           <div className="notice">

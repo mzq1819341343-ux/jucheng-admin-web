@@ -25,7 +25,7 @@ export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
   if (!rule) {
     return (
       <div className="card rule-card">
-        <p className="empty">工资体系待老板提供后录入：规则落库后，这里会用一句话讲清工资怎么算。</p>
+        <p className="empty">暂无工资规则：规则保存后，这里会用一句话讲清工资怎么算。</p>
       </div>
     );
   }

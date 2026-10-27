@@ -374,7 +374,7 @@ export default function StoreCostManager({
           </div>
           <div className="field">
             <label htmlFor="sc-amount">金额（元）</label>
-            <input id="sc-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="待老板提供" />
+            <input id="sc-amount" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="请输入金额" />
           </div>
         </div>
         <div className="field">
@@ -393,7 +393,7 @@ export default function StoreCostManager({
       </form>
 
       {costs.length === 0 ? (
-        <p className="empty">待老板提供成本数字后录入：上方表单先行就位，录入后即在此列示并进入净利核算。</p>
+        <p className="empty">暂无成本记录：使用上方表单录入，保存后即在此列示并进入净利核算。</p>
       ) : (
         <div className="table-wrap">
           <table className="report">

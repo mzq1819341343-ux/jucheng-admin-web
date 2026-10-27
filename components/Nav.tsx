@@ -52,7 +52,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
             {showBizTools ? <Link href="/business/aihuishou/breakdown">净利构成</Link> : null}
             <Link href="/members">成员与权限</Link>
             <Link href="/status">数据状态</Link>
-            <Link href="/help">帮助 · 操作手册</Link>
+            <Link href="/help">操作手册</Link>
           </MoreMenu>
         </nav>
         <div className="userbox">
@@ -74,7 +74,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           <DemoRoleSwitcher current={user.role} />
           <DemoBizSwitcher current={demoBiz} />
           <span className="demo-note">
-            演示模式：尚未连接 Supabase 或未登录，数据为 v3.3 汇总样例口径；可组合切换演示角色与业务授权，查看权限差异。
+            演示模式：当前为汇总样例数据，可切换角色与业务授权，查看不同权限下的页面差异。
           </span>
         </div>
       ) : null}

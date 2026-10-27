@@ -265,14 +265,14 @@ export default async function OverviewPage({
           </>
         ) : (
           <div className="card">
-            <p className="empty">暂未开通任何业务板块，请联系老板授权。</p>
+            <p className="empty">暂未开通任何业务板块，请联系老板开通授权。</p>
           </div>
         )}
 
         <h2 className="section-title">业务板块</h2>
         {visibleBusinesses.length === 0 ? (
           <div className="card">
-            <p className="empty">暂未开通任何业务板块，请联系老板授权。</p>
+            <p className="empty">暂未开通任何业务板块，请联系老板开通授权。</p>
           </div>
         ) : (
           <div className="biz-grid">
