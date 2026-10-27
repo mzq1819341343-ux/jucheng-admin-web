@@ -651,22 +651,26 @@ let salaryRules: string | null = null;
 let storeCosts: string | null = null;
 try {
 const supabase = await createServerSupabase();
-if (user.role === "owner") {
-const { data } = await supabase
+// 指令133 A2 瀑布：两条新鲜度查询互相独立，由串行 2 层改并行 1 层；
+// 角色门槛不变（工资规则仅 owner、门店成本 staff 不查），不查的分支以空结果占位。
+const [rulesRes, costsRes] = await Promise.all([
+user.role === "owner"
+? supabase
 .from("salary_rules")
 .select("updated_at")
 .order("updated_at", { ascending: false})
-.limit(1);
-salaryRules = (data?.[0]?.updated_at as string) ?? null;
-}
-if (user.role !== "staff") {
-const { data } = await supabase
+.limit(1)
+: Promise.resolve({ data: null as { updated_at: string }[] | null }),
+user.role !== "staff"
+? supabase
 .from("store_costs")
 .select("updated_at")
 .order("updated_at", { ascending: false})
-.limit(1);
-storeCosts = (data?.[0]?.updated_at as string) ?? null;
-}
+.limit(1)
+: Promise.resolve({ data: null as { updated_at: string }[] | null }),
+]);
+salaryRules = (rulesRes.data?.[0]?.updated_at as string) ?? null;
+storeCosts = (costsRes.data?.[0]?.updated_at as string) ?? null;
 } catch {
 // 按暂无录入处理
 }

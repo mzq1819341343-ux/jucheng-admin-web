@@ -75,9 +75,12 @@ export default async function ComparePage({
 }) {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
-  const wanda = await getMetrics("wanda", user.role);
-  const friendship = await getMetrics("friendship", user.role);
-  const costs = sensitive ? await getStoreCosts(user) : [];
+  // 指令133 A2 瀑布：三路独立取数由串行 3 层改 Promise.all 一层，口径不变。
+  const [wanda, friendship, costs] = await Promise.all([
+    getMetrics("wanda", user.role),
+    getMetrics("friendship", user.role),
+    sensitive ? getStoreCosts(user) : Promise.resolve([]),
+  ]);
 
   const wandaCmp = new Map(
     buildStoreComparison({ metrics: wanda.rows, storeCosts: costs, scope: "wanda" }).map((m) => [m.month, m])

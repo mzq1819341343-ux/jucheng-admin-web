@@ -1,7 +1,7 @@
 import Nav from "@/components/Nav";
 import BusinessAccessToggles from "@/components/BusinessAccessToggles";
 import MemberInvites from "@/components/MemberInvites";
-import { getCurrentUser, getAllMembers, getMemberInvites, ROLE_LABEL, type Profile } from "@/lib/data";
+import { getCurrentUser, getAllMembers, getMemberInvites, getMyBusinesses, ROLE_LABEL, type Profile } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -58,14 +58,19 @@ const DEMO_GRANTS: Record<string, string[]> = {
 export default async function MembersPage() {
   const user = await getCurrentUser();
   const isOwner = user.role === "owner";
-  const { members, accessByUser, fromDb } = isOwner
-    ? await getAllMembers()
-    : { members: [] as Profile[], accessByUser: {} as Record<string, string[]>, fromDb: false };
+  // 指令133 A2 瀑布：成员与待邀请两路独立（仅依赖 user），由串行改并行一层；
+  // Nav 的板块查询同批预热请求级缓存。非老板分支仍以空结果占位、不发查询。
+  const [membersRes, invitesRes] = await Promise.all([
+    isOwner
+      ? getAllMembers()
+      : Promise.resolve({ members: [] as Profile[], accessByUser: {} as Record<string, string[]>, fromDb: false }),
+    isOwner ? getMemberInvites(user) : Promise.resolve({ invites: [], tableReady: true }),
+    getMyBusinesses(user),
+  ]);
+  const { members, accessByUser, fromDb } = membersRes;
   const showDemoMembers = isOwner && user.demo && members.length === 0;
   // 指令59 A6：待邀请名单仅老板拉取与渲染（合伙人/店员整节不渲染）。
-  const { invites, tableReady } = isOwner
-    ? await getMemberInvites(user)
-    : { invites: [], tableReady: true };
+  const { invites, tableReady } = invitesRes;
   const matchMembers = (showDemoMembers ? DEMO_MEMBERS : members).map((m) => ({
     id: m.id,
     display_name: m.display_name,

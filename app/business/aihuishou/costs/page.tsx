@@ -19,8 +19,8 @@ export default async function StoreCostsPage() {
   if (user.role === "staff") {
     redirect("/?denied=costs");
   }
-  const costs = await getStoreCosts(user);
-  const contracts = await getStoreContracts(user);
+  // 指令133 A2 瀑布：成本与合同两路独立，由串行 2 层改 Promise.all 一层。
+  const [costs, contracts] = await Promise.all([getStoreCosts(user), getStoreContracts(user)]);
   const isOwner = user.role === "owner";
 
   // 按月分组（新→旧），组内给出两店分项与当月合计

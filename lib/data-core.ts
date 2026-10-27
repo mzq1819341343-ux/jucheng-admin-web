@@ -251,22 +251,21 @@ fromDb: boolean;
 if (isSupabaseConfigured()) {
 try {
 const supabase = await createServerSupabase();
-const { data, error} = await supabase
+// 指令133 A2 瀑布：成员表与授权表互相独立（授权查询不依赖成员结果），
+// 由串行 2 层改并行 1 层；授权表未迁移/出错时仍按空授权展示，与原行为一致。
+const [profilesRes, accessRes] = await Promise.all([
+supabase
 .from("profiles")
 .select("id, role, display_name, store_scope")
-.order("created_at", { ascending: true});
+.order("created_at", { ascending: true}),
+supabase.from("user_business_access").select("user_id, business_id"),
+]);
+const { data, error} = profilesRes;
 if (!error && data) {
 const accessByUser: Record<string, string[]> = {};
-try {
-const { data: acc } = await supabase
-.from("user_business_access")
-.select("user_id, business_id");
-for (const row of acc ?? []) {
+for (const row of accessRes.data ?? []) {
 const uid = row.user_id as string;
 (accessByUser[uid] ??= []).push(row.business_id as string);
-}
-} catch {
-// 授权表未迁移时忽略，勾选区按空授权展示
 }
 return { members: data as Profile[], accessByUser, fromDb: true};
 }
@@ -372,8 +371,13 @@ needLogin: boolean;
 hasLogs: boolean;
 }
 
-export async function getFetchRefreshMarker(user?: CurrentUser): Promise<FetchRefreshMarker> {
-const { logs, fromDb } = await getFetchLogs();
+export async function getFetchRefreshMarker(
+user?: CurrentUser,
+prefetched?: { logs: FetchLog[]; fromDb: boolean }
+): Promise<FetchRefreshMarker> {
+// 指令133 A2 瀑布：调用方已取过 fetch_logs 时可传入复用，免去本函数内部
+// 再发一次同一查询（原实现与页面自身的 getFetchLogs 构成重复往返）。
+const { logs, fromDb } = prefetched ?? (await getFetchLogs());
 if (!fromDb && !(user?.demo)) {
   return { lastSuccessAt: null, needLogin: false, hasLogs: false };
 }

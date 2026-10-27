@@ -11,9 +11,16 @@ export const dynamic = "force-dynamic";
 export default async function AihuishouReportPage() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
-  const combined = await getMetrics("combined", user.role);
-  const wanda = await getMetrics("wanda", user.role);
-  const friendship = await getMetrics("friendship", user.role);
+  // 指令133 A2 瀑布：六路取数互相独立（只依赖 user / sensitive），由串行 6 层改 Promise.all 一层；
+  // 取数条件与角色口径逐条不变（非敏感角色仍走空数组占位，不发查询）。
+  const [combined, wanda, friendship, costs, expenseInput, siteTargets] = await Promise.all([
+    getMetrics("combined", user.role),
+    getMetrics("wanda", user.role),
+    getMetrics("friendship", user.role),
+    sensitive ? getStoreCosts(user) : Promise.resolve([]),
+    sensitive ? getExpenseOperatingInput(user) : Promise.resolve([]),
+    sensitive ? getSiteTargets(user) : Promise.resolve([]),
+  ]);
 
   const rows = combined.rows;
   const wandaTotal = wanda.rows.reduce((s, r) => s + (r.profit ?? 0), 0);
@@ -24,9 +31,7 @@ export default async function AihuishouReportPage() {
   const tProfit = rows.reduce((s, r) => s + (r.profit ?? 0), 0);
   const tDoor = rows.reduce((s, r) => s + (r.door_orders ?? 0), 0);
   const tWage = rows.reduce((s, r) => s + (r.wage_cost ?? 0), 0);
-  // 指令41/42/44：经营指标统一走 lib/operating 单一核算函数。
-  const costs = sensitive ? await getStoreCosts(user) : [];
-  const expenseInput = sensitive ? await getExpenseOperatingInput(user) : [];
+  // 指令41/42/44：经营指标统一走 lib/operating 单一核算函数（costs / expenseInput 已在页首并行取回）。
   const operating = buildOperatingMetrics({ metrics: rows, storeCosts: costs, expenses: expenseInput });
   const operatingByMonth = new Map(operating.months.map((m) => [m.month, m]));
   const sepCostTotal = storeCostsTotalForMonth(costs, "2026-09");
@@ -51,7 +56,6 @@ export default async function AihuishouReportPage() {
   // 指令58 A4 / 指令59 A5：目标达成复盘——行计算下沉 lib/targets.ts 单一来源，
   // 页面表格与 CSV 导出共用同一份行数据；目标与总览目标卡同源（site_targets），
   // 实际走经营核算口径，公司口径净利仅完整口径月份有值，其余标「待核算」。
-  const siteTargets = sensitive ? await getSiteTargets(user) : [];
   const companyNetMap: Record<string, number | null> = {};
   for (const m of operating.months) companyNetMap[m.month] = m.companyNetProfit;
   const reviewRows = buildTargetReviewRows({ months: rows, targets: siteTargets, companyNetProfit: companyNetMap });

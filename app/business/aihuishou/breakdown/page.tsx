@@ -17,11 +17,14 @@ export default async function NetBreakdownPage() {
   if (!canSeeSensitive(user.role)) {
     redirect("/?denied=breakdown");
   }
-  const combined = await getMetrics("combined", user.role);
-  const wanda = await getMetrics("wanda", user.role);
-  const friendship = await getMetrics("friendship", user.role);
-  const costs = await getStoreCosts(user);
-  const expenseInput = await getExpenseOperatingInput(user);
+  // 指令133 A2 瀑布：五路独立取数由串行 5 层改 Promise.all 一层，口径不变。
+  const [combined, wanda, friendship, costs, expenseInput] = await Promise.all([
+    getMetrics("combined", user.role),
+    getMetrics("wanda", user.role),
+    getMetrics("friendship", user.role),
+    getStoreCosts(user),
+    getExpenseOperatingInput(user),
+  ]);
   const operating = buildOperatingMetrics({ metrics: combined.rows, storeCosts: costs, expenses: expenseInput });
   const op = operating.latestComplete;
 
