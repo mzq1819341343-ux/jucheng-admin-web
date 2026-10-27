@@ -27,21 +27,22 @@ const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
 export default async function StatusPage() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
-  // 指令133 A2 瀑布：日志 / 配置新鲜度 / 工资明细（仅老板）三路独立，先并行一层取回；
-  // 刷新标记改吃已取回的日志（免其内部再发一次同一查询）；Nav 的板块查询同批预热请求级缓存。
-  const [fetchRes, freshness, detailRows] = await Promise.all([
-    getFetchLogs(),
-    getConfigFreshness(user),
-    user.role === "owner" ? getSalaryDetailImport(user) : Promise.resolve([]),
-    getMyBusinesses(user),
-  ]);
-  const { logs, fromDb } = fetchRes;
+  // 指令133 A2 瀑布：日志 / 配置新鲜度 / 工资明细（仅老板）三路独立，先同批启动、
+  // 再依次 await（启动即并发，串行深度一层）；Nav 的板块查询同批预热请求级缓存。
+  // 刷新标记改吃已取回的日志（免其内部再发一次同一查询）。
+  const freshnessPromise = getConfigFreshness(user);
+  const detailPromise = user.role === "owner" ? getSalaryDetailImport(user) : Promise.resolve([]);
+  const bizPromise = getMyBusinesses(user);
+  const { logs, fromDb } = await getFetchLogs();
+  const freshness = await freshnessPromise;
+  const detailRows = await detailPromise;
+  await bizPromise;
   // 指令74 A4 督工裁定（方向①）：真实模式下库里无抓取记录
   // （!fromDb 且非演示）时，记录节显式呈空态，与同页刷新标记的
   // 「暂无抓取记录」口径一致，不再渲染 FALLBACK 两行兜底；
   // 演示模式与 fromDb 为真时仍按 logs 原样渲染，不误伤。
   const fetchLogsEmpty = !fromDb && !user.demo;
-  const refreshMarker = await getFetchRefreshMarker(user, fetchRes);
+  const refreshMarker = await getFetchRefreshMarker(user, { logs, fromDb });
   const fmtTime = (v: string | null) => (v ? v.replace("T", " ").slice(0, 16) : null);
   const configUpdated =
     [fmtTime(freshness.salaryRules), fmtTime(freshness.storeCosts)]
