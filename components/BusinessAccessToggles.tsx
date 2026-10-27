@@ -73,7 +73,7 @@ export default function BusinessAccessToggles({
           </label>
         ) : (
           <span key={b.id} className="access-toggle access-toggle-off">
-            <input type="checkbox" disabled checked={false} readOnly />
+            <input type="checkbox" disabled checked={false} readOnly aria-label={`${b.name}（即将开放，不可勾）`} />
             {b.name}（即将开放，不可勾）
           </span>
         )
