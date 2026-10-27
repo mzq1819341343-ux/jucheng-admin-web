@@ -187,7 +187,7 @@ export default async function OverviewPage({
                   label="利润率（营收）"
                   value={latestOp.revenueMargin === null ? "—" : latestOp.revenueMargin.toFixed(1)}
                   unit={latestOp.revenueMargin === null ? undefined : "%"}
-                  sub={latestOp.revenueMargin === null ? "营收待接入" : "净利润 ÷ 当月营收"}
+                  sub={latestOp.revenueMargin === null ? "营收口径待接入（订单金额数据缺失），接入后自动出数" : "净利润 ÷ 当月营收"}
                   hint={
                     latestOp.revenueMargin === null
                       ? "营收口径待接入（订单金额数据缺失），接入后自动出数"
