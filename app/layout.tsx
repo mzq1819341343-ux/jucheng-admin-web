@@ -8,6 +8,13 @@ export const metadata: Metadata = {
   description: "聚天下英豪，成全球唯一 —— 聚成公司业务总后台",
 };
 
+/**
+ * 指令132 A1：函数区域亚太化——根 layout 的 preferredRegion 覆盖全部子路由，
+ * 与 vercel.json 的 regions 双保险，把 SSR / Server Action 执行地从默认
+ * iad1（弗吉尼亚）钉到 hkg1（香港），靠近老板（中国）与 Supabase（新加坡）。
+ */
+export const preferredRegion = "hkg1";
+
 /** 首帧渲染前从 localStorage 恢复主题（默认夜间），避免主题闪烁（指令34） */
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("jucheng-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
 
