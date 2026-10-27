@@ -34,10 +34,17 @@ export default function StoreCostManager({
 
   // 指令53 D5：电费实报快捷录入（cost_type='utilities'，与通用表单同表同口径）。
   // 同门店同月份已有电费行时走更新（编辑既有行），不重复新增；万达备注预填智能电表提示。
-  const [uScope, setUScope] = useState<StoreScope>("wanda");
-  const [uMonth, setUMonth] = useState("");
+  // 指令71 A4：默认带上次值——以最近一笔已录电费（月份最大、并列取 updated_at 最新）的
+  // 门店+月份预填，老板打开即接着上次录；无任何电费行时维持万达+空月默认。
+  const lastUtility = [...initialCosts]
+    .filter((c) => c.cost_type === "utilities")
+    .sort((a, b) => b.month.localeCompare(a.month) || b.updated_at.localeCompare(a.updated_at))[0];
+  const [uScope, setUScope] = useState<StoreScope>(lastUtility?.scope ?? "wanda");
+  const [uMonth, setUMonth] = useState(lastUtility?.month ?? "");
   const [uAmount, setUAmount] = useState("");
-  const [uNote, setUNote] = useState("智能电表自记、按实预付");
+  const [uNote, setUNote] = useState(
+    lastUtility?.scope === "friendship" ? "" : "智能电表自记、按实预付"
+  );
   const [uMsg, setUMsg] = useState<string | null>(null);
   const [uBusy, setUBusy] = useState(false);
   // 指令56-3b：行内校验错误（挂在对应字段下方，报错不提交）+ 选中门店/月份的录入状态提示。
@@ -49,6 +56,25 @@ export default function StoreCostManager({
   const uExisting = uMonthValid
     ? costs.find((c) => c.scope === uScope && c.month === uMonth && c.cost_type === "utilities")
     : undefined;
+
+  // 指令71 A4：所选门店成本月份跨度内尚无电费行的月份（点选即填，少一次手选）；
+  // 跨度取该店已有成本行的最早~最晚月，至多列最早 8 个。
+  const uMissingMonths = (() => {
+    const span = costs.filter((c) => c.scope === uScope).map((c) => c.month).sort();
+    if (span.length === 0) return [];
+    const have = new Set(
+      costs.filter((c) => c.scope === uScope && c.cost_type === "utilities").map((c) => c.month)
+    );
+    const out: string[] = [];
+    let cur = span[0];
+    const last = span[span.length - 1];
+    while (cur <= last && out.length < 8) {
+      if (!have.has(cur)) out.push(cur);
+      const [y, m] = cur.split("-").map(Number);
+      cur = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+    }
+    return out;
+  })();
 
   function onUScopeChange(s: StoreScope) {
     setUScope(s);
@@ -272,6 +298,7 @@ export default function StoreCostManager({
         <p className="page-desc" style={{ margin: "0 0 12px" }}>
           按门店 + 月份录入实际电费（万达智能电表自记、按实预付；友谊如有电费单据同样按实录入）。
           同门店同月份重复提交会更新既有行；未录入的月份按「未取得，未计入」处理，不估算。
+          表单默认带上次录入的门店与月份，下方会列出该门店尚未录入的月份，点选即可填入。
         </p>
         <form onSubmit={onUtilitySubmit}>
           <div className="form-row">
@@ -325,6 +352,26 @@ export default function StoreCostManager({
               {uExisting
                 ? `${STORE_LABEL[uScope]} ${uMonth} 已有电费 ${money2(uExisting.amount)} 元，本次提交将更新既有行。`
                 : `${STORE_LABEL[uScope]} ${uMonth} 电费尚未录入——未取得，未计入；录入后进入净利与花费拆解。`}
+            </div>
+          ) : null}
+          {uMissingMonths.length > 0 ? (
+            <div className="access-msg" style={{ margin: "0 0 10px" }}>
+              {STORE_LABEL[uScope]}未录电费月份：
+              {uMissingMonths.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ marginLeft: 6 }}
+                  onClick={() => {
+                    setUMonth(m);
+                    setUErrMonth(null);
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+              （点选即填入上方月份）
             </div>
           ) : null}
           <button type="submit" className="btn" disabled={uBusy}>
