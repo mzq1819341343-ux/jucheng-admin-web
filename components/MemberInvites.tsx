@@ -8,6 +8,7 @@ import {
   type MemberInvite,
 } from "@/lib/invites";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { runOptimistic } from "@/lib/optimistic";
 
 /**
  * 待邀请名单（指令59 A6 一期，仅老板）：
@@ -87,38 +88,36 @@ export default function MemberInvites({
       setNote("");
       return;
     }
-    // 指令68-P0-6 乐观更新：意向行先入列表，成功换服务端行，失败撤下并提示
-    setInvites((xs) => [row, ...xs]);
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：意向行先入列表，成功换服务端行，失败撤下
     setBusy("add");
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("member_invites")
-        .insert({
-          email: row.email,
-          intended_role: row.intended_role,
-          intended_businesses: row.intended_businesses,
-          note: row.note,
-          created_by: userId,
-        })
-        .select("*")
-        .single();
-      if (error) {
-        setInvites((xs) => xs.filter((i) => i.id !== row.id));
-        setMsg(`登记失败，已回滚：${error.message}`);
-      } else {
-        setInvites((xs) => xs.map((i) => (i.id === row.id ? (data as MemberInvite) : i)));
-        setMsg("意向已登记。下一步去 Supabase 控制台用该邮箱发邀请，对方设密注册后回本页一键对齐。");
-        setEmail("");
-        setNote("");
-      }
-    } catch (err) {
-      setInvites((xs) => xs.filter((i) => i.id !== row.id));
-      setMsg(`登记失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(null);
+    const okAdd = await runOptimistic<MemberInvite>({
+      apply: () => setInvites((xs) => [row, ...xs]),
+      rollback: () => setInvites((xs) => xs.filter((i) => i.id !== row.id)),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("member_invites")
+          .insert({
+            email: row.email,
+            intended_role: row.intended_role,
+            intended_businesses: row.intended_businesses,
+            note: row.note,
+            created_by: userId,
+          })
+          .select("*")
+          .single();
+        return { data: data as MemberInvite | null, error };
+      },
+      commit: (data) => setInvites((xs) => xs.map((i) => (i.id === row.id ? data : i))),
+      onError: (m) => setMsg(`登记失败，已回滚：${m}`),
+    });
+    if (okAdd) {
+      setMsg("意向已登记。下一步去 Supabase 控制台用该邮箱发邀请，对方设密注册后回本页一键对齐。");
+      setEmail("");
+      setNote("");
     }
+    setBusy(null);
   }
 
   async function align(invite: MemberInvite) {
@@ -139,44 +138,50 @@ export default function MemberInvites({
       setMsg(`演示：已本地对齐 ${invite.email}（未落库）。`);
       return;
     }
-    // 指令68-P0-6 乐观更新：确认后先把名单行标为已对齐，任一步写库失败回滚名单状态并报错
-    // （已成功的先行写入不假装未发生，错误信息会指明失败步骤，老板可重试对齐）
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：确认后先把名单行标为已对齐，
+    // 任一步写库失败回滚名单状态并报错（已成功的先行写入不假装未发生，
+    // 错误信息会指明失败步骤，老板可重试对齐）
     const snapshot = invites;
     const optimisticNow = new Date().toISOString();
-    setInvites((xs) =>
-      xs.map((i) => (i.id === invite.id ? { ...i, status: "aligned", aligned_at: optimisticNow, aligned_user_id: target.id } : i))
-    );
     setBusy(invite.id);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { error: roleErr } = await supabase
-        .from("profiles")
-        .update({ role: invite.intended_role })
-        .eq("id", target.id);
-      if (roleErr) throw new Error(`写角色失败：${roleErr.message}`);
-      for (const b of invite.intended_businesses) {
-        const { error: accErr } = await supabase
-          .from("user_business_access")
-          .upsert({ user_id: target.id, business_id: b }, { onConflict: "user_id,business_id" });
-        if (accErr) throw new Error(`写业务授权失败：${accErr.message}`);
-      }
-      const now = new Date().toISOString();
-      const { error: invErr } = await supabase
-        .from("member_invites")
-        .update({ status: "aligned", aligned_at: now, aligned_user_id: target.id })
-        .eq("id", invite.id);
-      if (invErr) throw new Error(`回写名单失败：${invErr.message}`);
-      setInvites((xs) =>
-        xs.map((i) => (i.id === invite.id ? { ...i, status: "aligned", aligned_at: now, aligned_user_id: target.id } : i))
-      );
+    const okAlign = await runOptimistic<string>({
+      apply: () =>
+        setInvites((xs) =>
+          xs.map((i) => (i.id === invite.id ? { ...i, status: "aligned", aligned_at: optimisticNow, aligned_user_id: target.id } : i))
+        ),
+      rollback: () => setInvites(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { error: roleErr } = await supabase
+          .from("profiles")
+          .update({ role: invite.intended_role })
+          .eq("id", target.id);
+        if (roleErr) throw new Error(`写角色失败：${roleErr.message}`);
+        for (const b of invite.intended_businesses) {
+          const { error: accErr } = await supabase
+            .from("user_business_access")
+            .upsert({ user_id: target.id, business_id: b }, { onConflict: "user_id,business_id" });
+          if (accErr) throw new Error(`写业务授权失败：${accErr.message}`);
+        }
+        const now = new Date().toISOString();
+        const { error: invErr } = await supabase
+          .from("member_invites")
+          .update({ status: "aligned", aligned_at: now, aligned_user_id: target.id })
+          .eq("id", invite.id);
+        if (invErr) throw new Error(`回写名单失败：${invErr.message}`);
+        return { data: now, error: null };
+      },
+      commit: (now) =>
+        setInvites((xs) =>
+          xs.map((i) => (i.id === invite.id ? { ...i, status: "aligned", aligned_at: now, aligned_user_id: target.id } : i))
+        ),
+      onError: (m) => setMsg(`对齐失败，名单状态已回滚：${m}`),
+    });
+    if (okAlign) {
       setMsg(`已对齐：${invite.email} 的角色与业务授权已按意向写入，对方重新打开页面即生效。`);
-    } catch (err) {
-      setInvites(snapshot);
-      setMsg(`对齐失败，名单状态已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(null);
     }
+    setBusy(null);
   }
 
   async function removeInvite(invite: MemberInvite) {
@@ -186,23 +191,20 @@ export default function MemberInvites({
       setMsg("演示：已本地删除（未落库）。");
       return;
     }
-    // 指令68-P0-6 乐观更新：先移除，失败回滚
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先移除，失败回滚
     const snapshot = invites;
-    setInvites((xs) => xs.filter((i) => i.id !== invite.id));
     setBusy(invite.id);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.from("member_invites").delete().eq("id", invite.id);
-      if (error) {
-        setInvites(snapshot);
-        setMsg(`删除失败，已回滚：${error.message}`);
-      }
-    } catch (err) {
-      setInvites(snapshot);
-      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(null);
-    }
+    await runOptimistic<never>({
+      apply: () => setInvites((xs) => xs.filter((i) => i.id !== invite.id)),
+      rollback: () => setInvites(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { error } = await supabase.from("member_invites").delete().eq("id", invite.id);
+        return { data: null, error };
+      },
+      onError: (m) => setMsg(`删除失败，已回滚：${m}`),
+    });
+    setBusy(null);
   }
 
   return (

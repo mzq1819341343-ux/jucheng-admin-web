@@ -5,6 +5,7 @@ import type { Role, SiteTarget, SiteTargetMetric } from "@/lib/data";
 import { TARGET_METRIC_LABEL } from "@/lib/targets";
 import { money2, int } from "@/lib/format";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { runOptimistic } from "@/lib/optimistic";
 
 export { TARGET_METRIC_LABEL };
 
@@ -74,45 +75,45 @@ export default function MonthlyTargetCard({
       setValue("");
       return;
     }
-    // 指令68-P0-6 乐观更新：先把目标写进 UI，失败回滚快照并提示
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先把目标写进 UI，失败回滚
     const snapshot = targets;
-    setTargets((prev) => {
-      const rest = prev.filter((t) => !(t.month === month && t.metric === metric));
-      const existing = prev.find((t) => t.month === month && t.metric === metric);
-      return [
-        ...rest,
-        { id: existing?.id ?? `temp-${month}-${metric}`, month, metric, target_value: v, note: existing?.note ?? null, updated_at: now },
-      ].sort((a, b) => a.month.localeCompare(b.month));
-    });
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("site_targets")
-        .upsert(
-          { month, metric, target_value: v, updated_by: userId, updated_at: now },
-          { onConflict: "month,metric" }
-        )
-        .select("*")
-        .single();
-      if (error) {
-        setTargets(snapshot);
-        setMsg(`保存失败，已回滚：${error.message}`);
-      } else if (data) {
+    const ok = await runOptimistic<SiteTarget>({
+      apply: () =>
         setTargets((prev) => {
           const rest = prev.filter((t) => !(t.month === month && t.metric === metric));
-          return [...rest, data as SiteTarget].sort((a, b) => a.month.localeCompare(b.month));
-        });
-        setMsg("目标已保存");
-        setValue("");
-      }
-    } catch (err) {
-      setTargets(snapshot);
-      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
+          const existing = prev.find((t) => t.month === month && t.metric === metric);
+          return [
+            ...rest,
+            { id: existing?.id ?? `temp-${month}-${metric}`, month, metric, target_value: v, note: existing?.note ?? null, updated_at: now },
+          ].sort((a, b) => a.month.localeCompare(b.month));
+        }),
+      rollback: () => setTargets(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("site_targets")
+          .upsert(
+            { month, metric, target_value: v, updated_by: userId, updated_at: now },
+            { onConflict: "month,metric" }
+          )
+          .select("*")
+          .single();
+        return { data: data as SiteTarget | null, error };
+      },
+      commit: (data) =>
+        setTargets((prev) => {
+          const rest = prev.filter((t) => !(t.month === month && t.metric === metric));
+          return [...rest, data].sort((a, b) => a.month.localeCompare(b.month));
+        }),
+      onError: (m) => setMsg(`保存失败，已回滚：${m}`),
+    });
+    if (ok) {
+      setMsg("目标已保存");
+      setValue("");
     }
+    setBusy(false);
   }
 
   return (

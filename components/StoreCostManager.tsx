@@ -5,6 +5,7 @@ import type { StoreCost } from "@/lib/data";
 import { STORE_LABEL, COST_TYPE_LABEL, type StoreScope, type CostType } from "@/lib/stores";
 import { money2 } from "@/lib/format";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { runOptimistic } from "@/lib/optimistic";
 
 /**
  * 门店成本管理（指令41，仅老板可写）：
@@ -102,68 +103,43 @@ export default function StoreCostManager({
       setUAmount("");
       return;
     }
-    // 指令68-P0-6 乐观更新：先改 UI，成功以服务端行校准，失败回滚快照
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先改 UI，成功以服务端行校准，失败回滚
     const snapshot = costs;
     const tempId = `temp-${Date.now()}`;
-    if (existing) {
-      setCosts((prev) => prev.map((c) => (c.id === existing.id ? { ...c, amount: amt, note: noteVal, updated_at: new Date().toISOString() } : c)));
-    } else {
-      setCosts((prev) => [
-        { id: tempId, scope: uScope, month: uMonth, cost_type: "utilities" as CostType, amount: amt, note: noteVal, updated_at: new Date().toISOString() },
-        ...prev,
-      ]);
-    }
     setUBusy(true);
     setUMsg(null);
-    try {
-      const supabase = createClient();
-      if (existing) {
-        const { data, error } = await supabase
-          .from("store_costs")
-          .update({ amount: amt, note: noteVal, updated_at: new Date().toISOString() })
-          .eq("id", existing.id)
-          .select("*")
-          .single();
-        if (error) {
-          setCosts(snapshot);
-          setUMsg(`保存失败，已回滚：${error.message}`);
+    const okU = await runOptimistic<StoreCost>({
+      apply: () => {
+        if (existing) {
+          setCosts((prev) => prev.map((c) => (c.id === existing.id ? { ...c, amount: amt, note: noteVal, updated_at: new Date().toISOString() } : c)));
         } else {
-          setCosts((prev) => prev.map((c) => (c.id === existing.id ? (data as StoreCost) : c)));
-          setUMsg("该月电费已存在，已更新既有行");
-          setUAmount("");
+          setCosts((prev) => [
+            { id: tempId, scope: uScope, month: uMonth, cost_type: "utilities" as CostType, amount: amt, note: noteVal, updated_at: new Date().toISOString() },
+            ...prev,
+          ]);
         }
-      } else {
-        const { data, error } = await supabase
-          .from("store_costs")
-          .insert({
-            scope: uScope,
-            month: uMonth,
-            cost_type: "utilities",
-            amount: amt,
-            note: noteVal,
-            created_by: userId,
-          })
-          .select("*")
-          .single();
-        if (error) {
-          setCosts(snapshot);
-          setUMsg(
-            error.message.includes("duplicate") || error.code === "23505"
-              ? "该门店该月份电费已存在，请重新提交以更新既有行"
-              : `保存失败，已回滚：${error.message}`
-          );
-        } else {
-          setCosts((prev) => prev.map((c) => (c.id === tempId ? (data as StoreCost) : c)));
-          setUMsg("电费已录入，将进入净利与花费拆解核算");
-          setUAmount("");
-        }
-      }
-    } catch (err) {
-      setCosts(snapshot);
-      setUMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setUBusy(false);
+      },
+      rollback: () => setCosts(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = existing
+          ? await supabase.from("store_costs").update({ amount: amt, note: noteVal, updated_at: new Date().toISOString() }).eq("id", existing.id).select("*").single()
+          : await supabase.from("store_costs").insert({ scope: uScope, month: uMonth, cost_type: "utilities", amount: amt, note: noteVal, created_by: userId }).select("*").single();
+        return { data: data as StoreCost | null, error };
+      },
+      commit: (data) => setCosts((prev) => prev.map((c) => (c.id === (existing?.id ?? tempId) ? data : c))),
+      onError: (m, raw) =>
+        setUMsg(
+          m.includes("duplicate") || (raw as { code?: string } | undefined)?.code === "23505"
+            ? "该门店该月份电费已存在，请重新提交以更新既有行"
+            : `保存失败，已回滚：${m}`
+        ),
+    });
+    if (okU) {
+      setUMsg(existing ? "该月电费已存在，已更新既有行" : "电费已录入，将进入净利与花费拆解核算");
+      setUAmount("");
     }
+    setUBusy(false);
   }
 
   function resetForm() {
@@ -228,58 +204,40 @@ export default function StoreCostManager({
       resetForm();
       return;
     }
-    // 指令68-P0-6 乐观更新：先改 UI，成功以服务端行校准，失败回滚快照
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先改 UI，成功以服务端行校准，失败回滚
     const snapshot = costs;
     const tempId = `temp-${Date.now()}`;
-    if (editingId) {
-      setCosts((prev) => prev.map((c) => (c.id === editingId ? { ...c, ...payload, updated_at: new Date().toISOString() } : c)));
-    } else {
-      setCosts((prev) => [{ id: tempId, ...payload, updated_at: new Date().toISOString() }, ...prev]);
-    }
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      if (editingId) {
-        const { data, error } = await supabase
-          .from("store_costs")
-          .update({ ...payload, updated_at: new Date().toISOString() })
-          .eq("id", editingId)
-          .select("*")
-          .single();
-        if (error) {
-          setCosts(snapshot);
-          setMsg(`保存失败，已回滚：${error.message}`);
+    const okC = await runOptimistic<StoreCost>({
+      apply: () => {
+        if (editingId) {
+          setCosts((prev) => prev.map((c) => (c.id === editingId ? { ...c, ...payload, updated_at: new Date().toISOString() } : c)));
         } else {
-          setCosts((prev) => prev.map((c) => (c.id === editingId ? (data as StoreCost) : c)));
-          setMsg("已保存");
-          resetForm();
+          setCosts((prev) => [{ id: tempId, ...payload, updated_at: new Date().toISOString() }, ...prev]);
         }
-      } else {
-        const { data, error } = await supabase
-          .from("store_costs")
-          .insert({ ...payload, created_by: userId })
-          .select("*")
-          .single();
-        if (error) {
-          setCosts(snapshot);
-          setMsg(
-            error.message.includes("duplicate") || error.code === "23505"
-              ? "该门店该月份该类型已存在，请用编辑修改"
-              : `保存失败，已回滚：${error.message}`
-          );
-        } else {
-          setCosts((prev) => prev.map((c) => (c.id === tempId ? (data as StoreCost) : c)));
-          setMsg("已保存");
-          resetForm();
-        }
-      }
-    } catch (err) {
-      setCosts(snapshot);
-      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
+      },
+      rollback: () => setCosts(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = editingId
+          ? await supabase.from("store_costs").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", editingId).select("*").single()
+          : await supabase.from("store_costs").insert({ ...payload, created_by: userId }).select("*").single();
+        return { data: data as StoreCost | null, error };
+      },
+      commit: (data) => setCosts((prev) => prev.map((c) => (c.id === (editingId ?? tempId) ? data : c))),
+      onError: (m, raw) =>
+        setMsg(
+          m.includes("duplicate") || (raw as { code?: string } | undefined)?.code === "23505"
+            ? "该门店该月份该类型已存在，请用编辑修改"
+            : `保存失败，已回滚：${m}`
+        ),
+    });
+    if (okC) {
+      setMsg("已保存");
+      resetForm();
     }
+    setBusy(false);
   }
 
   async function onDelete(id: string) {
@@ -288,26 +246,22 @@ export default function StoreCostManager({
       setMsg("演示：已从本地列表移除");
       return;
     }
-    // 指令68-P0-6 乐观更新：先移除，失败回滚
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先移除，失败回滚
     const snapshot = costs;
-    setCosts((prev) => prev.filter((c) => c.id !== id));
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.from("store_costs").delete().eq("id", id);
-      if (error) {
-        setCosts(snapshot);
-        setMsg(`删除失败，已回滚：${error.message}`);
-      } else {
-        setMsg("已删除");
-      }
-    } catch (err) {
-      setCosts(snapshot);
-      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
-    }
+    const okD = await runOptimistic<never>({
+      apply: () => setCosts((prev) => prev.filter((c) => c.id !== id)),
+      rollback: () => setCosts(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { error } = await supabase.from("store_costs").delete().eq("id", id);
+        return { data: null, error };
+      },
+      onError: (m) => setMsg(`删除失败，已回滚：${m}`),
+    });
+    if (okD) setMsg("已删除");
+    setBusy(false);
   }
 
   return (

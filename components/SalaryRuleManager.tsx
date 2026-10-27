@@ -5,6 +5,7 @@ import type { SalaryRule } from "@/lib/data";
 import { money2 } from "@/lib/format";
 import SalaryRuleVersionPreview from "@/components/SalaryRuleVersionPreview";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { runOptimistic } from "@/lib/optimistic";
 
 /**
  * 工资体系规则配置（指令41，仅老板）：
@@ -90,44 +91,46 @@ export default function SalaryRuleManager({
       setEffectiveFrom("");
       return;
     }
-    // 指令68-P0-6 乐观更新：草稿行先入列表并切预览，成功换服务端行，失败撤下（表单保留可重试）
-    setRules([draft, ...rules]);
-    setPreviewRuleId(draft.id);
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：草稿先入列表并切预览，成功换服务端行，失败撤下（表单保留可重试）
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("salary_rules")
-        .insert({
-          title: draft.title,
-          base_salary: draft.base_salary,
-          commission_rules: draft.commission_rules,
-          note: draft.note,
-          effective_from: draft.effective_from,
-          updated_by: userId,
-        })
-        .select("id, title, base_salary, commission_rules, note, effective_from, updated_at")
-        .single();
-      if (error) {
-        setRules(rules);
-        setMsg(`保存失败，已回滚：${error.message}`);
-      } else {
-        setRules([data as SalaryRule, ...rules]);
-        setPreviewRuleId((data as SalaryRule).id);
-        setMsg("已保存");
-        setTitle("");
-        setBaseSalary("");
-        setCommissionJson("");
-        setNote("");
-        setEffectiveFrom("");
-      }
-    } catch (err) {
-      setRules(rules);
-      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
+    const okR = await runOptimistic<SalaryRule>({
+      apply: () => {
+        setRules([draft, ...rules]);
+        setPreviewRuleId(draft.id);
+      },
+      rollback: () => setRules(rules),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("salary_rules")
+          .insert({
+            title: draft.title,
+            base_salary: draft.base_salary,
+            commission_rules: draft.commission_rules,
+            note: draft.note,
+            effective_from: draft.effective_from,
+            updated_by: userId,
+          })
+          .select("id, title, base_salary, commission_rules, note, effective_from, updated_at")
+          .single();
+        return { data: data as SalaryRule | null, error };
+      },
+      commit: (data) => {
+        setRules([data, ...rules]);
+        setPreviewRuleId(data.id);
+      },
+      onError: (m) => setMsg(`保存失败，已回滚：${m}`),
+    });
+    if (okR) {
+      setMsg("已保存");
+      setTitle("");
+      setBaseSalary("");
+      setCommissionJson("");
+      setNote("");
+      setEffectiveFrom("");
     }
+    setBusy(false);
   }
 
   async function onDelete(id: string) {
@@ -136,26 +139,22 @@ export default function SalaryRuleManager({
       setMsg("演示：已从本地列表移除");
       return;
     }
-    // 指令68-P0-6 乐观更新：先移除，失败回滚
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先移除，失败回滚
     const snapshot = rules;
-    setRules(rules.filter((r) => r.id !== id));
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.from("salary_rules").delete().eq("id", id);
-      if (error) {
-        setRules(snapshot);
-        setMsg(`删除失败，已回滚：${error.message}`);
-      } else {
-        setMsg("已删除");
-      }
-    } catch (err) {
-      setRules(snapshot);
-      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
-    }
+    const okD = await runOptimistic<never>({
+      apply: () => setRules(rules.filter((r) => r.id !== id)),
+      rollback: () => setRules(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { error } = await supabase.from("salary_rules").delete().eq("id", id);
+        return { data: null, error };
+      },
+      onError: (m) => setMsg(`删除失败，已回滚：${m}`),
+    });
+    if (okD) setMsg("已删除");
+    setBusy(false);
   }
 
   const previewEff =
@@ -290,28 +289,26 @@ function EffectiveFromEditor({
       setErr(null);
       return;
     }
-    // 指令68-P0-6 乐观更新：先回写上层状态（预览即时翻转），失败恢复原值并报错
-    onSaved(rule.id, next);
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先回写上层状态（预览即时翻转），失败恢复原值并报错
     setSaving(true);
     setErr(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("salary_rules")
-        .update({ effective_from: next })
-        .eq("id", rule.id);
-      if (error) {
+    await runOptimistic<never>({
+      apply: () => onSaved(rule.id, next),
+      rollback: () => {
         onSaved(rule.id, rule.effective_from);
         setValue(rule.effective_from ?? "");
-        setErr(`保存失败，已回滚：${error.message}`);
-      }
-    } catch (e) {
-      onSaved(rule.id, rule.effective_from);
-      setValue(rule.effective_from ?? "");
-      setErr(`保存失败，已回滚：${e instanceof Error ? e.message : "未知错误"}`);
-    } finally {
-      setSaving(false);
-    }
+      },
+      request: async () => {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("salary_rules")
+          .update({ effective_from: next })
+          .eq("id", rule.id);
+        return { data: null, error };
+      },
+      onError: (m) => setErr(`保存失败，已回滚：${m}`),
+    });
+    setSaving(false);
   }
 
   return (

@@ -6,6 +6,7 @@ import { EXPENSE_SCOPE_LABEL, isOverdueUnreimbursed, EXPENSE_OVERDUE_DAYS, type 
 import { money2 } from "@/lib/format";
 import { downloadExcel } from "@/lib/excel";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { runOptimistic } from "@/lib/optimistic";
 
 const DEMO_OWN_ID = "demo-current-user";
 
@@ -234,57 +235,39 @@ export default function ExpenseManager({
       return;
     }
 
-    // 指令68-P0-6 乐观更新：先按 payload 改 UI，成功以服务端行校准，失败回滚快照并提示
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先按 payload 改 UI，成功以服务端行校准，失败回滚
     const snapshot = claims;
     const tempId = `temp-${Date.now()}`;
-    if (editingId) {
-      setClaims((prev) => prev.map((c) => (c.id === editingId ? { ...c, ...payload, updated_at: now } : c)));
-    } else {
-      setClaims((prev) => [
-        { id: tempId, ...payload, created_by: currentUserKey, created_at: now, updated_at: now },
-        ...prev,
-      ]);
-    }
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      if (editingId) {
-        const { data, error } = await supabase
-          .from("expense_claims")
-          .update({ ...payload, updated_at: now })
-          .eq("id", editingId)
-          .select("*")
-          .single();
-        if (error) {
-          setClaims(snapshot);
-          setMsg(`保存失败，已回滚：${error.message}`);
+    const ok = await runOptimistic<ExpenseClaim>({
+      apply: () => {
+        if (editingId) {
+          setClaims((prev) => prev.map((c) => (c.id === editingId ? { ...c, ...payload, updated_at: now } : c)));
         } else {
-          setClaims((prev) => prev.map((c) => (c.id === editingId ? (data as ExpenseClaim) : c)));
-          setMsg("已保存");
-          resetForm();
+          setClaims((prev) => [
+            { id: tempId, ...payload, created_by: currentUserKey, created_at: now, updated_at: now },
+            ...prev,
+          ]);
         }
-      } else {
-        const { data, error } = await supabase
-          .from("expense_claims")
-          .insert({ ...payload, created_by: userId })
-          .select("*")
-          .single();
-        if (error) {
-          setClaims(snapshot);
-          setMsg(`保存失败，已回滚：${error.message}`);
-        } else {
-          setClaims((prev) => prev.map((c) => (c.id === tempId ? (data as ExpenseClaim) : c)));
-          setMsg("已保存");
-          resetForm();
-        }
-      }
-    } catch (err) {
-      setClaims(snapshot);
-      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
+      },
+      rollback: () => setClaims(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = editingId
+          ? await supabase.from("expense_claims").update({ ...payload, updated_at: now }).eq("id", editingId).select("*").single()
+          : await supabase.from("expense_claims").insert({ ...payload, created_by: userId }).select("*").single();
+        return { data: data as ExpenseClaim | null, error };
+      },
+      commit: (data) =>
+        setClaims((prev) => prev.map((c) => (c.id === (editingId ?? tempId) ? data : c))),
+      onError: (m) => setMsg(`保存失败，已回滚：${m}`),
+    });
+    if (ok) {
+      setMsg("已保存");
+      resetForm();
     }
+    setBusy(false);
   }
 
   async function toggleStatus(claim: ExpenseClaim) {
@@ -300,32 +283,28 @@ export default function ExpenseManager({
       setMsg(demo ? "演示：已本地切换状态，未写库" : "已本地切换状态");
       return;
     }
-    // 指令68-P0-6 乐观更新：先切换 UI，失败回滚
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先切换 UI，失败回滚
     const snapshot = claims;
-    setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...patch } : c)));
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("expense_claims")
-        .update(patch)
-        .eq("id", claim.id)
-        .select("*")
-        .single();
-      if (error) {
-        setClaims(snapshot);
-        setMsg(`状态切换失败，已回滚：${error.message}`);
-      } else {
-        setClaims((prev) => prev.map((c) => (c.id === claim.id ? (data as ExpenseClaim) : c)));
-        setMsg("状态已更新");
-      }
-    } catch (err) {
-      setClaims(snapshot);
-      setMsg(`状态切换失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
-    }
+    const ok = await runOptimistic<ExpenseClaim>({
+      apply: () => setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...patch } : c))),
+      rollback: () => setClaims(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("expense_claims")
+          .update(patch)
+          .eq("id", claim.id)
+          .select("*")
+          .single();
+        return { data: data as ExpenseClaim | null, error };
+      },
+      commit: (data) => setClaims((prev) => prev.map((c) => (c.id === claim.id ? data : c))),
+      onError: (m) => setMsg(`状态切换失败，已回滚：${m}`),
+    });
+    if (ok) setMsg("状态已更新");
+    setBusy(false);
   }
 
   async function onDelete(claim: ExpenseClaim) {
@@ -334,26 +313,22 @@ export default function ExpenseManager({
       setMsg(demo ? "演示：已从本地列表移除，未写库" : "已从本地列表移除");
       return;
     }
-    // 指令68-P0-6 乐观更新：先从列表移除，失败回滚
+    // 指令68-P0-6 乐观更新（骨架走 lib/optimistic）：先从列表移除，失败回滚
     const snapshot = claims;
-    setClaims((prev) => prev.filter((c) => c.id !== claim.id));
     setBusy(true);
     setMsg(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.from("expense_claims").delete().eq("id", claim.id);
-      if (error) {
-        setClaims(snapshot);
-        setMsg(`删除失败，已回滚：${error.message}`);
-      } else {
-        setMsg("已删除");
-      }
-    } catch (err) {
-      setClaims(snapshot);
-      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
-    } finally {
-      setBusy(false);
-    }
+    const ok = await runOptimistic<never>({
+      apply: () => setClaims((prev) => prev.filter((c) => c.id !== claim.id)),
+      rollback: () => setClaims(snapshot),
+      request: async () => {
+        const supabase = createClient();
+        const { error } = await supabase.from("expense_claims").delete().eq("id", claim.id);
+        return { data: null, error };
+      },
+      onError: (m) => setMsg(`删除失败，已回滚：${m}`),
+    });
+    if (ok) setMsg("已删除");
+    setBusy(false);
   }
 
   return (
