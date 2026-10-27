@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from "react";
-import CountUp from "./CountUp";
 
 /**
  * KPI 主数字（指令39）：按展示字符串长度分档缩放，保证任何卡内完整可见、不裁切。
@@ -9,7 +8,8 @@ import CountUp from "./CountUp";
  *
  * 指令51：KpiCard 增加 size 变体（hero = 现有阶梯最大档 / md = 现大卡档 / sm = 紧凑档）；
  * 长说明走 hint（title 悬停提示），卡面只留短标签与极短 sub；
- * 数字默认静态渲染，CountUp 仅英雄 opt-in（countUp / animate，时长 ≤500ms）。
+ * 数字一律静态渲染（指令70 T-A5 裁定删除：CountUp 组件及 countUp / animate
+ * 接口已移除——零调用死链，且误用即回到 T1 前的 LCP 钉点成因）。
  */
 export function kpiScaleFor(value: string): number {
   const len = value.replace(/\s/g, "").length;
@@ -24,18 +24,15 @@ export function KpiValue({
   value,
   unit,
   tone = "default",
-  animate = false,
 }: {
   value: string;
   unit?: string;
   tone?: "default" | "negative" | "positive";
-  /** 仅英雄数字开启（CountUp 时长压到 450ms）；其余一律静态。 */
-  animate?: boolean;
 }) {
   const style = { "--kpi-scale": kpiScaleFor(value) } as CSSProperties;
   return (
     <div className={`kpi-value${tone !== "default" ? ` kpi-${tone}` : ""}`} style={style}>
-      {animate ? <CountUp value={value} duration={450} /> : value}
+      {value}
       {unit ? <span className="kpi-unit">{unit}</span> : null}
     </div>
   );
@@ -52,7 +49,6 @@ export default function KpiCard({
   className,
   tone = "default",
   size = "md",
-  countUp = false,
 }: {
   label: string;
   value: string;
@@ -63,7 +59,6 @@ export default function KpiCard({
   className?: string;
   tone?: "default" | "negative" | "positive";
   size?: KpiSize;
-  countUp?: boolean;
 }) {
   const sizeClass = size === "hero" ? " kpi-card-hero" : size === "sm" ? " kpi-card-sm" : "";
   // 指令57 自扫：原 locked「无权限」占位变体已删除——无权限指标整卡不渲染，
@@ -71,7 +66,7 @@ export default function KpiCard({
   return (
     <div className={`kpi-card${sizeClass}${className ? ` ${className}` : ""}`} title={hint}>
       <div className="kpi-label">{label}</div>
-      <KpiValue value={value} unit={unit} tone={tone} animate={countUp} />
+      <KpiValue value={value} unit={unit} tone={tone} />
       {sub ? <div className="kpi-sub">{sub}</div> : null}
     </div>
   );
