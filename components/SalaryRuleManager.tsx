@@ -90,6 +90,9 @@ export default function SalaryRuleManager({
       setEffectiveFrom("");
       return;
     }
+    // 指令68-P0-6 乐观更新：草稿行先入列表并切预览，成功换服务端行，失败撤下（表单保留可重试）
+    setRules([draft, ...rules]);
+    setPreviewRuleId(draft.id);
     setBusy(true);
     setMsg(null);
     try {
@@ -107,7 +110,8 @@ export default function SalaryRuleManager({
         .select("id, title, base_salary, commission_rules, note, effective_from, updated_at")
         .single();
       if (error) {
-        setMsg(`保存失败：${error.message}`);
+        setRules(rules);
+        setMsg(`保存失败，已回滚：${error.message}`);
       } else {
         setRules([data as SalaryRule, ...rules]);
         setPreviewRuleId((data as SalaryRule).id);
@@ -119,7 +123,8 @@ export default function SalaryRuleManager({
         setEffectiveFrom("");
       }
     } catch (err) {
-      setMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setRules(rules);
+      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(false);
     }
@@ -131,19 +136,23 @@ export default function SalaryRuleManager({
       setMsg("演示：已从本地列表移除");
       return;
     }
+    // 指令68-P0-6 乐观更新：先移除，失败回滚
+    const snapshot = rules;
+    setRules(rules.filter((r) => r.id !== id));
     setBusy(true);
     setMsg(null);
     try {
       const supabase = createClient();
       const { error } = await supabase.from("salary_rules").delete().eq("id", id);
       if (error) {
-        setMsg(`删除失败：${error.message}`);
+        setRules(snapshot);
+        setMsg(`删除失败，已回滚：${error.message}`);
       } else {
-        setRules(rules.filter((r) => r.id !== id));
         setMsg("已删除");
       }
     } catch (err) {
-      setMsg(`删除失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setRules(snapshot);
+      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(false);
     }
@@ -281,6 +290,8 @@ function EffectiveFromEditor({
       setErr(null);
       return;
     }
+    // 指令68-P0-6 乐观更新：先回写上层状态（预览即时翻转），失败恢复原值并报错
+    onSaved(rule.id, next);
     setSaving(true);
     setErr(null);
     try {
@@ -290,12 +301,14 @@ function EffectiveFromEditor({
         .update({ effective_from: next })
         .eq("id", rule.id);
       if (error) {
-        setErr(`保存失败：${error.message}`);
-      } else {
-        onSaved(rule.id, next);
+        onSaved(rule.id, rule.effective_from);
+        setValue(rule.effective_from ?? "");
+        setErr(`保存失败，已回滚：${error.message}`);
       }
     } catch (e) {
-      setErr(`保存失败：${e instanceof Error ? e.message : "未知错误"}`);
+      onSaved(rule.id, rule.effective_from);
+      setValue(rule.effective_from ?? "");
+      setErr(`保存失败，已回滚：${e instanceof Error ? e.message : "未知错误"}`);
     } finally {
       setSaving(false);
     }

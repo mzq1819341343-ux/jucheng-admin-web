@@ -74,6 +74,16 @@ export default function MonthlyTargetCard({
       setValue("");
       return;
     }
+    // 指令68-P0-6 乐观更新：先把目标写进 UI，失败回滚快照并提示
+    const snapshot = targets;
+    setTargets((prev) => {
+      const rest = prev.filter((t) => !(t.month === month && t.metric === metric));
+      const existing = prev.find((t) => t.month === month && t.metric === metric);
+      return [
+        ...rest,
+        { id: existing?.id ?? `temp-${month}-${metric}`, month, metric, target_value: v, note: existing?.note ?? null, updated_at: now },
+      ].sort((a, b) => a.month.localeCompare(b.month));
+    });
     setBusy(true);
     setMsg(null);
     try {
@@ -86,8 +96,10 @@ export default function MonthlyTargetCard({
         )
         .select("*")
         .single();
-      if (error) setMsg(`保存失败：${error.message}`);
-      else if (data) {
+      if (error) {
+        setTargets(snapshot);
+        setMsg(`保存失败，已回滚：${error.message}`);
+      } else if (data) {
         setTargets((prev) => {
           const rest = prev.filter((t) => !(t.month === month && t.metric === metric));
           return [...rest, data as SiteTarget].sort((a, b) => a.month.localeCompare(b.month));
@@ -96,7 +108,8 @@ export default function MonthlyTargetCard({
         setValue("");
       }
     } catch (err) {
-      setMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setTargets(snapshot);
+      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(false);
     }

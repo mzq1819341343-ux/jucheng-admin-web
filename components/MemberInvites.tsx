@@ -87,6 +87,8 @@ export default function MemberInvites({
       setNote("");
       return;
     }
+    // 指令68-P0-6 乐观更新：意向行先入列表，成功换服务端行，失败撤下并提示
+    setInvites((xs) => [row, ...xs]);
     setBusy("add");
     setMsg(null);
     try {
@@ -103,15 +105,17 @@ export default function MemberInvites({
         .select("*")
         .single();
       if (error) {
-        setMsg(`登记失败：${error.message}`);
+        setInvites((xs) => xs.filter((i) => i.id !== row.id));
+        setMsg(`登记失败，已回滚：${error.message}`);
       } else {
-        setInvites((xs) => [data as MemberInvite, ...xs]);
+        setInvites((xs) => xs.map((i) => (i.id === row.id ? (data as MemberInvite) : i)));
         setMsg("意向已登记。下一步去 Supabase 控制台用该邮箱发邀请，对方设密注册后回本页一键对齐。");
         setEmail("");
         setNote("");
       }
     } catch (err) {
-      setMsg(`登记失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setInvites((xs) => xs.filter((i) => i.id !== row.id));
+      setMsg(`登记失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(null);
     }
@@ -135,6 +139,13 @@ export default function MemberInvites({
       setMsg(`演示：已本地对齐 ${invite.email}（未落库）。`);
       return;
     }
+    // 指令68-P0-6 乐观更新：确认后先把名单行标为已对齐，任一步写库失败回滚名单状态并报错
+    // （已成功的先行写入不假装未发生，错误信息会指明失败步骤，老板可重试对齐）
+    const snapshot = invites;
+    const optimisticNow = new Date().toISOString();
+    setInvites((xs) =>
+      xs.map((i) => (i.id === invite.id ? { ...i, status: "aligned", aligned_at: optimisticNow, aligned_user_id: target.id } : i))
+    );
     setBusy(invite.id);
     setMsg(null);
     try {
@@ -161,7 +172,8 @@ export default function MemberInvites({
       );
       setMsg(`已对齐：${invite.email} 的角色与业务授权已按意向写入，对方重新打开页面即生效。`);
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : "对齐失败：未知错误");
+      setInvites(snapshot);
+      setMsg(`对齐失败，名单状态已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(null);
     }
@@ -174,14 +186,20 @@ export default function MemberInvites({
       setMsg("演示：已本地删除（未落库）。");
       return;
     }
+    // 指令68-P0-6 乐观更新：先移除，失败回滚
+    const snapshot = invites;
+    setInvites((xs) => xs.filter((i) => i.id !== invite.id));
     setBusy(invite.id);
     try {
       const supabase = createClient();
       const { error } = await supabase.from("member_invites").delete().eq("id", invite.id);
-      if (error) setMsg(`删除失败：${error.message}`);
-      else setInvites((xs) => xs.filter((i) => i.id !== invite.id));
+      if (error) {
+        setInvites(snapshot);
+        setMsg(`删除失败，已回滚：${error.message}`);
+      }
     } catch (err) {
-      setMsg(`删除失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setInvites(snapshot);
+      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(null);
     }

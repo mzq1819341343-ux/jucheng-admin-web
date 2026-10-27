@@ -234,6 +234,17 @@ export default function ExpenseManager({
       return;
     }
 
+    // 指令68-P0-6 乐观更新：先按 payload 改 UI，成功以服务端行校准，失败回滚快照并提示
+    const snapshot = claims;
+    const tempId = `temp-${Date.now()}`;
+    if (editingId) {
+      setClaims((prev) => prev.map((c) => (c.id === editingId ? { ...c, ...payload, updated_at: now } : c)));
+    } else {
+      setClaims((prev) => [
+        { id: tempId, ...payload, created_by: currentUserKey, created_at: now, updated_at: now },
+        ...prev,
+      ]);
+    }
     setBusy(true);
     setMsg(null);
     try {
@@ -245,8 +256,10 @@ export default function ExpenseManager({
           .eq("id", editingId)
           .select("*")
           .single();
-        if (error) setMsg(`保存失败：${error.message}`);
-        else {
+        if (error) {
+          setClaims(snapshot);
+          setMsg(`保存失败，已回滚：${error.message}`);
+        } else {
           setClaims((prev) => prev.map((c) => (c.id === editingId ? (data as ExpenseClaim) : c)));
           setMsg("已保存");
           resetForm();
@@ -257,15 +270,18 @@ export default function ExpenseManager({
           .insert({ ...payload, created_by: userId })
           .select("*")
           .single();
-        if (error) setMsg(`保存失败：${error.message}`);
-        else {
-          setClaims((prev) => [data as ExpenseClaim, ...prev]);
+        if (error) {
+          setClaims(snapshot);
+          setMsg(`保存失败，已回滚：${error.message}`);
+        } else {
+          setClaims((prev) => prev.map((c) => (c.id === tempId ? (data as ExpenseClaim) : c)));
           setMsg("已保存");
           resetForm();
         }
       }
     } catch (err) {
-      setMsg(`保存失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setClaims(snapshot);
+      setMsg(`保存失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(false);
     }
@@ -284,6 +300,9 @@ export default function ExpenseManager({
       setMsg(demo ? "演示：已本地切换状态，未写库" : "已本地切换状态");
       return;
     }
+    // 指令68-P0-6 乐观更新：先切换 UI，失败回滚
+    const snapshot = claims;
+    setClaims((prev) => prev.map((c) => (c.id === claim.id ? { ...c, ...patch } : c)));
     setBusy(true);
     setMsg(null);
     try {
@@ -294,13 +313,16 @@ export default function ExpenseManager({
         .eq("id", claim.id)
         .select("*")
         .single();
-      if (error) setMsg(`状态切换失败：${error.message}`);
-      else {
+      if (error) {
+        setClaims(snapshot);
+        setMsg(`状态切换失败，已回滚：${error.message}`);
+      } else {
         setClaims((prev) => prev.map((c) => (c.id === claim.id ? (data as ExpenseClaim) : c)));
         setMsg("状态已更新");
       }
     } catch (err) {
-      setMsg(`状态切换失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setClaims(snapshot);
+      setMsg(`状态切换失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(false);
     }
@@ -312,18 +334,23 @@ export default function ExpenseManager({
       setMsg(demo ? "演示：已从本地列表移除，未写库" : "已从本地列表移除");
       return;
     }
+    // 指令68-P0-6 乐观更新：先从列表移除，失败回滚
+    const snapshot = claims;
+    setClaims((prev) => prev.filter((c) => c.id !== claim.id));
     setBusy(true);
     setMsg(null);
     try {
       const supabase = createClient();
       const { error } = await supabase.from("expense_claims").delete().eq("id", claim.id);
-      if (error) setMsg(`删除失败：${error.message}`);
-      else {
-        setClaims((prev) => prev.filter((c) => c.id !== claim.id));
+      if (error) {
+        setClaims(snapshot);
+        setMsg(`删除失败，已回滚：${error.message}`);
+      } else {
         setMsg("已删除");
       }
     } catch (err) {
-      setMsg(`删除失败：${err instanceof Error ? err.message : "未知错误"}`);
+      setClaims(snapshot);
+      setMsg(`删除失败，已回滚：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setBusy(false);
     }
