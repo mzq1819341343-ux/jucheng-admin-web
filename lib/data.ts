@@ -129,7 +129,7 @@ displayName: profile?.display_name?? null,
 }
 }
 if (!isDemoAllowed()) {
-// 指令40-2：生产环境禁用演示——忽略 demo Cookie，按未登录的最低权限用户处理（页面由 middleware 导向登录）
+// 指令40-2：生产环境禁用演示——忽略 demo Cookie，按未登录的最低权限用户处理（页面由 proxy 导向登录）
 return { id: null, role: "staff", demo: false, email: null, displayName: null };
 }
 const cookieStore = await cookies();

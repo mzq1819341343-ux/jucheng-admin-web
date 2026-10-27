@@ -1,25 +1,25 @@
 {
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.48.1",
-    "next": "^15.1.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "description": "聚成公司业务总后台（Next.js + Supabase + Vercel，零付费依赖）",
   "devDependencies": {
-    "@types/node": "^22.10.7",
-    "@types/react": "^19.0.7",
-    "@types/react-dom": "^19.0.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "playwright-core": "^1.64.1",
-    "typescript": "^5.7.3"
+    "typescript": "^7.0.2"
   },
   "name": "jucheng-admin",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "lint": "next lint",
+    "lint": "tsc --noEmit",
     "start": "next start",
     "regression": "node scripts/regression/run-all.mjs",
     "regression:390": "node scripts/regression/audit-390.mjs",
