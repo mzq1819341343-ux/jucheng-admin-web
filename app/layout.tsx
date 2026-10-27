@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./globals-extra.css";
 import HashAuthForwarder from "@/components/HashAuthForwarder";
 
 export const metadata: Metadata = {
