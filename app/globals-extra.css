@@ -316,14 +316,17 @@ footer.site-footer {
   animation: fadeUp 0.85s 0.18s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
 }
 /* 指令185：登录页口号逐字墨迹显现——容器不再整块淡入，改由 .ink-char 逐字落墨 */
-.login-brand-slogan--ink { animation: none; }
+/* 指令189：逐字 delay 改 CSS 变量合成——容器给 --ink-base/--ink-step 默认值（PC 口径），
+   单字 span 只带 --i 索引（login/page.tsx）；窄屏媒体查询只改变量即可放慢，PC 时序一字不变。 */
+.login-brand-slogan--ink { animation: none; --ink-base: 0.25s; --ink-step: 0.075s; }
 /* 指令188：墨迹扫入——主效果改 clip-path 左→右拭入 + opacity，blur/scale 退场；
-   单字 0.55s，内联 delay 0.25s 起每字 +75ms（login/page.tsx），末字 1.0s 起笔、1.55s 落稳。
+   单字 0.55s，delay = 0.25s 起每字 +75ms（变量合成），末字 1.0s 起笔、1.55s 落稳。
    span 自首帧即占位（backwards 填充），容器尺寸不变、无 CLS；落稳保留静态轻金 glow，字本身不循环。 */
 .ink-char {
   display: inline-block;
   text-shadow: 0 0 14px rgba(201, 162, 39, 0.28);
   animation: inkChar 0.55s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
+  animation-delay: calc(var(--ink-base, 0.25s) + var(--i, 0) * var(--ink-step, 0.075s));
 }
 @keyframes inkChar {
   0% { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px); }
@@ -378,17 +381,65 @@ footer.site-footer {
   58%, 100% { transform: rotate(-14deg) translateX(230%); opacity: 0; }
 }
 @media (max-width: 720px) {
-  /* 指令188：窄屏动画总时长略缩（末字 1.0s 起笔 + 0.42s = 1.42s 落稳）、光点 ≤4、能量线只留 1 条 */
-  .ink-char { animation-duration: 0.42s; }
-  .tech-dot:nth-child(5), .tech-dot:nth-child(6) { display: none; }
-  .tech-line--b { display: none; }
-  .tech-line--a { animation-duration: 8s; }
+  /* 指令189：窄屏可见性加厚（仅 ≤720，PC 参数一律不动）——老板 iPhone 反馈 188 版
+     网格/光点/能量线对比度过低、墨迹 1.42s 一闪而过看不见，本段逐项提亮放慢：
+     网格线 0.09→0.19、金点阵 0.32→0.50、遮罩椭圆放大；光点 6 个全显、呼吸 0.38→0.85；
+     能量线 1px→2px、峰值 0.55→0.80、双条（b 条走弱化关键帧 0.42）；墨迹放慢到 2.25s 落稳。 */
+  .login-wrap::before {
+    background-image:
+      radial-gradient(circle, rgba(201, 162, 39, 0.5) 1px, transparent 1.7px),
+      linear-gradient(rgba(148, 162, 190, 0.19) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 162, 190, 0.19) 1px, transparent 1px);
+    -webkit-mask-image: radial-gradient(ellipse 106% 84% at 50% 40%, black 34%, transparent 88%);
+    mask-image: radial-gradient(ellipse 106% 84% at 50% 40%, black 34%, transparent 88%);
+  }
+  /* 墨迹放慢：base 0.25→0.45s、step 75→110ms、单字 0.55→0.70s，末字 1.55s 起笔、2.25s 落稳 */
+  .login-brand-slogan--ink { --ink-base: 0.45s; --ink-step: 0.11s; }
+  .ink-char { animation-duration: 0.7s; }
+  /* 指令189：窄屏口号字重 400→600（A/B 截图对比笔划明显变粗更醒目后保留；仅 ≤720，不外链字体） */
+  .login-brand-slogan { font-weight: 600; }
+  /* 光点全显提亮：基透明 0.18→0.42、尺寸收到 7–9px 档（呼吸关键帧在本段内重定义为 0.38→0.85） */
+  .tech-dot { width: 8px; height: 8px; opacity: 0.42; }
+  .tech-dot:nth-child(2) { width: 7px; height: 7px; }
+  .tech-dot:nth-child(3) { width: 9px; height: 9px; }
+  .tech-dot:nth-child(5) { width: 7px; height: 7px; display: block; }
+  .tech-dot:nth-child(6) { display: block; }
+  @keyframes techDotBreathe {
+    0%, 100% { opacity: 0.38; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.3); }
+  }
+  /* 能量线加粗提亮：1px→2px、渐变峰 0.5→0.85、扫过峰值 0.55→0.80；a 条 7s 一圈必见，b 条放开并走弱化关键帧 */
+  .tech-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.5), rgba(243, 224, 158, 0.85), rgba(201, 162, 39, 0.5), transparent);
+  }
+  .tech-line--a { animation-duration: 7s; }
+  .tech-line--b { display: block; animation-name: techLineSweepSoft; animation-duration: 9.5s; }
+  @keyframes techLineSweep {
+    0% { transform: rotate(-14deg) translateX(-60%); opacity: 0; }
+    10% { opacity: 0.8; }
+    46% { opacity: 0.8; }
+    58%, 100% { transform: rotate(-14deg) translateX(230%); opacity: 0; }
+  }
+  @keyframes techLineSweepSoft {
+    0% { transform: rotate(-14deg) translateX(-60%); opacity: 0; }
+    10% { opacity: 0.42; }
+    46% { opacity: 0.42; }
+    58%, 100% { transform: rotate(-14deg) translateX(230%); opacity: 0; }
+  }
 }
-/* 指令188：减动效下登录装饰全静——墨字直接完整呈现、光点静态低透明、能量线隐藏（另有全局降级兜底） */
+/* 指令188/189：减动效下登录装饰全静——墨字直接完整呈现、光点静态且肉眼可见（0.22→0.45）、
+   能量线留 a 条静态低透明斜线让科技底不空白（b 条仍隐藏；另有全局降级兜底） */
 @media (prefers-reduced-motion: reduce) {
   .ink-char { animation: none !important; opacity: 1; clip-path: none; transform: none; }
-  .tech-dot { animation: none !important; opacity: 0.22; transform: none; }
-  .tech-line { animation: none !important; display: none; }
+  .tech-dot { animation: none !important; opacity: 0.45; transform: none; }
+  .tech-line { animation: none !important; opacity: 0; transform: none; }
+  .tech-line--a { opacity: 0.32; transform: rotate(-14deg); }
+  .tech-line--b { display: none; }
+}
+/* 指令189：窄屏 + 减动效叠加——静态光点再提一档，保证小屏静帧科技底不空白 */
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  .tech-dot { opacity: 0.55; }
 }
 @media (max-width: 480px) {
   .login-brand-slogan { font-size: 19px; letter-spacing: 3px; margin-left: 3px; }

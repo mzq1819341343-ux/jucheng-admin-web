@@ -74,12 +74,14 @@ export default function LoginPage() {
       <div className="login-brand">
         <div className="login-brand-name">聚成</div>
         {/* 指令185 模块A：口号定稿 + 逐字墨迹显现（纯 CSS 动画，零新增 JS 逻辑） */}
+        {/* 指令189：delay 改由 CSS 变量合成（--ink-base + --i × --ink-step，见 globals-extra.css），
+            PC 时序不变（0.25s 起、+75ms/字）；窄屏由媒体查询改变量放慢，不再内联写死。 */}
         <div className="login-brand-slogan login-brand-slogan--ink" aria-label={BRAND_SLOGAN}>
           {BRAND_SLOGAN.split("").map((ch, i) => (
             <span
               key={i}
               className="ink-char"
-              style={{ animationDelay: `${0.25 + i * 0.075}s` }}
+              style={{ "--i": i } as React.CSSProperties}
               aria-hidden="true"
             >
               {ch}
