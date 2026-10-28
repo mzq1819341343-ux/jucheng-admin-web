@@ -252,12 +252,31 @@ footer.site-footer {
 
 /* ---------- 登录页（品牌化 + 入场动画，指令35） ---------- */
 .login-wrap {
+  position: relative;
+  z-index: 0;
   min-height: 86vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 56px 24px 64px;
+}
+/* 指令185 模块A：科技感背景——细网格（两层线性渐变）+ 金色光点阵，
+   径向遮罩只在品牌区附近显形，纯 CSS、无 JS、无图片。 */
+.login-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(201, 162, 39, 0.32) 1px, transparent 1.7px),
+    linear-gradient(rgba(128, 140, 165, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 140, 165, 0.09) 1px, transparent 1px);
+  background-size: 132px 132px, 34px 34px, 34px 34px;
+  background-position: 17px 9px, 0 0, 0 0;
+  -webkit-mask-image: radial-gradient(ellipse 92% 72% at 50% 38%, black 26%, transparent 78%);
+  mask-image: radial-gradient(ellipse 92% 72% at 50% 38%, black 26%, transparent 78%);
 }
 .login-brand {
   position: relative;
@@ -287,13 +306,27 @@ footer.site-footer {
   animation: fadeUp 0.85s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
 }
 .login-brand-slogan {
+  font-family: "KaiTi", "STKaiti", "Kaiti SC", "Songti SC", "STSong", serif;
   color: var(--text);
-  opacity: 0.9;
-  font-size: 17px;
-  letter-spacing: 6px;
+  opacity: 0.92;
+  font-size: 22px;
+  letter-spacing: 5px;
   margin-top: 15px;
-  margin-left: 6px;
+  margin-left: 5px;
   animation: fadeUp 0.85s 0.18s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
+}
+/* 指令185：登录页口号逐字墨迹显现——容器不再整块淡入，改由 .ink-char 逐字落墨 */
+.login-brand-slogan--ink { animation: none; }
+.ink-char {
+  display: inline-block;
+  animation: inkChar 0.5s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
+}
+@keyframes inkChar {
+  from { opacity: 0; filter: blur(4px); transform: translateY(3px) scale(1.09); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+@media (max-width: 480px) {
+  .login-brand-slogan { font-size: 19px; letter-spacing: 3px; margin-left: 3px; }
 }
 .login-brand-en {
   color: var(--faint);
@@ -304,12 +337,27 @@ footer.site-footer {
   animation: fadeUp 0.85s 0.34s ease backwards;
 }
 .login-brand-rule {
+  position: relative;
+  overflow: hidden;
   width: 64px;
   height: 2px;
   background: var(--gold);
   margin: 24px auto 0;
   opacity: 0.85;
   animation: fadeUp 0.85s 0.46s ease backwards;
+}
+/* 指令185：能量线——一道亮光沿金线缓慢扫过（纯 CSS） */
+.login-brand-rule::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: translateX(-100%);
+  animation: ruleSheen 3.8s 1.2s ease-in-out infinite;
+}
+@keyframes ruleSheen {
+  0% { transform: translateX(-100%); }
+  42%, 100% { transform: translateX(100%); }
 }
 .login-card {
   width: 100%;

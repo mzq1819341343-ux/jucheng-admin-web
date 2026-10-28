@@ -7,6 +7,7 @@ import {
   authCallbackPathWithoutSecrets,
   beginPasswordCallback,
 } from "@/lib/supabase/password-callback";
+import { BRAND_SLOGAN } from "@/lib/brand";
 
 type Phase = "checking" | "ready" | "invalid" | "done";
 
@@ -92,7 +93,7 @@ export default function SetPasswordPage() {
     <main className="login-wrap">
       <div className="login-brand">
         <div className="login-brand-name">聚成</div>
-        <div className="login-brand-slogan">聚天下英豪，成全球唯一</div>
+        <div className="login-brand-slogan">{BRAND_SLOGAN}</div>
         <div className="login-brand-en en">JUCHENG</div>
         <div className="login-brand-rule" aria-hidden="true" />
       </div>

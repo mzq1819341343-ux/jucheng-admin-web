@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { preconnect } from "react-dom";
 import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { isDemoAllowed } from "@/lib/demo";
+import { BRAND_SLOGAN } from "@/lib/brand";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -61,7 +62,19 @@ export default function LoginPage() {
     <main className="login-wrap">
       <div className="login-brand">
         <div className="login-brand-name">聚成</div>
-        <div className="login-brand-slogan">聚天下英豪，成全球唯一</div>
+        {/* 指令185 模块A：口号定稿 + 逐字墨迹显现（纯 CSS 动画，零新增 JS 逻辑） */}
+        <div className="login-brand-slogan login-brand-slogan--ink" aria-label={BRAND_SLOGAN}>
+          {BRAND_SLOGAN.split("").map((ch, i) => (
+            <span
+              key={i}
+              className="ink-char"
+              style={{ animationDelay: `${0.25 + i * 0.075}s` }}
+              aria-hidden="true"
+            >
+              {ch}
+            </span>
+          ))}
+        </div>
         <div className="login-brand-en en">JUCHENG</div>
         <div className="login-brand-rule" aria-hidden="true" />
       </div>

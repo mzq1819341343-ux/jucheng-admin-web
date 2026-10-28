@@ -8,6 +8,7 @@ import DemoBizSwitcher, { type DemoBiz } from "./DemoBizSwitcher";
 import ThemeToggle from "./ThemeToggle";
 import NavShell from "./NavShell";
 import MoreMenu from "./MoreMenu";
+import { BRAND_SLOGAN } from "@/lib/brand";
 
 /** 邮箱掩码（指令51）：顶栏不明文展示完整邮箱，只留首尾与域名，全址进 title。 */
 function maskEmail(email: string): string {
@@ -36,7 +37,7 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           <Link href="/" className="brand-name">
             聚成
           </Link>
-          <span className="brand-slogan">聚天下英豪，成全球唯一</span>
+          <span className="brand-slogan">{BRAND_SLOGAN}</span>
           <span className="brand-en en">JUCHENG</span>
         </div>
         {/* 指令51：桌面单行导航——主链接直达，次要项收进「更多」溢出菜单，不再折行 */}

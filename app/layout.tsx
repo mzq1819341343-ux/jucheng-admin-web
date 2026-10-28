@@ -2,10 +2,15 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./globals-extra.css";
 import HashAuthForwarder from "@/components/HashAuthForwarder";
+import { BRAND_SLOGAN } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "聚成 · 公司业务总后台",
-  description: "聚天下英豪，成全球唯一 —— 聚成公司业务总后台",
+  description: `${BRAND_SLOGAN} —— 聚成公司业务总后台`,
+  openGraph: {
+    title: "聚成 · 公司业务总后台",
+    description: `${BRAND_SLOGAN} —— 聚成公司业务总后台`,
+  },
 };
 
 /**
