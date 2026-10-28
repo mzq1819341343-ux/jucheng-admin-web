@@ -3,6 +3,7 @@ import loadable from "next/dynamic";
 import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
+import RealtimePayrollCard from "@/components/RealtimePayrollCard";
 
 /**
  * 指令170 C1/C6：老板区两个重型客户端组件（规则管理器含双版本预览、CSV 导入器）
@@ -60,6 +61,10 @@ export default async function SalaryPage() {
 
         <h2 className="section-title">工资怎么算</h2>
         <SalaryRuleCard rule={publicRule} />
+
+        {/* 指令194：实时工资人效汇总卡——老板 / 合伙人可见（汇总口径，
+            与门店汇总可见性一致）；店员整卡不渲染（指令58 不渲染口径）。 */}
+        {user.role === "owner" || user.role === "partner" ? <RealtimePayrollCard /> : null}
 
         {user.role === "owner" ? (
           <OwnerSalary user={user} />
