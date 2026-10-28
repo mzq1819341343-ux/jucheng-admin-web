@@ -317,13 +317,78 @@ footer.site-footer {
 }
 /* 指令185：登录页口号逐字墨迹显现——容器不再整块淡入，改由 .ink-char 逐字落墨 */
 .login-brand-slogan--ink { animation: none; }
+/* 指令188：墨迹扫入——主效果改 clip-path 左→右拭入 + opacity，blur/scale 退场；
+   单字 0.55s，内联 delay 0.25s 起每字 +75ms（login/page.tsx），末字 1.0s 起笔、1.55s 落稳。
+   span 自首帧即占位（backwards 填充），容器尺寸不变、无 CLS；落稳保留静态轻金 glow，字本身不循环。 */
 .ink-char {
   display: inline-block;
-  animation: inkChar 0.5s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
+  text-shadow: 0 0 14px rgba(201, 162, 39, 0.28);
+  animation: inkChar 0.55s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
 }
 @keyframes inkChar {
-  from { opacity: 0; filter: blur(4px); transform: translateY(3px) scale(1.09); }
-  to { opacity: 1; filter: blur(0); transform: none; }
+  0% { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateY(2px); }
+  55% { opacity: 1; }
+  100% { opacity: 1; clip-path: inset(0 0 0 0); transform: translateY(0); }
+}
+/* 指令188：科技装饰层——光点呼吸 + 能量线对角扫过，纯 CSS、零 JS；
+   .login-tech 绝对定位于 .login-wrap 内、z-index:-1 与网格同层，pointer-events:none 不挡表单。 */
+.login-tech {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.tech-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(238, 211, 122, 0.95) 0%, rgba(201, 162, 39, 0.35) 45%, transparent 72%);
+  opacity: 0.18;
+  animation: techDotBreathe 5.6s ease-in-out infinite;
+}
+.tech-dot:nth-child(1) { top: 16%; left: 11%; animation-duration: 5.2s; }
+.tech-dot:nth-child(2) { top: 11%; left: 83%; width: 5px; height: 5px; animation-duration: 6.4s; animation-delay: -2.1s; }
+.tech-dot:nth-child(3) { top: 64%; left: 6%; width: 7px; height: 7px; animation-duration: 7.1s; animation-delay: -3.4s; }
+.tech-dot:nth-child(4) { top: 58%; left: 91%; animation-duration: 4.8s; animation-delay: -1.2s; }
+.tech-dot:nth-child(5) { top: 86%; left: 26%; width: 5px; height: 5px; animation-duration: 6s; animation-delay: -4.2s;
+  background: radial-gradient(circle, rgba(196, 230, 214, 0.9) 0%, rgba(140, 190, 170, 0.32) 45%, transparent 72%); }
+.tech-dot:nth-child(6) { top: 82%; left: 74%; animation-duration: 5.5s; animation-delay: -2.8s;
+  background: radial-gradient(circle, rgba(196, 230, 214, 0.9) 0%, rgba(140, 190, 170, 0.32) 45%, transparent 72%); }
+@keyframes techDotBreathe {
+  0%, 100% { opacity: 0.14; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.3); }
+}
+.tech-line {
+  position: absolute;
+  left: -8%;
+  width: 52%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.32), rgba(243, 224, 158, 0.5), rgba(201, 162, 39, 0.32), transparent);
+  opacity: 0;
+  animation: techLineSweep 9s linear infinite;
+}
+.tech-line--a { top: 13%; }
+.tech-line--b { top: 88%; animation-duration: 12.5s; animation-delay: -6s; }
+@keyframes techLineSweep {
+  0% { transform: rotate(-14deg) translateX(-60%); opacity: 0; }
+  10% { opacity: 0.55; }
+  46% { opacity: 0.55; }
+  58%, 100% { transform: rotate(-14deg) translateX(230%); opacity: 0; }
+}
+@media (max-width: 720px) {
+  /* 指令188：窄屏动画总时长略缩（末字 1.0s 起笔 + 0.42s = 1.42s 落稳）、光点 ≤4、能量线只留 1 条 */
+  .ink-char { animation-duration: 0.42s; }
+  .tech-dot:nth-child(5), .tech-dot:nth-child(6) { display: none; }
+  .tech-line--b { display: none; }
+  .tech-line--a { animation-duration: 8s; }
+}
+/* 指令188：减动效下登录装饰全静——墨字直接完整呈现、光点静态低透明、能量线隐藏（另有全局降级兜底） */
+@media (prefers-reduced-motion: reduce) {
+  .ink-char { animation: none !important; opacity: 1; clip-path: none; transform: none; }
+  .tech-dot { animation: none !important; opacity: 0.22; transform: none; }
+  .tech-line { animation: none !important; display: none; }
 }
 @media (max-width: 480px) {
   .login-brand-slogan { font-size: 19px; letter-spacing: 3px; margin-left: 3px; }

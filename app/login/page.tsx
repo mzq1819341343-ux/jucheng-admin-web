@@ -60,6 +60,17 @@ export default function LoginPage() {
 
   return (
     <main className="login-wrap">
+      {/* 指令188：科技装饰层（光点呼吸 + 能量线，纯 CSS、零 JS），读屏与指针均隔离 */}
+      <div className="login-tech" aria-hidden="true">
+        <span className="tech-dot" />
+        <span className="tech-dot" />
+        <span className="tech-dot" />
+        <span className="tech-dot" />
+        <span className="tech-dot" />
+        <span className="tech-dot" />
+        <span className="tech-line tech-line--a" />
+        <span className="tech-line tech-line--b" />
+      </div>
       <div className="login-brand">
         <div className="login-brand-name">聚成</div>
         {/* 指令185 模块A：口号定稿 + 逐字墨迹显现（纯 CSS 动画，零新增 JS 逻辑） */}
