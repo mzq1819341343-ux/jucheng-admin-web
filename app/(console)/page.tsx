@@ -1,6 +1,7 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
+import { SectionSkeleton } from "@/components/PageSkeleton";
 import {
   getCurrentUser,
   getMyBusinesses,
@@ -27,19 +28,49 @@ import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+function DeniedNotice() {
+  return (
+    <div className="notice">
+      你未被授权进入该业务板块（或该板块尚未开放），入口未对你开放。如需开通，请联系老板在「成员与权限」页为你勾选对应业务。
+    </div>
+  );
+}
+
 /**
  * 公司总览（指令51 改版 · 留皮换骨）：
  * 眉题一行情境 → 唯一英雄「扣成本后净利」（敏感角色）→ 双利润率次级并排 →
  * 年回报紧凑一行 → 成本拆解默认折叠 → 运营四数紧凑行 → 月度目标 → 业务卡。
  * 数字全部走 lib/operating 核算函数；工资明细校验提示不在首页出现（在工资页/状态页）。
+ * 标题先出，指标放在 Suspense 里，不必等六路取数才换掉点击骨架。
  */
 export default async function OverviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ denied?: string }>;
 }) {
-  const user = await getCurrentUser();
   const { denied } = await searchParams;
+  return (
+    <main className="container calm no-enter">
+      <Suspense fallback={<OverviewFallback denied={denied} />}>
+        <OverviewContent denied={denied} />
+      </Suspense>
+    </main>
+  );
+}
+
+function OverviewFallback({ denied }: { denied?: string }) {
+  return (
+    <>
+      <div className="skel skel-eyebrow" />
+      <h1 className="page-title">聚成总后台</h1>
+      {denied ? <DeniedNotice /> : null}
+      <SectionSkeleton />
+    </>
+  );
+}
+
+async function OverviewContent({ denied }: { denied?: string }) {
+  const user = await getCurrentUser();
   const { businesses, grantedIds } = await getMyBusinesses(user);
   const hasAihuishou = canAccessBusiness(grantedIds, "aihuishou");
 
@@ -123,8 +154,6 @@ export default async function OverviewPage({
 
   return (
     <>
-      <Nav user={user} />
-      <main className="container calm no-enter">
         <div className="eyebrow">
           <span className="eyebrow-cn">
             {hasAihuishou ? `爱回收 · 最新月 ${latest?.month ?? "—"}` : "公司总览"}
@@ -132,11 +161,7 @@ export default async function OverviewPage({
         </div>
         <h1 className="page-title">聚成总后台</h1>
 
-        {denied ? (
-          <div className="notice">
-            你未被授权进入该业务板块（或该板块尚未开放），入口未对你开放。如需开通，请联系老板在「成员与权限」页为你勾选对应业务。
-          </div>
-        ) : null}
+        {denied ? <DeniedNotice /> : null}
 
         {overdueClaims.length > 0 ? (
           <Link href="/expenses?status=unreimbursed" className="alert-bar" role="alert">
@@ -330,7 +355,6 @@ export default async function OverviewPage({
             })}
           </div>
         )}
-      </main>
     </>
   );
 }

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import Nav from "@/components/Nav";
 import {
   getCurrentUser,
   getFetchLogs,
@@ -93,7 +92,6 @@ export default async function StatusPage() {
 
   return (
     <>
-      <Nav user={user} />
       <main className="container">
         <div className="eyebrow">
           <span className="en">DATA STATUS</span>

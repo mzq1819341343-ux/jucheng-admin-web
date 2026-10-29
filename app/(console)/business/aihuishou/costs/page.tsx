@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
-import Nav from "@/components/Nav";
-import StoreCostManager from "@/components/StoreCostManager";
+import loadable from "next/dynamic";
+
+/** 与报销页 ExpenseManager、工资页规则管理器同一做法：重型客户端表单不进导航关键 chunk。 */
+const StoreCostManager = loadable(() => import("@/components/StoreCostManager"), {
+  loading: () => <div className="skel skel-block" aria-hidden="true" />,
+});
 import { getCurrentUser, getStoreCosts, getStoreContracts, type StoreCost, type StoreContract } from "@/lib/data";
 import { STORE_LABEL, COST_TYPE_LABEL, type CostType } from "@/lib/stores";
 import { money2 } from "@/lib/format";
@@ -28,7 +32,6 @@ export default async function StoreCostsPage() {
 
   return (
     <>
-      <Nav user={user} />
       <main className="container">
         <div className="eyebrow">
           <span className="en">AIHUISHOU · STORE COSTS</span>

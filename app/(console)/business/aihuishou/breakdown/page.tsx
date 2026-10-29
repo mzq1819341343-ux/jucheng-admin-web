@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Nav from "@/components/Nav";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput } from "@/lib/data";
 import { buildOperatingMetrics } from "@/lib/operating";
 import { money2 } from "@/lib/format";
@@ -62,7 +61,6 @@ export default async function NetBreakdownPage() {
 
   return (
     <>
-      <Nav user={user} />
       <main className="container">
         <div className="eyebrow">
           <span className="en">AIHUISHOU · NET BREAKDOWN</span>
