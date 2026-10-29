@@ -41,4 +41,4 @@ proxy.ts        已配置 Supabase 时的登录保护
 
 ## 回归
 
-`scripts/` 在 ops 仓。本仓 `package.json` 不再挂 `regression*`、`shots`、`salary:verify`。回归脚本仍按单体布局编写，要跑 `docs/运维_回归清单.md` 里的回归，用原仓 `jucheng-admin`。
+`scripts/` 在 ops 仓。本仓 `package.json` 不再挂 `regression*`、`shots`、`salary:verify`。本地/演示回归在 [jucheng-admin-ops](https://github.com/mzq1819341343-ux/jucheng-admin-ops) 跑：须设 `REG_WEB_ROOT` 指向本仓根，并用 `REG_BASE` / `REG_ONLINE` 指向本仓预览或本地 `start`。
