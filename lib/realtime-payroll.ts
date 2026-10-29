@@ -13,7 +13,32 @@
  * UPLOAD / APPLY 仍为 false（docs/fetch-pipeline/pipeline_config.json），
  * 本站不自动写入、不覆盖生产真数。本数是草案（draft）：10 月对账单
  * 未生成（statement=pending，月未结），待月结后校准。
+ *
+ * 计薪口径（老板拍板，对齐 ops 仓 scripts/payroll/realtime_payroll.py）：
+ * - 线上 = 非门店 × 1%（脚本 ONLINE_MODE 曾把「来源=官网」标为待确认假设）
+ * - 门店 = 订单金额不含券阶梯（STORE_BASE_FIELD、STORE_TIERS：≥6 万 4% / ≥3 万 3%）
+ * - 底薪全员 2000（BASE_SALARY；本文件 baseTotal = 计薪人数 × 2000）
+ * 汇总额是已同步的 193 在职草案锚点。个人明细不在本仓，这里不重算金额。
  */
+
+/** 人效卡与「工资怎么算」共用的口径句，避免两处各写一套。 */
+export const PAYROLL_CALIBER = {
+  /** 底薪全员 2000（元/人/月） */
+  basePerPerson: 2000,
+  /** 线上 = 非门店 × 1% */
+  onlineBasis: "非门店",
+  onlinePct: 1,
+  /** 门店 = 订单金额不含券阶梯 */
+  storeBasis: "订单金额不含券阶梯",
+  /** 与 realtime_payroll.py STORE_TIERS 一致，只用于口径说明 */
+  storeTiers: [
+    { min: 60000, pct: 4 },
+    { min: 30000, pct: 3 },
+  ],
+  /** 配件仍无数据源时，卡面必须打出的占位，不能留空 */
+  accessoriesPlaceholder: 0,
+  accessoriesHasData: false,
+} as const;
 
 export const REALTIME_PAYROLL = {
   /** 草案月份（生效月 effective_from = 2026-10） */
@@ -31,11 +56,12 @@ export const REALTIME_PAYROLL = {
   /** 排除人数 / 单量（名单外与已离职，不计薪，订单留痕于排除清单） */
   excludedPeople: 4,
   excludedOrders: 183,
-  /** 五项拆分汇总（元） */
+  /** 五项拆分汇总（元）。底薪合计 = 计薪人数 × 底薪全员 2000。 */
   baseTotal: 8000,
   doorCommissionTotal: 647.5,
   onlineCommissionTotal: 737.95,
   storeCommissionTotal: 7849.6,
+  /** 无配件数据源，与 PAYROLL_CALIBER.accessoriesPlaceholder 同值 */
   accessoriesCommissionTotal: 0,
   /** 应发合计（元） */
   grossTotal: 17235.05,

@@ -35,6 +35,9 @@
   --shadow: 0 18px 44px rgba(2, 6, 17, 0.5), 0 3px 10px rgba(2, 6, 17, 0.4);
   --shadow-lift: 0 28px 64px rgba(2, 6, 17, 0.62), 0 6px 18px rgba(2, 6, 17, 0.45);
   --serif: "Songti SC", "STSong", "Noto Serif SC", "SimSun", serif;
+  /* 楷体优先；本机没有楷体时落到系统中文黑体，避免缺字成方框。
+     末位用 sans-serif：Linux 上 serif 常是只有拉丁字形的字体。 */
+  --kaiti: "KaiTi", "楷体", "Kaiti SC", "STKaiti", "KaiTi_GB2312", "Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "微软雅黑", "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Droid Sans Fallback", sans-serif;
 }
 
 html[data-theme="light"] {

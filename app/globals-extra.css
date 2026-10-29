@@ -2,6 +2,50 @@
    由 layout.tsx 在 globals.css 之后导入，级联顺序与拆分前完全一致。 */
 /* 工资 / 成本页细节（指令43 块3）：长文本可读、导入异常行可辨、合同卡不溢出 */
 .rule-card li, .contract-card li { line-height: 1.65; }
+/* 工资页与规则卡：楷体，缺字落到系统中文（--kaiti），避免方框 */
+.salary-page,
+.rule-card {
+  font-family: var(--kaiti);
+}
+.salary-page :where(input, button, select, textarea) {
+  font-family: inherit;
+}
+.salary-head {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.salary-head-text { min-width: 0; }
+.salary-kind {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  border: 1px solid transparent;
+}
+.salary-kind-draft {
+  color: var(--notice-text);
+  background: var(--notice-bg);
+  border-color: var(--gold);
+}
+.salary-kind-actual {
+  color: var(--green);
+  background: rgba(67, 181, 129, 0.12);
+  border-color: rgba(67, 181, 129, 0.55);
+}
+/* 人效构成表：口径名换行，金额不换行，手机上数字仍在屏内 */
+table.report.payroll-split th:first-child,
+table.report.payroll-split td:first-child {
+  white-space: normal;
+  text-align: left;
+}
+table.report.payroll-split th:last-child,
+table.report.payroll-split td:last-child {
+  white-space: nowrap;
+  width: 1%;
+}
 .contract-card { overflow-wrap: break-word; }
 .contract-card .plain li { margin-bottom: 10px; }
 .salary-import-table { min-width: 940px; }

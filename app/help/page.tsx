@@ -1,5 +1,6 @@
 import Nav from "@/components/Nav";
 import { getCurrentUser, ROLE_LABEL } from "@/lib/data";
+import { PAYROLL_CALIBER as CALIBER } from "@/lib/realtime-payroll";
 
 export const dynamic = "force-dynamic";
 
@@ -286,14 +287,15 @@ export default async function HelpPage() {
               <strong>规则说明：</strong>以下为规则说明；以工资页配置为准；手册不展示任何员工实发与实表明细。
             </li>
             <li>
-              <strong>底薪：</strong>合计 2,000 元/月 = 基础 1,000 + 全勤 500 + 拉新 500。
+              <strong>底薪：</strong>全员 {CALIBER.basePerPerson.toLocaleString("zh-CN")} 元/月 = 基础 1,000 + 全勤 500 + 拉新 500。
               拉新口径以工资表模板为准（模板到后核对更新）。
             </li>
             <li>
-              <strong>线上订单提成：</strong>一律 1%。
+              <strong>线上订单提成：</strong>
+              {CALIBER.onlineBasis} × {CALIBER.onlinePct}%。
             </li>
             <li>
-              <strong>门店提成（阶梯，取最高达成档）：</strong>业绩 ≥ 30,000 元 → 3%；业绩 ≥ 60,000 元 → 4%。
+              <strong>门店提成（{CALIBER.storeBasis}，取最高达成档）：</strong>业绩 ≥ 30,000 元 → 3%；业绩 ≥ 60,000 元 → 4%。
             </li>
             <li>
               <strong>配件提成：</strong>业绩 &lt; 6,500 元 → 20%；≥ 6,500 元 → 30%；≥ 10,000 元 → 40%。
