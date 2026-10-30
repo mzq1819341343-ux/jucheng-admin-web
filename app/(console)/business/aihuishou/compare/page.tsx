@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Nav from "@/components/Nav";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts } from "@/lib/data";
 import { buildStoreComparison, type StoreMonthComparison } from "@/lib/operating";
 import { STORE_LABEL, type StoreScope } from "@/lib/stores";
@@ -103,7 +102,6 @@ export default async function ComparePage({
 
   return (
     <>
-      <Nav user={user} />
       <main className="container">
         <div className="eyebrow">
           <span className="en">AIHUISHOU · COMPARE</span>

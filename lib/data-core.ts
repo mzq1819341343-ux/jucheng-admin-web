@@ -1,7 +1,9 @@
-import { cookies} from "next/headers";
+import { cache } from "react";
+import { cookies, headers } from "next/headers";
 import { createClient as createServerSupabase, isSupabaseConfigured} from "./supabase/server";
 import { isDemoAllowed } from "./demo";
 import { FALLBACK_BUSINESSES, type BusinessDef } from "./businesses";
+import { readAuthHint } from "./request-auth";
 
 export type { BusinessDef };
 export type Role = "owner" | "partner" | "staff";
@@ -103,27 +105,73 @@ email: string | null;
 displayName: string | null;
 }
 
+/**
+ * 板块表 + 授权行。与 profiles 并行启动，同一请求内只打一次（React cache）。
+ * owner 仍不使用授权行，只是一并取回，避免先等角色再打第二轮。
+ */
+const loadBusinessRows = cache(async (userId: string) => {
+  try {
+    const supabase = await createServerSupabase();
+    const [bizRes, accRes] = await Promise.all([
+      supabase.from("businesses").select("id, name, status, sort").order("sort", { ascending: true }),
+      supabase.from("user_business_access").select("business_id").eq("user_id", userId),
+    ]);
+    const bizRows = bizRes.data;
+    const businesses: BusinessDef[] =
+      bizRows && bizRows.length > 0
+        ? (bizRows as Omit<BusinessDef, "en">[]).map((b) => ({
+            ...b,
+            en: FALLBACK_BUSINESSES.find((f) => f.id === b.id)?.en ?? b.id.toUpperCase(),
+          }))
+        : FALLBACK_BUSINESSES;
+    return {
+      businesses,
+      accessIds: (accRes.data ?? []).map((r) => r.business_id as string),
+    };
+  } catch {
+    return null;
+  }
+});
+
+async function userFromVerifiedId(id: string, email: string | null): Promise<CurrentUser> {
+  // 与 profiles 同时开打；Nav / 板块守卫稍后 await 同一条 cache。
+  void loadBusinessRows(id);
+  const supabase = await createServerSupabase();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, display_name")
+    .eq("id", id)
+    .single();
+  return {
+    id,
+    role: (profile?.role as Role) ?? "staff",
+    demo: false,
+    email,
+    displayName: profile?.display_name ?? null,
+  };
+}
+
 export async function getCurrentUser(): Promise<CurrentUser> {
 if (isSupabaseConfigured()) {
 try {
+const headerStore = await headers();
+const hinted = readAuthHint((name) => headerStore.get(name));
+// proxy 已经验过签：这里只查 profiles，不再 getUser。
+if (hinted) return await userFromVerifiedId(hinted.id, hinted.email);
+
 const supabase = await createServerSupabase();
-const {
-data: { user},
-} = await supabase.auth.getUser();
-if (user) {
-const { data: profile} = await supabase
-.from("profiles")
-.select("role, display_name")
-.eq("id", user.id)
-.single();
-return {
-id: user.id,
-role: (profile?.role as Role)?? "staff",
-demo: false,
-email: user.email?? null,
-displayName: profile?.display_name?? null,
-};
+const { data: claimsData } = await supabase.auth.getClaims();
+const claims = claimsData?.claims;
+if (claims?.sub) {
+  return await userFromVerifiedId(
+    claims.sub,
+    typeof claims.email === "string" ? claims.email : null
+  );
 }
+const {
+  data: { user },
+} = await supabase.auth.getUser();
+if (user) return await userFromVerifiedId(user.id, user.email ?? null);
 } catch {
 // 落到演示模式（生产环境在下方被总开关拦住）
 }
@@ -154,32 +202,17 @@ grantedIds: string[];
 export async function getMyBusinesses(user: CurrentUser): Promise<MyBusinesses> {
 if (!user.demo && isSupabaseConfigured() && user.id) {
 try {
-const supabase = await createServerSupabase();
-// 指令132 A3：板块表与授权行互相独立（授权行只需要 user.id），并行取，
-// 不再串行等两次往返；owner 不查授权行，行为与原实现一致。
-const bizPromise = supabase
-.from("businesses")
-.select("id, name, status, sort")
-.order("sort", { ascending: true});
-const accPromise =
-user.role === "owner"
-? Promise.resolve({ data: null as null | { business_id: string }[] })
-: supabase.from("user_business_access").select("business_id").eq("user_id", user.id);
-const [{ data: bizRows }, accRes] = await Promise.all([bizPromise, accPromise]);
-const businesses: BusinessDef[] =
-bizRows && bizRows.length > 0
-? (bizRows as Omit<BusinessDef, "en">[]).map((b) => ({
-...b,
-en: FALLBACK_BUSINESSES.find((f) => f.id === b.id)?.en ?? b.id.toUpperCase(),
-}))
-: FALLBACK_BUSINESSES;
+const loaded = await loadBusinessRows(user.id);
+if (!loaded) throw new Error("business rows unavailable");
+const { businesses, accessIds } = loaded;
+// owner 不使用授权行（与原先跳过该查询的结果一致：全部 active 板块）。
 if (user.role === "owner") {
 return {
 businesses,
 grantedIds: businesses.filter((b) => b.status === "active").map((b) => b.id),
 };
 }
-return { businesses, grantedIds: (accRes.data ?? []).map((r) => r.business_id as string) };
+return { businesses, grantedIds: accessIds };
 } catch {
 // 落到兜底：owner 给全部 active，其他角色不给（页面会被守卫拦下并提示）
 return {

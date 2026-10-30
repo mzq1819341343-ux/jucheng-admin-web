@@ -1,4 +1,3 @@
-import Nav from "@/components/Nav";
 import KpiCard from "@/components/KpiCard";
 import loadable from "next/dynamic";
 
@@ -68,7 +67,6 @@ export default async function ExpensesPage({
     const latestMonth = agg[0]?.month ?? currentMonth;
     return (
       <>
-        <Nav user={user} />
         <main className="container calm no-enter">
           <div className="eyebrow">
             <span className="en">EXPENSES</span>
@@ -128,7 +126,6 @@ export default async function ExpensesPage({
 
   return (
     <>
-      <Nav user={user} />
       <main className="container calm no-enter">
         <div className="eyebrow">
           <span className="en">EXPENSES</span>

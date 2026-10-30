@@ -1,4 +1,3 @@
-import Nav from "@/components/Nav";
 import BusinessAccessToggles from "@/components/BusinessAccessToggles";
 import MemberInvites from "@/components/MemberInvites";
 import { getCurrentUser, getAllMembers, getMemberInvites, getMyBusinesses, ROLE_LABEL, type Profile } from "@/lib/data";
@@ -78,7 +77,6 @@ export default async function MembersPage() {
 
   return (
     <>
-      <Nav user={user} />
       <main className="container">
         <div className="eyebrow">
           <span className="en">MEMBERS</span>
