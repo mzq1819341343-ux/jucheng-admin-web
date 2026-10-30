@@ -1,6 +1,6 @@
 # 聚成 · 业务总后台（前端）
 
-本仓是 [jucheng-admin](https://github.com/mzq1819341343-ux/jucheng-admin) 的软拆结果，只保留页面、组件和面向页面的 `lib/`（Supabase 客户端、`data` / `brand`，以及实时工资汇总常量）。历史用 `git filter-repo` 按路径从单体仓 `main` 滤出，提交说明仍可追溯。
+本仓是 [jucheng-admin](https://github.com/mzq1819341343-ux/jucheng-admin) 的软拆结果，只保留页面、组件和面向页面的 `lib/`（Supabase 客户端、`data` / `brand`，以及计薪口径说明）。历史用 `git filter-repo` 按路径从单体仓 `main` 滤出，提交说明仍可追溯。
 
 - 原单体仓（保留，不删除，不改写 `main`）：https://github.com/mzq1819341343-ux/jucheng-admin
 - 运维 / schema / 抓数管道 / 文档：https://github.com/mzq1819341343-ux/jucheng-admin-ops
@@ -9,9 +9,9 @@
 
 ## 红线
 
-- 禁止把工资原表、个人工资明细、任何「个人姓名对应金额」放进仓库或前端。本站只存汇总。
+- 禁止把工资原表和个人工资金额写进仓库。按人草案只在登录后从数据库读出，源码里不写姓名对应金额。
 - 禁止把密钥、密码写进代码。真值只填本地 `.env.local` 与 Vercel 项目里已有的环境变量，仓库里只有 `.env.example`。
-- `lib/realtime-payroll.ts` 的汇总数是指令194 草案。这次拆分没有改这些数字。上传开关在 ops 仓，`UPLOAD` / `APPLY` 保持 false。
+- 实时工资草案走只读 `GET /api/salary/realtime`（`salary_realtime_draft`）。已发布月度工资仍只走 `salary_monthly`。`lib/realtime-payroll.ts` 只留计薪口径，不放汇总额。上传开关在 ops 仓，`UPLOAD` / `APPLY` 保持 false。
 
 ## 本地运行
 
@@ -34,7 +34,7 @@ npm run lint                 # tsc --noEmit
 ```
 app/            页面
 components/     组件
-lib/            页面数据层、品牌文案、Supabase 客户端、实时工资汇总常量
+lib/            页面数据层、品牌文案、Supabase 客户端、计薪口径
 public/         帮助截图
 proxy.ts        已配置 Supabase 时的登录保护
 ```

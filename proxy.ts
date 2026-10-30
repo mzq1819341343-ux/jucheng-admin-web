@@ -105,8 +105,10 @@ export async function proxy(request: NextRequest) {
   const isLoginPage = pathname === "/login";
   // 设密码承接页：会话来自 URL hash（服务端看不到），未登录也要放行到页面由浏览器端承接
   const isAuthPage = pathname.startsWith("/auth/");
+  // API 自己返回 JSON 状态码。未登录若跳 /login，实时工资草案就无法按约定返回 401。
+  const isApi = pathname.startsWith("/api/");
 
-  if (!authed && !hasDemo && !isLoginPage && !isAuthPage) {
+  if (!authed && !hasDemo && !isLoginPage && !isAuthPage && !isApi) {
     const redirect = request.nextUrl.clone();
     redirect.pathname = "/login";
     return NextResponse.redirect(redirect);

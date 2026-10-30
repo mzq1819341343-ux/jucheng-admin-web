@@ -61,8 +61,8 @@ export default async function SalaryPage() {
           <PublicSalaryRule user={user} />
         </Suspense>
 
-        {/* 指令194：实时工资人效汇总卡——老板 / 合伙人可见（汇总口径，
-            与门店汇总可见性一致）；店员整卡不渲染（指令58 不渲染口径）。 */}
+        {/* 实时工资人效：老板 / 合伙人看按人草案（GET /api/salary/realtime）；
+            店员整卡不渲染。已发布月度工资仍走下方 salary_monthly。 */}
         {user.role === "owner" || user.role === "partner" ? <RealtimePayrollCard /> : null}
 
         <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
