@@ -1,41 +1,50 @@
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import Nav from "@/components/Nav";
-import { ConsoleSessionProvider, PublishConsoleSession } from "@/components/ConsoleSession";
-import { getCurrentUser } from "@/lib/data";
+import {
+  ConsoleSessionProvider,
+  PublishConsoleSession,
+  PublishConsoleNavChrome,
+} from "@/components/ConsoleSession";
+import { getCurrentUser, getMyBusinesses } from "@/lib/data";
+import type { DemoBiz } from "@/components/DemoBizSwitcher";
 
 /**
- * 登录后的壳：导航与当前用户只挂在这一层。
- * 布局函数本身不读 Cookie，身份放进 Suspense，这样子页的 loading 可以在点击后立刻出现，
- * 软导航不再把顶栏拆掉重查一遍。
+ * 登录后的壳：顶栏客户端常驻；身份在 Suspense 里后台刷新。
+ * 软导航不再因重取 getCurrentUser 把顶栏拆成骨架（壳 warm 目标 ≤150ms）。
  */
 export default function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
     <ConsoleSessionProvider>
-      <Suspense fallback={<NavPlaceholder />}>
-        <ConsoleNav />
+      <Nav />
+      <Suspense fallback={null}>
+        <ConsoleNavPublisher />
       </Suspense>
       {children}
     </ConsoleSessionProvider>
   );
 }
 
-async function ConsoleNav() {
+async function ConsoleNavPublisher() {
   const user = await getCurrentUser();
+  let demoBiz: DemoBiz = "all";
+  if (user.demo) {
+    const v = (await cookies()).get("demo_biz")?.value;
+    if (v === "aihuishou" || v === "none") demoBiz = v;
+  }
+  const { grantedIds } = await getMyBusinesses(user);
   return (
     <>
       <PublishConsoleSession session={{ role: user.role, demo: user.demo }} />
-      <Nav user={user} />
+      <PublishConsoleNavChrome
+        chrome={{
+          role: user.role,
+          demo: user.demo,
+          email: user.email,
+          grantedIds,
+          demoBiz,
+        }}
+      />
     </>
-  );
-}
-
-function NavPlaceholder() {
-  return (
-    <header className="topbar" aria-hidden="true">
-      <div className="topbar-inner">
-        <div className="skel skel-title" style={{ width: 92, height: 28, margin: 0 }} />
-        <div className="skel skel-line" style={{ width: 280, margin: 0 }} />
-      </div>
-    </header>
   );
 }
