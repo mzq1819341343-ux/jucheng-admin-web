@@ -1,14 +1,28 @@
+"use client";
+
 import Link from "next/link";
-import { cookies } from "next/headers";
-import type { CurrentUser } from "@/lib/data";
-import { ROLE_LABEL, getMyBusinesses, canAccessBusiness } from "@/lib/data";
 import LogoutButton from "./LogoutButton";
 import DemoRoleSwitcher from "./DemoRoleSwitcher";
-import DemoBizSwitcher, { type DemoBiz } from "./DemoBizSwitcher";
+import DemoBizSwitcher from "./DemoBizSwitcher";
 import ThemeToggle from "./ThemeToggle";
 import NavShell from "./NavShell";
 import MoreMenu from "./MoreMenu";
 import { BRAND_SLOGAN } from "@/lib/brand";
+import {
+  useConsoleNavChrome,
+  type ConsoleNavChrome,
+  type ConsoleRole,
+} from "./ConsoleSession";
+
+const ROLE_LABEL: Record<ConsoleRole, string> = {
+  owner: "老板",
+  partner: "合伙人",
+  staff: "店员",
+};
+
+function canAccessBusiness(grantedIds: string[], businessId: string) {
+  return grantedIds.includes(businessId);
+}
 
 /** 邮箱掩码（指令51）：顶栏不明文展示完整邮箱，只留首尾与域名，全址进 title。 */
 function maskEmail(email: string): string {
@@ -19,16 +33,10 @@ function maskEmail(email: string): string {
   return `${head}***${email.slice(at)}`;
 }
 
-export default async function Nav({ user }: { user: CurrentUser }) {
-  let demoBiz: DemoBiz = "all";
-  if (user.demo) {
-    const v = (await cookies()).get("demo_biz")?.value;
-    if (v === "aihuishou" || v === "none") demoBiz = v;
-  }
-  // 指令37：无权限板块入口完全不渲染——导航里的业务链接同样按授权显隐
-  const { grantedIds } = await getMyBusinesses(user);
+function NavBody({ chrome }: { chrome: ConsoleNavChrome }) {
+  const { role, demo, email, grantedIds, demoBiz } = chrome;
   const showAihuishou = canAccessBusiness(grantedIds, "aihuishou");
-  const showBizTools = showAihuishou && user.role !== "staff";
+  const showBizTools = showAihuishou && role !== "staff";
 
   return (
     <NavShell>
@@ -40,11 +48,10 @@ export default async function Nav({ user }: { user: CurrentUser }) {
           <span className="brand-slogan">{BRAND_SLOGAN}</span>
           <span className="brand-en en">JUCHENG</span>
         </div>
-        {/* 指令51：桌面单行导航——主链接直达，次要项收进「更多」溢出菜单，不再折行 */}
         <nav className="menu">
           <Link href="/">公司总览</Link>
           {showAihuishou ? <Link href="/business/aihuishou">爱回收</Link> : null}
-          <Link href="/salary">{user.role === "staff" ? "我的薪酬" : "工资"}</Link>
+          <Link href="/salary">{role === "staff" ? "我的薪酬" : "工资"}</Link>
           <Link href="/expenses">报销</Link>
           <MoreMenu>
             {showAihuishou ? <Link href="/business/aihuishou/reports">经营报表</Link> : null}
@@ -58,21 +65,21 @@ export default async function Nav({ user }: { user: CurrentUser }) {
         </nav>
         <div className="userbox">
           <span className="user-role">
-            {ROLE_LABEL[user.role]}
-            {user.demo ? "（演示）" : ""}
+            {ROLE_LABEL[role]}
+            {demo ? "（演示）" : ""}
           </span>
-          {user.email ? (
-            <span className="user-email en" title={user.email}>
-              {maskEmail(user.email)}
+          {email ? (
+            <span className="user-email en" title={email}>
+              {maskEmail(email)}
             </span>
           ) : null}
           <ThemeToggle />
           <LogoutButton />
         </div>
       </div>
-      {user.demo ? (
+      {demo ? (
         <div className="demo-bar">
-          <DemoRoleSwitcher current={user.role} />
+          <DemoRoleSwitcher current={role} />
           <DemoBizSwitcher current={demoBiz} />
           <span className="demo-note">
             演示模式：当前为汇总样例数据，可切换角色与业务授权，查看不同权限下的页面差异。
@@ -81,4 +88,25 @@ export default async function Nav({ user }: { user: CurrentUser }) {
       ) : null}
     </NavShell>
   );
+}
+
+function NavPlaceholder() {
+  return (
+    <header className="topbar" aria-hidden="true">
+      <div className="topbar-inner">
+        <div className="skel skel-title" style={{ width: 92, height: 28, margin: 0 }} />
+        <div className="skel skel-line" style={{ width: 280, margin: 0 }} />
+      </div>
+    </header>
+  );
+}
+
+/**
+ * 登录壳顶栏：读布局发布的 chrome 快照。
+ * 软导航时 Provider 不卸载，沿用上一份 chrome，Suspense 重取身份时顶栏不闪骨架。
+ */
+export default function Nav() {
+  const chrome = useConsoleNavChrome();
+  if (!chrome) return <NavPlaceholder />;
+  return <NavBody chrome={chrome} />;
 }
