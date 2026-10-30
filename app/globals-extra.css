@@ -49,6 +49,8 @@ table.report.payroll-split td:last-child {
 .contract-card { overflow-wrap: break-word; }
 .contract-card .plain li { margin-bottom: 10px; }
 .salary-import-table { min-width: 940px; }
+/* 人效按人表：列不换行，窄屏由 .table-wrap 横向滚动，汇总 KPI 留在表外 */
+table.report.salary-people { min-width: 720px; }
 .expense-table { min-width: 980px; }
 .status-badge {
   display: inline-block;

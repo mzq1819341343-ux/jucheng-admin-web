@@ -1,132 +1,207 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
-import { money, money2 } from "@/lib/format";
+import { money2 } from "@/lib/format";
 import {
-  PAYROLL_CALIBER as CALIBER,
-  REALTIME_PAYROLL as RP,
-  REALTIME_PAYROLL_PER_CAPITA,
-  REALTIME_PAYROLL_ORDERS_PER_CAPITA,
-  REALTIME_PAYROLL_WAGE_TO_PROFIT_PCT,
-} from "@/lib/realtime-payroll";
+  formatShanghaiDateTime,
+  shanghaiYearMonth,
+  showAccessoriesColumn,
+  type RealtimeSalaryResponse,
+} from "@/lib/salary-realtime";
 
 /**
- * 实时工资 · 人效汇总卡（指令194）：展示 193 在职口径实时工资草案汇总数。
- * 纯服务端静态渲染（汇总常量在 lib/realtime-payroll.ts），零客户端 JS。
- * 可见性由调用方按角色决定：老板 / 合伙人渲染，店员整卡不渲染（指令58）。
+ * 实时工资 · 人效卡。老板 / 合伙人由工资页渲染；店员整卡不渲染。
+ * 数字只来自 GET /api/salary/realtime，空月份显示「暂无数据」。
  */
-export default function RealtimePayrollCard() {
-  const onlineLabel = `线上提成（${CALIBER.onlineBasis} × ${CALIBER.onlinePct}%）`;
-  const storeLabel = `门店提成（${CALIBER.storeBasis}）`;
-  const tierPhrase = CALIBER.storeTiers
-    .map((t) => `≥${t.min / 10000} 万 ${t.pct}%`)
-    .join(" / ");
-  const accessoriesText = CALIBER.accessoriesHasData
-    ? money2(RP.accessoriesCommissionTotal)
-    : `${money2(CALIBER.accessoriesPlaceholder)}（占位）`;
-  const staleSuffix = CALIBER.amountsPendingRerun
-    ? `（${CALIBER.staleAmountNote}）`
-    : "";
 
-  // 构成名允许换行：金额列保持不换行，避免长口径把数字挤出手机屏。
-  const rows: Array<{ label: string; value: string }> = [
-    { label: `底薪（全员 ${CALIBER.basePerPerson}）`, value: money2(RP.baseTotal) },
-    { label: "上门提成（分润 × 50%）", value: money2(RP.doorCommissionTotal) },
-    {
-      label: onlineLabel,
-      value: `${money2(RP.onlineCommissionTotal)}${staleSuffix}`,
-    },
-    { label: storeLabel, value: money2(RP.storeCommissionTotal) },
-    { label: "配件提成（无数据）", value: accessoriesText },
-  ];
+type Phase = "loading" | "ready" | "error";
+
+export default function RealtimePayrollCard() {
+  const [month, setMonth] = useState(shanghaiYearMonth);
+  const [phase, setPhase] = useState<Phase>("loading");
+  const [message, setMessage] = useState("");
+  const [payload, setPayload] = useState<RealtimeSalaryResponse | null>(null);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    setPhase("loading");
+    setMessage("");
+    setPayload(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/salary/realtime?month=${encodeURIComponent(month)}`, {
+          cache: "no-store",
+          signal: ctrl.signal,
+        });
+        if (res.status === 401) {
+          setPhase("error");
+          setMessage("未登录，无法读取实时工资草案");
+          return;
+        }
+        if (res.status === 403) {
+          setPhase("error");
+          setMessage("当前角色无权查看实时工资草案");
+          return;
+        }
+        if (!res.ok) {
+          setPhase("error");
+          setMessage("实时工资草案读取失败");
+          return;
+        }
+        const body = (await res.json()) as RealtimeSalaryResponse;
+        if (!body || !Array.isArray(body.people) || !body.totals) {
+          setPhase("error");
+          setMessage("实时工资草案读取失败");
+          return;
+        }
+        setPayload(body);
+        setPhase("ready");
+      } catch {
+        if (ctrl.signal.aborted) return;
+        setPhase("error");
+        setMessage("实时工资草案读取失败");
+      }
+    })();
+    return () => ctrl.abort();
+  }, [month]);
+
+  const people = payload?.people ?? [];
+  const empty = phase === "ready" && people.length === 0;
+  const showPeople = phase === "ready" && payload !== null && people.length > 0;
+  const showAccessories = payload ? showAccessoriesColumn(payload) : false;
 
   return (
-    <>
+    <section aria-busy={phase === "loading"} aria-live="polite">
       <h2 className="section-title salary-head">
-        <span className="salary-head-text">实时工资 · 人效（{RP.month}）</span>
-        <span className="salary-kind salary-kind-draft">当月实时草案（未月结）</span>
+        <span className="salary-head-text">实时工资 · 人效（{month}）</span>
+        <span className="salary-kind salary-kind-draft">实时草案（未月结）</span>
       </h2>
-      <div className="kpi-row">
-        <div className="kpi-card kpi-wide kpi-hero">
-          <div className="kpi-label">
-            应发合计（实时工资草案，{RP.month}）
-            {staleSuffix}
-          </div>
-          <KpiValue value={money2(RP.grossTotal)} unit="元" />
-          <div className="kpi-sub">
-            计薪 {RP.headcount} 人（仅在职名单）｜数据来源：191 抓数 + 193 名单口径
-            {CALIBER.amountsPendingRerun
-              ? "｜旧锚点已作废，待按新口径重跑"
-              : ""}
-          </div>
+
+      <div className="form-row">
+        <div className="field" style={{ flex: "0 1 220px", marginBottom: 0 }}>
+          <label htmlFor="realtime-salary-month">月份</label>
+          <input
+            id="realtime-salary-month"
+            type="month"
+            value={month}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (/^\d{4}-\d{2}$/.test(next)) setMonth(next);
+            }}
+          />
         </div>
-      </div>
-      <div className="kpi-row" style={{ marginTop: 16 }}>
-        <KpiCard label="计薪人数" value={String(RP.headcount)} unit="人" />
-        <KpiCard
-          label={CALIBER.amountsPendingRerun ? `人均应发${staleSuffix}` : "人均应发"}
-          value={money2(REALTIME_PAYROLL_PER_CAPITA)}
-          unit="元"
-          sub={`应发合计 ÷ 计薪人数（${money(RP.grossTotal)} ÷ ${RP.headcount}）`}
-        />
-        <KpiCard
-          label="人均单量"
-          value={REALTIME_PAYROLL_ORDERS_PER_CAPITA.toFixed(2)}
-          unit="单"
-          sub={`计薪单量 ÷ 计薪人数（${RP.countedOrders} ÷ ${RP.headcount}）`}
-        />
-        <KpiCard
-          label="工资占分润比"
-          value={`${REALTIME_PAYROLL_WAGE_TO_PROFIT_PCT.toFixed(2)}%`}
-          sub={`分母 = ${RP.month} 订单分润合计 ${money2(RP.orderProfitTotal)} 元（订单口径，对账单未结）`}
-        />
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="table-wrap">
-          <table className="report payroll-split">
-            <thead>
-              <tr>
-                <th>构成</th>
-                <th>金额（元）</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.label}>
-                  <td>{r.label}</td>
-                  <td>{r.value}</td>
-                </tr>
-              ))}
-              <tr>
-                <td>应发合计{staleSuffix}</td>
-                <td>{money2(RP.grossTotal)}</td>
-              </tr>
-            </tbody>
-          </table>
+      {phase === "loading" ? (
+        <div className="skel skel-block" style={{ marginTop: 16 }} aria-hidden="true" />
+      ) : null}
+
+      {phase === "error" ? (
+        <div className="card" style={{ marginTop: 16 }}>
+          <p className="empty" role="alert">
+            {message}
+          </p>
         </div>
-        <p className="kpi-sub" style={{ marginTop: 8 }}>
-          注：配件提成 —— 191 抓数无配件数据源，占位 {CALIBER.accessoriesPlaceholder}。
-          {CALIBER.amountsPendingRerun ? (
-            <>
-              {" "}
-              线上提成与应发合计为旧锚点（{money2(RP.onlineCommissionTotal)} /{" "}
-              {money2(RP.grossTotal)}），{CALIBER.staleAmountNote}；旧锚点作废，本仓不重算。
-            </>
-          ) : null}
-        </p>
-        <p className="page-desc" style={{ marginTop: 12 }}>
-          口径说明：只算在职名单内人员；张浩冉与已离职人员不计薪（本月排除 {RP.excludedPeople}{" "}
-          人、{RP.excludedOrders} 单，订单已留痕于排除清单）。底薪全员 {CALIBER.basePerPerson}。线上提成 ={" "}
-          {CALIBER.onlineBasis} × {CALIBER.onlinePct}%；门店提成 = {CALIBER.storeBasis}（{tierPhrase}，取最高达成档）；上门提成
-          = 上门单分润 × 50%；配件无数据源，占位 {CALIBER.accessoriesPlaceholder}。生效月（effective_from）=
-          2026-10。工资占分润比的分母为 {RP.month} 全量 {RP.orderRowsTotal} 单的订单分润合计（{RP.orderProfitRows}{" "}
-          单分润非空求和，空值不补）——此为订单口径，10 月对账单尚未生成（statement = pending），
-          本卡数字为当月实时草案（未月结），待对账单月结后校准
-          {CALIBER.amountsPendingRerun
-            ? `；其中线上提成与应发合计仍为旧数（${CALIBER.staleAmountNote}）`
-            : ""}
-          。此汇总不含任何个人明细，个人级草案仅存老板本机。
-        </p>
-      </div>
-    </>
+      ) : null}
+
+      {empty ? (
+        <div className="card" style={{ marginTop: 16 }}>
+          <p className="empty">暂无数据</p>
+        </div>
+      ) : null}
+
+      {showPeople && payload ? (
+        <>
+          <div className="kpi-row" style={{ marginTop: 16 }}>
+            <div className="kpi-card kpi-wide kpi-hero">
+              <div className="kpi-label">应发合计（实时工资草案，{payload.month}）</div>
+              <KpiValue value={money2(payload.totals.gross)} unit="元" />
+              <div className="kpi-sub">
+                计薪 {people.length} 人
+                {payload.as_of ? (
+                  <>
+                    ｜截至 <time dateTime={payload.as_of}>{formatShanghaiDateTime(payload.as_of)}</time>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+          <div className="kpi-row" style={{ marginTop: 16 }}>
+            <KpiCard label="计薪人数" value={String(people.length)} unit="人" />
+            <KpiCard
+              label="人均应发"
+              value={money2(payload.totals.gross / people.length)}
+              unit="元"
+              sub="应发合计 ÷ 计薪人数"
+            />
+            <KpiCard label="底薪合计" value={money2(payload.totals.base)} unit="元" />
+            <KpiCard label="上门合计" value={money2(payload.totals.door)} unit="元" />
+            <KpiCard label="线上合计" value={money2(payload.totals.online)} unit="元" />
+            <KpiCard label="门店合计" value={money2(payload.totals.store)} unit="元" />
+            {showAccessories ? (
+              <KpiCard label="配件合计" value={money2(payload.totals.accessories)} unit="元" />
+            ) : null}
+            {payload.totals.net !== null ? (
+              <KpiCard label="实发合计" value={money2(payload.totals.net)} unit="元" />
+            ) : null}
+          </div>
+
+          <div className="card" style={{ marginTop: 16 }}>
+            <h3 className="section-title" style={{ marginTop: 0 }}>
+              按人明细
+            </h3>
+            <div className="table-wrap">
+              <table className="report salary-people">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>底薪（元）</th>
+                    <th>上门（元）</th>
+                    <th>线上（元）</th>
+                    <th>门店（元）</th>
+                    {showAccessories ? <th>配件（元）</th> : null}
+                    <th>应发（元）</th>
+                    <th>实发（元）</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {people.map((person) => (
+                    <tr key={person.person_key}>
+                      <td>{person.display_name}</td>
+                      <td>{money2(person.base)}</td>
+                      <td>{money2(person.door)}</td>
+                      <td>{money2(person.online)}</td>
+                      <td>{money2(person.store)}</td>
+                      {showAccessories ? <td>{money2(person.accessories)}</td> : null}
+                      <td>{money2(person.gross)}</td>
+                      <td>{money2(person.net)}</td>
+                    </tr>
+                  ))}
+                  <tr className="total">
+                    <td>合计</td>
+                    <td>{money2(payload.totals.base)}</td>
+                    <td>{money2(payload.totals.door)}</td>
+                    <td>{money2(payload.totals.online)}</td>
+                    <td>{money2(payload.totals.store)}</td>
+                    {showAccessories ? <td>{money2(payload.totals.accessories)}</td> : null}
+                    <td>{money2(payload.totals.gross)}</td>
+                    <td>{money2(payload.totals.net)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {payload.caliber ? (
+              <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
+                口径：{payload.caliber}
+              </p>
+            ) : null}
+            <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
+              此为实时工资草案，只读。已发布月度工资仍在下方，本卡不修改、不发布。
+            </p>
+          </div>
+        </>
+      ) : null}
+    </section>
   );
 }
