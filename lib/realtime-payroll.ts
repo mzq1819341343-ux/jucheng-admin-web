@@ -38,6 +38,12 @@ export const PAYROLL_CALIBER = {
   /** 配件仍无数据源时，卡面必须打出的占位，不能留空 */
   accessoriesPlaceholder: 0,
   accessoriesHasData: false,
+  /**
+   * 汇总额仍是旧口径同步锚点（含 onlineCommissionTotal / grossTotal）。
+   * 卡面必须标「旧数·待按新口径重跑」，禁止冒充新口径结果；本仓不重算。
+   */
+  amountsPendingRerun: true,
+  staleAmountNote: "旧数·待按新口径重跑",
 } as const;
 
 export const REALTIME_PAYROLL = {
@@ -59,11 +65,12 @@ export const REALTIME_PAYROLL = {
   /** 五项拆分汇总（元）。底薪合计 = 计薪人数 × 底薪全员 2000。 */
   baseTotal: 8000,
   doorCommissionTotal: 647.5,
+  /** 旧锚点（官网×1% 时代同步）；待按新口径「非门店×1%」重跑 */
   onlineCommissionTotal: 737.95,
   storeCommissionTotal: 7849.6,
   /** 无配件数据源，与 PAYROLL_CALIBER.accessoriesPlaceholder 同值 */
   accessoriesCommissionTotal: 0,
-  /** 应发合计（元） */
+  /** 应发合计（元）；旧锚点，待按新口径重跑后替换 */
   grossTotal: 17235.05,
   /**
    * 人效分母：2026-10 全量 458 单的订单分润金额合计（元，订单口径）。
