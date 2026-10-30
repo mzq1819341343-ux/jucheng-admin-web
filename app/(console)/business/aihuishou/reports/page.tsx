@@ -1,5 +1,6 @@
-import Nav from "@/components/Nav";
+import { Suspense } from "react";
 import { KpiValue } from "@/components/KpiCard";
+import { SectionSkeleton } from "@/components/PageSkeleton";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSiteTargets, type SiteTargetMetric } from "@/lib/data";
 import { TARGET_METRIC_LABEL, buildTargetReviewRows } from "@/lib/targets";
 import TargetReviewExport from "@/components/TargetReviewExport";
@@ -8,7 +9,25 @@ import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function AihuishouReportPage() {
+export default function AihuishouReportPage() {
+  return (
+    <main className="container">
+      <div className="eyebrow">
+        <span className="en">AIHUISHOU · REPORTS</span>
+        <span className="eyebrow-cn">业务板块 · 爱回收</span>
+      </div>
+      <h1 className="page-title">爱回收报表</h1>
+      <p className="page-desc">
+        数据来源：爱回收驾驶舱 <span className="en">v3.3</span> 汇总口径（2026-01~09，已锁定台账：3,958 单 / 416,661.32 元）。
+      </p>
+      <Suspense fallback={<SectionSkeleton />}>
+        <ReportsBody />
+      </Suspense>
+    </main>
+  );
+}
+
+async function ReportsBody() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
   // 指令133 A2 瀑布：六路取数互相独立（只依赖 user / sensitive），由串行 6 层改 Promise.all 一层；
@@ -64,17 +83,6 @@ export default async function AihuishouReportPage() {
 
   return (
     <>
-      <Nav user={user} />
-      <main className="container">
-        <div className="eyebrow">
-          <span className="en">AIHUISHOU · REPORTS</span>
-          <span className="eyebrow-cn">业务板块 · 爱回收</span>
-        </div>
-        <h1 className="page-title">爱回收报表</h1>
-        <p className="page-desc">
-          数据来源：爱回收驾驶舱 <span className="en">v3.3</span> 汇总口径（2026-01~09，已锁定台账：3,958 单 / 416,661.32 元）。
-        </p>
-
         <h2 className="section-title">按月汇总（两店合计）</h2>
         <div className="card table-wrap">
           <table className="report">
@@ -378,7 +386,6 @@ export default async function AihuishouReportPage() {
             ? ` 2026-09 已在「门店成本」录入 ${money2(sepCostTotal)} 元（${sepCostDesc.items}），爱回收仪表盘的净利暂定已扣除该金额；本表为扣除前口径。`
             : ""}
         </p>
-      </main>
     </>
   );
 }

@@ -1,19 +1,14 @@
-import Nav from "@/components/Nav";
-import { getCurrentUser, ROLE_LABEL } from "@/lib/data";
+import HelpRoleName from "@/components/HelpRoleName";
 import { PAYROLL_CALIBER as CALIBER } from "@/lib/realtime-payroll";
-
-export const dynamic = "force-dynamic";
 
 /**
  * 操作手册（指令40-1）：全角色可见，登录后可达。
  * 内容只讲正式使用：三角色权限、登录与设密码、主题、业务入口、异常处理。
+ * 正文不读会话，可静态生成；角色名由布局里已经解析的会话填上。
  */
-export default async function HelpPage() {
-  const user = await getCurrentUser();
-
+export default function HelpPage() {
   return (
     <>
-      <Nav user={user} />
       <main className="container">
         <div className="eyebrow">
           <span className="en">GUIDE</span>
@@ -21,7 +16,7 @@ export default async function HelpPage() {
         </div>
         <h1 className="page-title">操作手册</h1>
         <p className="page-desc">
-          当前账号角色：{ROLE_LABEL[user.role]}。本页说明各角色的权限范围与常用操作。
+          当前账号角色：<HelpRoleName />。本页说明各角色的权限范围与常用操作。
         </p>
         <div className="help-notice" role="note">
           本页截图与数字均为虚构示例，用于教学；与线上真实经营数据无关。

@@ -1,6 +1,5 @@
-import { Fragment } from "react";
+import { Fragment, Suspense } from "react";
 import loadable from "next/dynamic";
-import Nav from "@/components/Nav";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
 import RealtimePayrollCard from "@/components/RealtimePayrollCard";
@@ -42,11 +41,9 @@ export const dynamic = "force-dynamic";
  */
 export default async function SalaryPage() {
   const user = await getCurrentUser();
-  const publicRule = await getPublicSalaryRule(user);
 
   return (
     <>
-      <Nav user={user} />
       <main className="container calm no-enter salary-page">
         <div className="eyebrow">
           <span className="en">SALARY</span>
@@ -59,21 +56,35 @@ export default async function SalaryPage() {
           ｜工资由老板录入，本站不展示工资原表。
         </p>
 
-        <h2 className="section-title">工资怎么算</h2>
-        <SalaryRuleCard rule={publicRule} />
+        {/* 规则卡与角色区互相独立，并行取数，不再先等 getPublicSalaryRule 再查工资行。 */}
+        <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
+          <PublicSalaryRule user={user} />
+        </Suspense>
 
         {/* 指令194：实时工资人效汇总卡——老板 / 合伙人可见（汇总口径，
             与门店汇总可见性一致）；店员整卡不渲染（指令58 不渲染口径）。 */}
         {user.role === "owner" || user.role === "partner" ? <RealtimePayrollCard /> : null}
 
-        {user.role === "owner" ? (
-          <OwnerSalary user={user} />
-        ) : user.role === "partner" ? (
-          <PartnerSalary user={user} />
-        ) : (
-          <StaffSalary user={user} />
-        )}
+        <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
+          {user.role === "owner" ? (
+            <OwnerSalary user={user} />
+          ) : user.role === "partner" ? (
+            <PartnerSalary user={user} />
+          ) : (
+            <StaffSalary user={user} />
+          )}
+        </Suspense>
       </main>
+    </>
+  );
+}
+
+async function PublicSalaryRule({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
+  const publicRule = await getPublicSalaryRule(user);
+  return (
+    <>
+      <h2 className="section-title">工资怎么算</h2>
+      <SalaryRuleCard rule={publicRule} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isDemoAllowed } from "./lib/demo";
+import { AUTH_EMAIL_HEADER, AUTH_UID_HEADER, encodeAuthEmail, isAuthUserId } from "./lib/request-auth";
 
 type CookieToSet = { name: string; value: string; options?: CookieOptions };
 
@@ -20,7 +21,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  let response = NextResponse.next({ request });
+  // 客户端不能自带身份头。只有下面验签成功才会写回，供页面跳过第二次 getUser。
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(AUTH_UID_HEADER);
+  requestHeaders.delete(AUTH_EMAIL_HEADER);
+  const pendingCookies: CookieToSet[] = [];
+  const build = () => {
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    for (const { name, value, options } of pendingCookies) {
+      res.cookies.set(name, value, options);
+    }
+    return res;
+  };
+  let response = build();
   let authed = false;
 
   // 指令165 P0 快路径：请求完全不带 Supabase 鉴权 Cookie（sb-<ref>-auth-token，
@@ -46,10 +59,12 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
+          for (const cookie of cookiesToSet) {
+            const idx = pendingCookies.findIndex((c) => c.name === cookie.name);
+            if (idx >= 0) pendingCookies[idx] = cookie;
+            else pendingCookies.push(cookie);
+          }
+          response = build();
         },
       },
     });
@@ -59,12 +74,29 @@ export async function proxy(request: NextRequest) {
     // 取不到 claims（无会话 / 对称旧令牌 / JWKS 不可达）时回落 getUser() 权威校验，
     // 与原行为逐路一致——会话刷新仍由 ssr 客户端在会话读取阶段完成并回写 Cookie。
     const { data: claimsData } = await supabase.auth.getClaims();
-    authed = Boolean(claimsData?.claims);
+    let uid: string | null = null;
+    let email: string | null = null;
+    const claims = claimsData?.claims;
+    if (isAuthUserId(claims?.sub)) {
+      uid = claims.sub;
+      email = typeof claims.email === "string" ? claims.email : null;
+      authed = true;
+    }
     if (!authed) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      authed = Boolean(user);
+      if (user && isAuthUserId(user.id)) {
+        authed = true;
+        uid = user.id;
+        email = user.email ?? null;
+      }
+    }
+    if (uid) {
+      requestHeaders.set(AUTH_UID_HEADER, uid);
+      const encoded = encodeAuthEmail(email);
+      if (encoded) requestHeaders.set(AUTH_EMAIL_HEADER, encoded);
+      response = build();
     }
   }
 

@@ -1,5 +1,6 @@
-import Nav from "@/components/Nav";
+import { Suspense } from "react";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
+import { SectionSkeleton } from "@/components/PageSkeleton";
 import Sparkline from "@/components/Sparkline";
 import { getCurrentUser, getMetrics, canSeeSensitive, getStoreCosts, getExpenseOperatingInput, storeCostsTotalForMonth, describeMonthCosts, getSalaryDetailImport, salaryDetailByMonth, getFetchRefreshMarker, type StoreCost, type ExpenseClaim, type SalaryDetailImportRow } from "@/lib/data";
 import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
@@ -9,7 +10,22 @@ import { money, money2, int, pct } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default function DashboardPage() {
+  return (
+    <main className="container">
+      <div className="eyebrow">
+        <span className="en">AIHUISHOU</span>
+        <span className="eyebrow-cn">业务板块 · 爱回收</span>
+      </div>
+      <h1 className="page-title">爱回收仪表盘</h1>
+      <Suspense fallback={<SectionSkeleton />}>
+        <DashboardBody />
+      </Suspense>
+    </main>
+  );
+}
+
+async function DashboardBody() {
   const user = await getCurrentUser();
   const sensitive = canSeeSensitive(user.role);
   // 指令132 A3：五路取数互相独立，一次并行发完（原为串行逐个 await，
@@ -80,13 +96,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <Nav user={user} />
-      <main className="container">
-        <div className="eyebrow">
-          <span className="en">AIHUISHOU</span>
-          <span className="eyebrow-cn">业务板块 · 爱回收</span>
-        </div>
-        <h1 className="page-title">爱回收仪表盘</h1>
         <p className="page-desc">
           最新月份 {latest?.month}（两店合计）｜数据来源：爱回收驾驶舱 <span className="en">v3.3</span> 汇总（2026-01~09）
           {user.demo ? "｜当前为演示模式" : ""}
@@ -353,7 +362,6 @@ export default async function DashboardPage() {
               }`
             : null}
         </p>
-      </main>
     </>
   );
 }

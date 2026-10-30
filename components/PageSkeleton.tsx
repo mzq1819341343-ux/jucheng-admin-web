@@ -5,6 +5,20 @@
  * 纯服务端组件、零客户端 JS；脉冲动画受 globals-extra.css 的
  * prefers-reduced-motion 全局降级规则约束（近乎静态）。
  */
+/** 页头已经画出之后，下面数据块用的占位，避免再套一层整页骨架。 */
+export function SectionSkeleton() {
+  return (
+    <div role="status" aria-label="内容加载中">
+      <div className="skel-row">
+        <div className="skel skel-card" />
+        <div className="skel skel-card" />
+        <div className="skel skel-card" />
+      </div>
+      <div className="skel skel-block" />
+    </div>
+  );
+}
+
 export default function PageSkeleton({ label }: { label: string }) {
   return (
     <main className="container" role="status" aria-label={`${label}加载中`}>
