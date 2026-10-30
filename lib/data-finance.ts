@@ -163,7 +163,10 @@ if (!error && data && data.length > 0) return data[0] as SalaryRule;
 return null;
 }
 
-/** 兜底工资规则：与 migration_004 种子逐字一致（老板 2026-10-26 口述版），仅演示 / 未配置时使用。 */
+/**
+ * 兜底工资规则：与 migration_004 种子逐字一致（老板 2026-10-26 口述版），仅演示 / 未配置时使用。
+ * 展示句（全员底薪 / 非门店 × 1% / 订单金额不含券阶梯）在 SalaryRuleCard，常量见 PAYROLL_CALIBER。
+ */
 export const FALLBACK_SALARY_RULE: SalaryRule = {
 id: "fallback-salary-rule",
 title: "通用工资体系（老板口述版）",

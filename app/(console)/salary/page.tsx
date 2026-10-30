@@ -44,7 +44,7 @@ export default async function SalaryPage() {
 
   return (
     <>
-      <main className="container calm no-enter">
+      <main className="container calm no-enter salary-page">
         <div className="eyebrow">
           <span className="en">SALARY</span>
           <span className="eyebrow-cn">工资</span>
@@ -165,7 +165,10 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
         </p>
       </div>
 
-      <h2 className="section-title">工资明细（实表导入）</h2>
+      <h2 className="section-title salary-head">
+        <span className="salary-head-text">工资明细（实表导入）</span>
+        <span className="salary-kind salary-kind-actual">1–9 实表</span>
+      </h2>
       <SalaryDetailSection user={user} detailRows={detailRows} combinedRows={combined.rows} />
     </>
   );
