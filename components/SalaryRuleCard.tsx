@@ -5,7 +5,7 @@ import CommissionRuleText from "@/components/CommissionRuleText";
 
 /**
  * 「工资怎么算」规则卡（指令42）：/salary 顶部全角色可见。
- * 把 salary_rules 的结构化配置翻译成人话：底薪全员、线上（非门店）、门店（订单金额不含券阶梯）、配件阶梯、上门提成、生效起始月。
+ * 把 salary_rules 的结构化配置翻译成人话：底薪全员、线上（非门店）、门店（订单金额不含券阶梯）、配件（阶梯或实付 × n%）、上门提成、生效起始月。
  * 提成短句与工资体系表「提成规则」列共用 formatCommissionRuleLines，两边口径保持一致。
  * 规则来自老板配置（演示模式为同口径兜底常量）；不涉及任何个人工资数据。
  */

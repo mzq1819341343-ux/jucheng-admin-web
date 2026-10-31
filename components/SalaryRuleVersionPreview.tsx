@@ -1,18 +1,17 @@
 "use client";
 
-import type { SalaryRule } from "@/lib/data";
-
 /**
  * 工资双版本预览（指令53 D2）：按规则的生效起始月（effective_from）把数据月份
  * 逐月标注「旧规则 / 新规则」——生效月之前按旧规则、生效月起按新规则回算。
  * effective_from 为空时不臆测切换点，整列显示「待确认」。
  * 纯展示组件：吃 SalaryRuleManager 的本地状态，保存生效月后即时翻转（演示模式同样成立）。
+ * 只需要岗位名和生效月，不接收提成原文。
  */
 export default function SalaryRuleVersionPreview({
   rule,
   months,
 }: {
-  rule: SalaryRule | null;
+  rule: { title: string; effective_from: string | null } | null;
   months: string[];
 }) {
   if (!rule || months.length === 0) return null;
