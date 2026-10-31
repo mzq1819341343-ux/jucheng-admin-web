@@ -2,6 +2,20 @@
    由 layout.tsx 在 globals.css 之后导入，级联顺序与拆分前完全一致。 */
 /* 工资 / 成本页细节（指令43 块3）：长文本可读、导入异常行可辨、合同卡不溢出 */
 .rule-card li, .contract-card li { line-height: 1.65; }
+/* 工资体系表「提成规则」：中文按句换行。列有最小宽度，窄屏由表格横向滚动，避免挤成一字一行。 */
+table.report td.commission-cell {
+  white-space: normal;
+  text-align: left;
+  vertical-align: top;
+  min-width: 22rem;
+}
+.commission-lines {
+  white-space: normal;
+  max-width: 32rem;
+  line-height: 1.65;
+  overflow-wrap: break-word;
+}
+.commission-lines > div + div { margin-top: 4px; }
 /* 工资页与规则卡：楷体，缺字落到系统中文（--kaiti），避免方框 */
 .salary-page,
 .rule-card {

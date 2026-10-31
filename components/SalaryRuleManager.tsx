@@ -3,6 +3,11 @@
 import { useState } from "react";
 import type { SalaryRule } from "@/lib/data";
 import { money2 } from "@/lib/format";
+import {
+  COMMISSION_RULES_EMPTY,
+  formatCommissionRuleLines,
+} from "@/lib/commission-rules";
+import CommissionRuleText from "@/components/CommissionRuleText";
 import SalaryRuleVersionPreview from "@/components/SalaryRuleVersionPreview";
 import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
@@ -195,8 +200,8 @@ export default function SalaryRuleManager({
                 <tr key={r.id}>
                   <td style={{ textAlign: "left" }}>{r.title}</td>
                   <td>{r.base_salary === null ? "待定" : money2(r.base_salary)}</td>
-                  <td style={{ textAlign: "left", whiteSpace: "normal" }}>
-                    <code className="en">{JSON.stringify(r.commission_rules)}</code>
+                  <td className="commission-cell">
+                    <CommissionRulesCell rules={r.commission_rules} baseSalary={r.base_salary} />
                   </td>
                   <td style={{ textAlign: "left", whiteSpace: "normal" }}>{r.note ?? "—"}</td>
                   <td>
@@ -255,6 +260,32 @@ export default function SalaryRuleManager({
         </button>
         {msg ? <div className="access-msg">{msg}</div> : null}
       </form>
+    </div>
+  );
+}
+
+/**
+ * 「提成规则」列：中文多行，与「工资怎么算」同一套句子。
+ * 空 / 无法解析显示「暂无提成细则」；未知键只留一行降色说明，不输出 JSON。
+ */
+function CommissionRulesCell({
+  rules,
+  baseSalary,
+}: {
+  rules: SalaryRule["commission_rules"];
+  baseSalary: number | null;
+}) {
+  const lines = formatCommissionRuleLines(rules, baseSalary);
+  if (lines.length === 0) {
+    return <span style={{ color: "var(--muted)" }}>{COMMISSION_RULES_EMPTY}</span>;
+  }
+  return (
+    <div className="commission-lines">
+      {lines.map((line) => (
+        <div key={line.id}>
+          <CommissionRuleText line={line} />
+        </div>
+      ))}
     </div>
   );
 }
