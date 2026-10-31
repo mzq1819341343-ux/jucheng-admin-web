@@ -29,6 +29,7 @@ import {
 } from "@/lib/data";
 import { STORE_LABEL } from "@/lib/stores";
 import { money, money2 } from "@/lib/format";
+import { salaryRuleClientView } from "@/lib/commission-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +108,7 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
       <h2 className="section-title">工资体系配置</h2>
       <div className="card">
         <SalaryRuleManager
-          initialRules={rules}
+          initialRules={rules.map(salaryRuleClientView)}
           demo={user.demo}
           userId={user.id}
           months={combined.rows.map((r) => r.month)}

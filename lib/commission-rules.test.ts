@@ -5,6 +5,7 @@ import {
   COMMISSION_RULES_HIDDEN,
   commissionRuleLineText,
   formatCommissionRuleLines,
+  salaryRuleClientView,
 } from "./commission-rules.ts";
 
 const FORBIDDEN = /[{}]|base_breakdown|store_tiers|door_profit_pct|online_order_pct|accessories_tiers|new_customer|JSON\.stringify/;
@@ -94,6 +95,67 @@ describe("formatCommissionRuleLines", () => {
     assert.equal(joined.includes("}"), false);
     assert.equal(joined.includes("store_tiers"), false);
     assert.equal(FORBIDDEN.test(joined), false);
+  });
+
+  it("renders the live accessories_pct rule as sentences and never the raw JSON", () => {
+    const live = {
+      store_tiers: [
+        { pct: 3, threshold: 30000 },
+        { pct: 4, note: "阶梯取最高达成档", threshold: 60000 },
+      ],
+      base_breakdown: {
+        note: "拉新非交口径待工资表模板到后核对，先按老板口述原样记录",
+        basic: 1000,
+        attendance: 500,
+        new_customer: 500,
+      },
+      accessories_pct: 30,
+      door_profit_pct: 50,
+      online_order_pct: 1,
+    };
+    const raw = JSON.stringify(live);
+    assert.match(raw, /store_tiers/);
+    assert.match(raw, /accessories_pct/);
+    assert.match(raw, /[{}]/);
+    const text = texts(live, "2000.00").join("\n");
+    assert.match(text, /底薪：全员 2,000\.00 元\/月/);
+    assert.match(text, /线上订单提成：非门店 × 1%/);
+    assert.match(text, /门店提成（订单金额不含券阶梯，取最高达成档）：业绩 ≥ 30,000 元 → 3%；业绩 ≥ 60,000 元 → 4%/);
+    assert.match(text, /配件提成：实付 × 30%/);
+    assert.match(text, /上门提成：卖出机子利润的 50%/);
+    assert.equal(text.includes(COMMISSION_RULES_HIDDEN), false);
+    assert.equal(FORBIDDEN.test(text), false, text);
+    for (const key of ["store_tiers", "base_breakdown", "accessories_pct", "door_profit_pct", "online_order_pct", "threshold", "pct"]) {
+      assert.equal(text.includes(key), false, key);
+    }
+  });
+
+  it("drops raw commission_rules before the row crosses to the client", () => {
+    const live = {
+      store_tiers: [{ pct: 3, threshold: 30000 }],
+      base_breakdown: { basic: 1000, attendance: 500, new_customer: 500 },
+      accessories_pct: 30,
+      door_profit_pct: 50,
+      online_order_pct: 1,
+    };
+    const view = salaryRuleClientView({
+      id: "row-1",
+      title: "通用工资体系",
+      base_salary: "2000.00",
+      commission_rules: live,
+      note: null,
+      effective_from: "2026-10",
+      updated_at: "2026-10-26",
+    });
+    assert.equal("commission_rules" in view, false);
+    const blob = JSON.stringify(view);
+    const shown = view.commissionLines.map(commissionRuleLineText).join("\n");
+    assert.match(shown, /配件提成：实付 × 30%/);
+    assert.equal(FORBIDDEN.test(shown), false, shown);
+    for (const key of ["store_tiers", "base_breakdown", "accessories_pct", "accessories_tiers", "door_profit_pct", "online_order_pct", "new_customer", "threshold", "pct"]) {
+      assert.equal(blob.includes(key), false, key);
+      assert.equal(shown.includes(key), false, key);
+    }
   });
 
   it("shows only the hidden line when every key is unknown", () => {
