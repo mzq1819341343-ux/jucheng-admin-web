@@ -1,75 +1,136 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import { money2 } from "@/lib/format";
+import {
+  sumMistakeLineAmounts,
+  validateMistakeLines,
+  type MistakeLineInput,
+  type SalaryMistakeDetail,
+} from "@/lib/salary-mistake";
 import {
   formatShanghaiDateTime,
   shanghaiYearMonth,
   showAccessoriesColumn,
+  shownAfterDeduction,
+  type RealtimeSalaryPerson,
   type RealtimeSalaryResponse,
 } from "@/lib/salary-realtime";
 
 /**
  * 实时工资 · 人效卡。老板 / 合伙人由工资页渲染；店员整卡不渲染。
- * 数字只来自 GET /api/salary/realtime，空月份显示「暂无数据」。
+ * 应发来自 GET /api/salary/realtime。失误合计与扣后实发也在这份响应里。
+ * 事由明细只在老板展开某人时另取，合伙人不请求、不展示。
+ * 本轮编辑只覆盖表里已有的人，没有单独的「添加不在表中的人」入口。
  */
 
 type Phase = "loading" | "ready" | "error";
+type SalaryRole = "owner" | "partner";
 
-export default function RealtimePayrollCard() {
+interface EditorLine extends MistakeLineInput {
+  key: string;
+}
+
+function messageFor(status: number, code: string): string {
+  if (status === 401) return "未登录，无法读取实时工资草案";
+  if (status === 403) return "当前角色无权查看实时工资草案";
+  if (code === "mistake totals unavailable") return "失误合计暂不可用";
+  return "实时工资草案读取失败";
+}
+
+function blankLine(): EditorLine {
+  return { key: crypto.randomUUID(), id: null, reason: "", amount: "", note: "" };
+}
+
+function lineFromRow(row: SalaryMistakeDetail): EditorLine {
+  return {
+    key: row.id,
+    id: row.id,
+    reason: row.reason,
+    amount: row.amount.toFixed(2),
+    note: row.note ?? "",
+  };
+}
+
+export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
+  const canEdit = role === "owner";
   const [month, setMonth] = useState(shanghaiYearMonth);
   const [phase, setPhase] = useState<Phase>("loading");
   const [message, setMessage] = useState("");
   const [payload, setPayload] = useState<RealtimeSalaryResponse | null>(null);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+
+  const loadPayload = useCallback(async (targetMonth: string, signal: AbortSignal, quiet: boolean) => {
+    if (!quiet) {
+      setPhase("loading");
+      setMessage("");
+      setPayload(null);
+    }
+    try {
+      const res = await fetch(`/api/salary/realtime?month=${encodeURIComponent(targetMonth)}`, {
+        cache: "no-store",
+        signal,
+      });
+      if (signal.aborted) return;
+      if (!res.ok) {
+        let code = "";
+        try {
+          const errBody = (await res.json()) as { error?: unknown };
+          if (typeof errBody.error === "string") code = errBody.error;
+        } catch {
+          code = "";
+        }
+        if (signal.aborted) return;
+        setPhase("error");
+        setMessage(messageFor(res.status, code));
+        return;
+      }
+      const body = (await res.json()) as RealtimeSalaryResponse;
+      if (signal.aborted) return;
+      if (!body || !Array.isArray(body.people) || !body.totals) {
+        setPhase("error");
+        setMessage("实时工资草案读取失败");
+        return;
+      }
+      setPayload(body);
+      setPhase("ready");
+    } catch {
+      if (signal.aborted) return;
+      setPhase("error");
+      setMessage("实时工资草案读取失败");
+    }
+  }, []);
 
   useEffect(() => {
     const ctrl = new AbortController();
-    setPhase("loading");
-    setMessage("");
-    setPayload(null);
-    (async () => {
-      try {
-        const res = await fetch(`/api/salary/realtime?month=${encodeURIComponent(month)}`, {
-          cache: "no-store",
-          signal: ctrl.signal,
-        });
-        if (res.status === 401) {
-          setPhase("error");
-          setMessage("未登录，无法读取实时工资草案");
-          return;
-        }
-        if (res.status === 403) {
-          setPhase("error");
-          setMessage("当前角色无权查看实时工资草案");
-          return;
-        }
-        if (!res.ok) {
-          setPhase("error");
-          setMessage("实时工资草案读取失败");
-          return;
-        }
-        const body = (await res.json()) as RealtimeSalaryResponse;
-        if (!body || !Array.isArray(body.people) || !body.totals) {
-          setPhase("error");
-          setMessage("实时工资草案读取失败");
-          return;
-        }
-        setPayload(body);
-        setPhase("ready");
-      } catch {
-        if (ctrl.signal.aborted) return;
-        setPhase("error");
-        setMessage("实时工资草案读取失败");
-      }
-    })();
+    setOpenKey(null);
+    void loadPayload(month, ctrl.signal, false);
     return () => ctrl.abort();
-  }, [month]);
+  }, [month, loadPayload]);
+
+  const refreshQuiet = useCallback(() => {
+    const ctrl = new AbortController();
+    return loadPayload(month, ctrl.signal, true);
+  }, [loadPayload, month]);
 
   const people = payload?.people ?? [];
   const empty = phase === "ready" && people.length === 0;
   const showPeople = phase === "ready" && payload !== null && people.length > 0;
   const showAccessories = payload ? showAccessoriesColumn(payload) : false;
+  const headcount = people.filter((person) => person.in_draft).length;
+  const columns = (showAccessories ? 1 : 0) + 8;
+  const afterTotal = payload
+    ? shownAfterDeduction({
+        gross: payload.totals.gross,
+        mistake_total: payload.totals.mistake_total,
+        after_deduction: payload.totals.after_deduction,
+      })
+    : 0;
+
+  function toggle(personKey: string) {
+    setOpenKey((current) => (current === personKey ? null : personKey));
+  }
 
   return (
     <section aria-busy={phase === "loading"} aria-live="polite">
@@ -118,7 +179,7 @@ export default function RealtimePayrollCard() {
               <div className="kpi-label">应发合计（实时工资草案，{payload.month}）</div>
               <KpiValue value={money2(payload.totals.gross)} unit="元" />
               <div className="kpi-sub">
-                计薪 {people.length} 人
+                计薪 {headcount} 人
                 {payload.as_of ? (
                   <>
                     ｜截至 <time dateTime={payload.as_of}>{formatShanghaiDateTime(payload.as_of)}</time>
@@ -126,24 +187,31 @@ export default function RealtimePayrollCard() {
                 ) : null}
               </div>
             </div>
+            <KpiCard label="失误合计" value={money2(payload.totals.mistake_total ?? 0)} unit="元" sub="本月失误扣款" />
+            <KpiCard
+              label="扣后合计"
+              value={money2(afterTotal)}
+              unit="元"
+              tone={afterTotal < 0 ? "negative" : "default"}
+              sub="应发合计 − 失误合计"
+            />
           </div>
           <div className="kpi-row" style={{ marginTop: 16 }}>
-            <KpiCard label="计薪人数" value={String(people.length)} unit="人" />
-            <KpiCard
-              label="人均应发"
-              value={money2(payload.totals.gross / people.length)}
-              unit="元"
-              sub="应发合计 ÷ 计薪人数"
-            />
+            <KpiCard label="计薪人数" value={String(headcount)} unit="人" />
+            {headcount > 0 ? (
+              <KpiCard
+                label="人均应发"
+                value={money2(payload.totals.gross / headcount)}
+                unit="元"
+                sub="应发合计 ÷ 计薪人数"
+              />
+            ) : null}
             <KpiCard label="底薪合计" value={money2(payload.totals.base)} unit="元" />
             <KpiCard label="上门合计" value={money2(payload.totals.door)} unit="元" />
             <KpiCard label="线上合计" value={money2(payload.totals.online)} unit="元" />
             <KpiCard label="门店合计" value={money2(payload.totals.store)} unit="元" />
             {showAccessories ? (
               <KpiCard label="配件合计" value={money2(payload.totals.accessories)} unit="元" />
-            ) : null}
-            {payload.totals.net !== null ? (
-              <KpiCard label="实发合计" value={money2(payload.totals.net)} unit="元" />
             ) : null}
           </div>
 
@@ -162,22 +230,29 @@ export default function RealtimePayrollCard() {
                     <th>门店（元）</th>
                     {showAccessories ? <th>配件（元）</th> : null}
                     <th>应发（元）</th>
-                    <th>实发（元）</th>
+                    <th>失误扣款（元）</th>
+                    <th title="应发 − 失误扣款">实发（元）</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {people.map((person) => (
-                    <tr key={person.person_key}>
-                      <td>{person.display_name}</td>
-                      <td>{money2(person.base)}</td>
-                      <td>{money2(person.door)}</td>
-                      <td>{money2(person.online)}</td>
-                      <td>{money2(person.store)}</td>
-                      {showAccessories ? <td>{money2(person.accessories)}</td> : null}
-                      <td>{money2(person.gross)}</td>
-                      <td>{money2(person.net)}</td>
-                    </tr>
-                  ))}
+                  {people.map((person) => {
+                    const open = canEdit && openKey === person.person_key;
+                    const after = shownAfterDeduction(person);
+                    return (
+                      <PersonRows
+                        key={person.person_key}
+                        person={person}
+                        after={after}
+                        showAccessories={showAccessories}
+                        canEdit={canEdit}
+                        open={open}
+                        columns={columns}
+                        month={payload.month}
+                        onToggle={() => toggle(person.person_key)}
+                        onSaved={refreshQuiet}
+                      />
+                    );
+                  })}
                   <tr className="total">
                     <td>合计</td>
                     <td>{money2(payload.totals.base)}</td>
@@ -186,7 +261,8 @@ export default function RealtimePayrollCard() {
                     <td>{money2(payload.totals.store)}</td>
                     {showAccessories ? <td>{money2(payload.totals.accessories)}</td> : null}
                     <td>{money2(payload.totals.gross)}</td>
-                    <td>{money2(payload.totals.net)}</td>
+                    <td>{money2(payload.totals.mistake_total ?? 0)}</td>
+                    <td>{money2(afterTotal)}</td>
                   </tr>
                 </tbody>
               </table>
@@ -197,11 +273,276 @@ export default function RealtimePayrollCard() {
               </p>
             ) : null}
             <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
-              此为实时工资草案，只读。已发布月度工资仍在下方，本卡不修改、不发布。
+              {canEdit
+                ? "实发 = 应发 − 失误扣款。编辑只改失误明细，不回写应发草案，也不发布月度工资。表里还没有的人，本轮不能从这里新增。"
+                : "失误扣款只显示每人合计和上方合计，不显示事由，也不能修改。应发仍是实时草案，本卡不改草案、不发布月度工资。"}
             </p>
           </div>
         </>
       ) : null}
     </section>
+  );
+}
+
+function PersonRows({
+  person,
+  after,
+  showAccessories,
+  canEdit,
+  open,
+  columns,
+  month,
+  onToggle,
+  onSaved,
+}: {
+  person: RealtimeSalaryPerson;
+  after: number;
+  showAccessories: boolean;
+  canEdit: boolean;
+  open: boolean;
+  columns: number;
+  month: string;
+  onToggle: () => void;
+  onSaved: () => Promise<void>;
+}) {
+  return (
+    <>
+      <tr onClick={canEdit ? onToggle : undefined} style={canEdit ? { cursor: "pointer" } : undefined}>
+        <td>
+          {person.display_name}
+          {canEdit ? (
+            <button
+              type="button"
+              className="btn btn-ghost salary-row-edit"
+              aria-expanded={open}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggle();
+              }}
+            >
+              {open ? "收起" : "编辑"}
+            </button>
+          ) : null}
+        </td>
+        <td>{money2(person.base)}</td>
+        <td>{money2(person.door)}</td>
+        <td>{money2(person.online)}</td>
+        <td>{money2(person.store)}</td>
+        {showAccessories ? <td>{money2(person.accessories)}</td> : null}
+        <td>{money2(person.gross)}</td>
+        <td>{money2(person.mistake_total ?? 0)}</td>
+        <td style={after < 0 ? { color: "var(--negative)" } : undefined}>{money2(after)}</td>
+      </tr>
+      {open ? (
+        <tr className="mistake-editor">
+          <td colSpan={columns}>
+            <MistakeEditor month={month} personName={person.person_key} onSaved={onSaved} />
+          </td>
+        </tr>
+      ) : null}
+    </>
+  );
+}
+
+function MistakeEditor({
+  month,
+  personName,
+  onSaved,
+}: {
+  month: string;
+  personName: string;
+  onSaved: () => Promise<void>;
+}) {
+  const [lines, setLines] = useState<EditorLine[] | null>(null);
+  const [original, setOriginal] = useState<SalaryMistakeDetail[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError("");
+    const res = await fetch(
+      `/api/salary/mistake/details?month=${encodeURIComponent(month)}&person_name=${encodeURIComponent(personName)}`,
+      { cache: "no-store" }
+    );
+    if (res.status === 403) {
+      setLines([]);
+      setError("当前角色不能查看失误事由");
+      return;
+    }
+    if (!res.ok) {
+      setLines([]);
+      setError("失误明细读取失败");
+      return;
+    }
+    const body = (await res.json()) as { rows?: SalaryMistakeDetail[] };
+    const rows = Array.isArray(body.rows) ? body.rows : [];
+    setOriginal(rows);
+    setLines(rows.length > 0 ? rows.map(lineFromRow) : [blankLine()]);
+  }, [month, personName]);
+
+  useEffect(() => {
+    void load().catch(() => {
+      setLines([]);
+      setError("失误明细读取失败");
+    });
+  }, [load]);
+
+  async function onSave() {
+    if (!lines) return;
+    const validated = validateMistakeLines(lines);
+    if (!validated.ok) {
+      setError(validated.error);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const keptIds = new Set(
+        validated.lines.flatMap((line) => (line.id ? [line.id] : []))
+      );
+      for (const row of original) {
+        if (keptIds.has(row.id)) continue;
+        const res = await fetch(`/api/salary/mistake/${row.id}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 404) throw new Error("delete");
+      }
+      for (const line of validated.lines) {
+        if (line.id === null) {
+          const res = await fetch("/api/salary/mistake", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              month,
+              person_name: personName,
+              reason: line.reason,
+              amount: line.amount,
+              note: line.note,
+            }),
+          });
+          if (!res.ok) throw new Error("post");
+          continue;
+        }
+        const prev = original.find((row) => row.id === line.id);
+        if (!prev) throw new Error("missing");
+        if (prev.reason === line.reason && prev.amount === line.amount && (prev.note ?? null) === line.note) {
+          continue;
+        }
+        const res = await fetch(`/api/salary/mistake/${line.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reason: line.reason,
+            amount: line.amount,
+            note: line.note,
+          }),
+        });
+        if (!res.ok) throw new Error("patch");
+      }
+      await onSaved();
+      await load();
+    } catch {
+      setError("保存失败，请重试");
+      try {
+        await load();
+      } catch {
+        setError("保存失败，请重试");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const live = lines ? sumMistakeLineAmounts(lines) : 0;
+
+  return (
+    <div className="mistake-editor-panel">
+      <p className="page-desc" style={{ marginTop: 0 }}>
+        {personName} 的失误扣款。多行事由与金额，合计 {money2(live)} 元。
+      </p>
+      {lines === null ? <div className="skel skel-block" aria-hidden="true" /> : null}
+      {lines ? (
+        <>
+          <div className="mistake-lines">
+            {lines.map((line, index) => (
+              <div className="mistake-line" key={line.key}>
+                <div className="field">
+                  <label htmlFor={`mistake-reason-${line.key}`}>事由</label>
+                  <input
+                    id={`mistake-reason-${line.key}`}
+                    value={line.reason}
+                    disabled={busy}
+                    onChange={(event) => {
+                      const reason = event.target.value;
+                      setLines((current) =>
+                        current?.map((item) => (item.key === line.key ? { ...item, reason } : item)) ?? current
+                      );
+                    }}
+                  />
+                </div>
+                <div className="field mistake-amount">
+                  <label htmlFor={`mistake-amount-${line.key}`}>金额（元）</label>
+                  <input
+                    id={`mistake-amount-${line.key}`}
+                    inputMode="decimal"
+                    value={line.amount}
+                    disabled={busy}
+                    onChange={(event) => {
+                      const amount = event.target.value;
+                      setLines((current) =>
+                        current?.map((item) => (item.key === line.key ? { ...item, amount } : item)) ?? current
+                      );
+                    }}
+                  />
+                </div>
+                <div className="field">
+                  <label htmlFor={`mistake-note-${line.key}`}>备注（可选）</label>
+                  <input
+                    id={`mistake-note-${line.key}`}
+                    value={line.note}
+                    disabled={busy}
+                    onChange={(event) => {
+                      const note = event.target.value;
+                      setLines((current) =>
+                        current?.map((item) => (item.key === line.key ? { ...item, note } : item)) ?? current
+                      );
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  disabled={busy}
+                  onClick={() => {
+                    setLines((current) => current?.filter((item) => item.key !== line.key) ?? current);
+                  }}
+                >
+                  删除第 {index + 1} 行
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="form-row" style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={busy}
+              onClick={() => setLines((current) => [...(current ?? []), blankLine()])}
+            >
+              添加一行
+            </button>
+            <button type="button" className="btn" disabled={busy || lines === null} onClick={() => void onSave()}>
+              {busy ? "保存中" : "保存"}
+            </button>
+          </div>
+        </>
+      ) : null}
+      {error ? (
+        <p className="empty" role="alert" style={{ marginTop: 8 }}>
+          {error}
+        </p>
+      ) : null}
+      <p className="page-desc" style={{ marginBottom: 0 }}>
+        空行不计入。全部清空后保存，该人失误合计为 0。
+      </p>
+    </div>
   );
 }

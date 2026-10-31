@@ -62,8 +62,11 @@ export default async function SalaryPage() {
         </Suspense>
 
         {/* 实时工资人效：老板 / 合伙人看按人草案（GET /api/salary/realtime）；
-            店员整卡不渲染。已发布月度工资仍走下方 salary_monthly。 */}
-        {user.role === "owner" || user.role === "partner" ? <RealtimePayrollCard /> : null}
+            店员整卡不渲染。失误合计同卡展示，事由与编辑仅老板。
+            已发布月度工资仍走下方 salary_monthly。 */}
+        {user.role === "owner" || user.role === "partner" ? (
+          <RealtimePayrollCard role={user.role} />
+        ) : null}
 
         <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
           {user.role === "owner" ? (

@@ -50,7 +50,17 @@ table.report.payroll-split td:last-child {
 .contract-card .plain li { margin-bottom: 10px; }
 .salary-import-table { min-width: 940px; }
 /* 人效按人表：列不换行，窄屏由 .table-wrap 横向滚动，汇总 KPI 留在表外 */
-table.report.salary-people { min-width: 720px; }
+table.report.salary-people { min-width: 860px; }
+tr.mistake-editor > td {
+  background: var(--bg-2);
+  text-align: left;
+  white-space: normal;
+}
+.mistake-lines { display: grid; gap: 10px; margin-top: 8px; }
+.mistake-line { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.mistake-line .field { margin-bottom: 0; flex: 1 1 180px; }
+.mistake-line .field.mistake-amount { flex: 0 1 140px; }
+button.salary-row-edit { margin-left: 8px; min-height: 32px; padding: 4px 10px; }
 .expense-table { min-width: 980px; }
 .status-badge {
   display: inline-block;
