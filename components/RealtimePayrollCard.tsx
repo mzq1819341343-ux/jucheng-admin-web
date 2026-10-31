@@ -1,8 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import { money2 } from "@/lib/format";
+import {
+  MISTAKE_DISCARD_MESSAGE,
+  mistakeLineSignature,
+  mistakeLinesDirty,
+  navigationLeavesSalary,
+} from "@/lib/mistake-editor-dirty";
 import {
   sumMistakeLineAmounts,
   validateMistakeLines,
@@ -60,6 +66,29 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
   const [message, setMessage] = useState("");
   const [payload, setPayload] = useState<RealtimeSalaryResponse | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
+  const [editorDirty, setEditorDirty] = useState(false);
+  const dirtyRef = useRef(false);
+  const acceptedLeaveRef = useRef(false);
+  const lastSignatureRef = useRef("");
+  const salaryHrefRef = useRef("");
+
+  const onDirtyChange = useCallback((dirty: boolean, signature: string) => {
+    if (signature !== lastSignatureRef.current) {
+      lastSignatureRef.current = signature;
+      acceptedLeaveRef.current = false;
+    }
+    if (!dirty) acceptedLeaveRef.current = false;
+    dirtyRef.current = dirty;
+    setEditorDirty((current) => (current === dirty ? current : dirty));
+  }, []);
+
+  function confirmDiscard(): boolean {
+    if (acceptedLeaveRef.current) return true;
+    if (!dirtyRef.current) return true;
+    if (!window.confirm(MISTAKE_DISCARD_MESSAGE)) return false;
+    acceptedLeaveRef.current = true;
+    return true;
+  }
 
   const loadPayload = useCallback(async (targetMonth: string, signal: AbortSignal, quiet: boolean) => {
     if (!quiet) {
@@ -109,6 +138,65 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
     return () => ctrl.abort();
   }, [month, loadPayload]);
 
+  useEffect(() => {
+    if (!editorDirty) return;
+    salaryHrefRef.current = window.location.href;
+
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirtyRef.current || acceptedLeaveRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    const onClick = (event: MouseEvent) => {
+      if (!dirtyRef.current || acceptedLeaveRef.current) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      if (anchor.hasAttribute("download")) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) return;
+      if (!navigationLeavesSalary(anchor.href, window.location.href)) return;
+      if (confirmDiscard()) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const onPopState = () => {
+      if (!dirtyRef.current || acceptedLeaveRef.current) return;
+      const backTo = salaryHrefRef.current;
+      if (!backTo) return;
+      if (!navigationLeavesSalary(window.location.href, backTo)) return;
+      if (confirmDiscard()) return;
+      history.pushState(null, "", backTo);
+    };
+
+    const originalPush = history.pushState.bind(history);
+    const originalReplace = history.replaceState.bind(history);
+    const guardHistory = (original: History["pushState"]): History["pushState"] =>
+      function (this: History, data, unused, url) {
+        const urlText = typeof url === "string" ? url : url instanceof URL ? url.toString() : "";
+        if (urlText && navigationLeavesSalary(urlText, window.location.href) && !confirmDiscard()) return;
+        return original.call(this, data, unused, url);
+      };
+
+    history.pushState = guardHistory(originalPush);
+    history.replaceState = guardHistory(originalReplace);
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("popstate", onPopState);
+    document.addEventListener("click", onClick, true);
+    return () => {
+      history.pushState = originalPush;
+      history.replaceState = originalReplace;
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("popstate", onPopState);
+      document.removeEventListener("click", onClick, true);
+    };
+  }, [editorDirty]);
+
   const refreshQuiet = useCallback(() => {
     const ctrl = new AbortController();
     return loadPayload(month, ctrl.signal, true);
@@ -129,6 +217,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
     : 0;
 
   function toggle(personKey: string) {
+    if (openKey !== null && !confirmDiscard()) return;
     setOpenKey((current) => (current === personKey ? null : personKey));
   }
 
@@ -148,7 +237,16 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
             value={month}
             onChange={(e) => {
               const next = e.target.value;
-              if (/^\d{4}-\d{2}$/.test(next)) setMonth(next);
+              if (!/^\d{4}-\d{2}$/.test(next) || next === month) {
+                e.target.value = month;
+                return;
+              }
+              if (!confirmDiscard()) {
+                e.target.value = month;
+                return;
+              }
+              setOpenKey(null);
+              setMonth(next);
             }}
           />
         </div>
@@ -250,6 +348,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                         month={payload.month}
                         onToggle={() => toggle(person.person_key)}
                         onSaved={refreshQuiet}
+                        onDirtyChange={onDirtyChange}
                       />
                     );
                   })}
@@ -294,6 +393,7 @@ function PersonRows({
   month,
   onToggle,
   onSaved,
+  onDirtyChange,
 }: {
   person: RealtimeSalaryPerson;
   after: number;
@@ -304,6 +404,7 @@ function PersonRows({
   month: string;
   onToggle: () => void;
   onSaved: () => Promise<void>;
+  onDirtyChange: (dirty: boolean, signature: string) => void;
 }) {
   return (
     <>
@@ -336,7 +437,12 @@ function PersonRows({
       {open ? (
         <tr className="mistake-editor">
           <td colSpan={columns}>
-            <MistakeEditor month={month} personName={person.person_key} onSaved={onSaved} />
+            <MistakeEditor
+              month={month}
+              personName={person.person_key}
+              onSaved={onSaved}
+              onDirtyChange={onDirtyChange}
+            />
           </td>
         </tr>
       ) : null}
@@ -348,15 +454,20 @@ function MistakeEditor({
   month,
   personName,
   onSaved,
+  onDirtyChange,
 }: {
   month: string;
   personName: string;
   onSaved: () => Promise<void>;
+  onDirtyChange: (dirty: boolean, signature: string) => void;
 }) {
   const [lines, setLines] = useState<EditorLine[] | null>(null);
+  const [baseline, setBaseline] = useState<string | null>(null);
   const [original, setOriginal] = useState<SalaryMistakeDetail[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const signature = lines ? mistakeLineSignature(lines) : "";
+  const isDirty = mistakeLinesDirty(lines, baseline);
 
   const load = useCallback(async () => {
     setError("");
@@ -376,16 +487,27 @@ function MistakeEditor({
     }
     const body = (await res.json()) as { rows?: SalaryMistakeDetail[] };
     const rows = Array.isArray(body.rows) ? body.rows : [];
+    const nextLines = rows.length > 0 ? rows.map(lineFromRow) : [blankLine()];
     setOriginal(rows);
-    setLines(rows.length > 0 ? rows.map(lineFromRow) : [blankLine()]);
+    setLines(nextLines);
+    setBaseline(mistakeLineSignature(nextLines));
   }, [month, personName]);
 
   useEffect(() => {
     void load().catch(() => {
       setLines([]);
+      setBaseline(mistakeLineSignature([]));
       setError("失误明细读取失败");
     });
   }, [load]);
+
+  useEffect(() => {
+    onDirtyChange(isDirty, signature);
+  }, [isDirty, signature, onDirtyChange]);
+
+  useEffect(() => {
+    return () => onDirtyChange(false, "");
+  }, [onDirtyChange]);
 
   async function onSave() {
     if (!lines) return;
@@ -438,6 +560,9 @@ function MistakeEditor({
         if (!res.ok) throw new Error("patch");
       }
       await onSaved();
+      const saved = mistakeLineSignature(lines);
+      setBaseline(saved);
+      onDirtyChange(false, saved);
       await load();
     } catch {
       setError("保存失败，请重试");
