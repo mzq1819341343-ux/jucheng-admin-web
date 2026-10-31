@@ -1,7 +1,8 @@
 /**
  * 实时工资草案的纯映射（GET /api/salary/realtime）。
- * 不访问数据库：路由用登录会话的 Supabase 客户端查 salary_realtime_draft，
- * 再把行交给这里。店员不会走到映射（路由先 403，不拿空列表冒充）。
+ * 不访问数据库：路由用登录会话查 salary_realtime_draft，再用服务端聚合后的
+ * 失误合计交给这里。店员不会走到映射（路由先 403，不拿空列表冒充）。
+ * 失误合计不回写 draft 的 deduction_amount / net_amount。
  */
 
 export const YEAR_MONTH = /^\d{4}-\d{2}$/;
@@ -68,6 +69,12 @@ export interface RealtimeSalaryPerson {
   gross: number;
   deduction: number | null;
   net: number | null;
+  /** 当月失误扣款合计。没有明细时为 0。 */
+  mistake_total: number;
+  /** 应发 − 失误合计。没有草案行时按应发 0，结果可以为负。 */
+  after_deduction: number;
+  /** 该人是否来自 salary_realtime_draft。只有失误、没有草案行时为 false。 */
+  in_draft: boolean;
 }
 
 export interface RealtimeSalaryTotals {
@@ -79,6 +86,14 @@ export interface RealtimeSalaryTotals {
   gross: number;
   deduction: number | null;
   net: number | null;
+  mistake_total: number;
+  after_deduction: number;
+}
+
+/** 路由聚合后的按人失误合计。这里只收合计，不收事由。 */
+export interface MistakeTotalInput {
+  person_name: string;
+  mistake_total: number;
 }
 
 export interface RealtimeSalaryResponse {
@@ -147,13 +162,56 @@ const EMPTY_TOTALS: RealtimeSalaryTotals = {
   gross: 0,
   deduction: null,
   net: null,
+  mistake_total: 0,
+  after_deduction: 0,
 };
+
+function toCents(value: number): number {
+  return Math.round(value * 100);
+}
+
+/** 应发 − 失误合计，按分计算，避免二进制小数漂移。 */
+export function afterDeductionAmount(gross: number, mistakeTotal: number): number {
+  return (toCents(gross) - toCents(mistakeTotal)) / 100;
+}
+
+/**
+ * 页面上的扣后实发。接口有 after_deduction 时用接口值；
+ * 没有该字段时用应发 − 失误合计本地算。
+ */
+export function shownAfterDeduction(person: {
+  gross: number;
+  mistake_total?: number;
+  after_deduction?: number;
+}): number {
+  if (typeof person.after_deduction === "number" && Number.isFinite(person.after_deduction)) {
+    return person.after_deduction;
+  }
+  const mistake =
+    typeof person.mistake_total === "number" && Number.isFinite(person.mistake_total)
+      ? person.mistake_total
+      : 0;
+  return afterDeductionAmount(person.gross, mistake);
+}
+
+function mergeMistakeCents(rows: readonly MistakeTotalInput[]): Map<string, number> {
+  const centsByName = new Map<string, number>();
+  for (const row of rows) {
+    if (typeof row.person_name !== "string" || row.person_name === "") continue;
+    const cents = toCents(moneyNumber(row.mistake_total));
+    centsByName.set(row.person_name, (centsByName.get(row.person_name) ?? 0) + cents);
+  }
+  return centsByName;
+}
 
 export function buildRealtimeSalary(
   month: string,
-  rows: readonly SalaryRealtimeDraftRow[]
+  rows: readonly SalaryRealtimeDraftRow[],
+  mistakeTotals: readonly MistakeTotalInput[] = []
 ): RealtimeSalaryResponse {
+  const mistakeCents = mergeMistakeCents(mistakeTotals);
   const people: RealtimeSalaryPerson[] = [];
+  const seen = new Set<string>();
   let bestMs = Number.NEGATIVE_INFINITY;
   let bestName = "";
   let asOf: string | null = null;
@@ -161,6 +219,8 @@ export function buildRealtimeSalary(
 
   for (const row of rows) {
     if (typeof row.person_name !== "string" || row.person_name === "") continue;
+    const gross = moneyNumber(row.gross_amount);
+    const mistake = mistakeCents.get(row.person_name) ?? 0;
     const person: RealtimeSalaryPerson = {
       person_key: row.person_name,
       display_name: row.person_name,
@@ -170,11 +230,15 @@ export function buildRealtimeSalary(
       online: moneyNumber(row.online_amount),
       store: moneyNumber(row.store_amount),
       accessories: moneyNumber(row.accessories_amount),
-      gross: moneyNumber(row.gross_amount),
+      gross,
       deduction: moneyOrNull(row.deduction_amount),
       net: moneyOrNull(row.net_amount),
+      mistake_total: mistake / 100,
+      after_deduction: (toCents(gross) - mistake) / 100,
+      in_draft: true,
     };
     people.push(person);
+    seen.add(row.person_name);
 
     const ms = timeMs(row.as_of);
     if (ms === null) continue;
@@ -186,6 +250,26 @@ export function buildRealtimeSalary(
       asOf = row.as_of ?? null;
       caliber = typeof row.caliber === "string" ? row.caliber : null;
     }
+  }
+
+  for (const [personName, cents] of mistakeCents) {
+    if (seen.has(personName) || cents === 0) continue;
+    people.push({
+      person_key: personName,
+      display_name: personName,
+      user_id: null,
+      base: 0,
+      door: 0,
+      online: 0,
+      store: 0,
+      accessories: 0,
+      gross: 0,
+      deduction: null,
+      net: null,
+      mistake_total: cents / 100,
+      after_deduction: -cents / 100,
+      in_draft: false,
+    });
   }
 
   people.sort((a, b) => (a.person_key < b.person_key ? -1 : a.person_key > b.person_key ? 1 : 0));
@@ -208,6 +292,8 @@ export function buildRealtimeSalary(
       gross: sumMoney(people.map((p) => p.gross)),
       deduction: sumNullableMoney(people.map((p) => p.deduction)),
       net: sumNullableMoney(people.map((p) => p.net)),
+      mistake_total: sumMoney(people.map((p) => p.mistake_total)),
+      after_deduction: sumMoney(people.map((p) => p.after_deduction)),
     },
   };
 }
