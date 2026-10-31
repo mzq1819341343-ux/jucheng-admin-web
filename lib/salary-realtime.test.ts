@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  afterDeductionAmount,
   buildRealtimeSalary,
   formatShanghaiDateTime,
   realtimeReadDecision,
   shanghaiYearMonth,
   showAccessoriesColumn,
+  shownAfterDeduction,
 } from "./salary-realtime.ts";
 
 describe("realtimeReadDecision", () => {
@@ -54,6 +56,8 @@ describe("buildRealtimeSalary", () => {
         gross: 0,
         deduction: null,
         net: null,
+        mistake_total: 0,
+        after_deduction: 0,
       },
     });
   });
@@ -140,6 +144,70 @@ describe("buildRealtimeSalary", () => {
     assert.equal(body.totals.accessories, 2.5);
     assert.equal(body.totals.deduction, 1.25);
     assert.equal(body.totals.net, 2);
+    const jiaRow = body.people.find((person) => person.person_key === "甲");
+    assert.ok(jiaRow);
+    assert.equal(jiaRow.mistake_total, 0);
+    assert.equal(jiaRow.after_deduction, 3.5);
+    assert.equal(body.totals.mistake_total, 0);
+    assert.equal(body.totals.after_deduction, 4.5);
+    assert.equal(body.people.every((person) => person.in_draft), true);
+  });
+
+  it("subtracts mistake totals in cents and keeps draft deduction/net untouched", () => {
+    const body = buildRealtimeSalary(
+      "2026-10",
+      [
+        {
+          person_name: "甲",
+          gross_amount: 100,
+          base_amount: 100,
+          deduction_amount: null,
+          net_amount: null,
+        },
+      ],
+      [
+        { person_name: "甲", mistake_total: 12.5 },
+        { person_name: "甲", mistake_total: 0.1 },
+        { person_name: "乙", mistake_total: 3 },
+      ]
+    );
+    const jia = body.people.find((person) => person.person_key === "甲");
+    const yi = body.people.find((person) => person.person_key === "乙");
+    assert.ok(jia);
+    assert.ok(yi);
+    assert.equal(jia.mistake_total, 12.6);
+    assert.equal(jia.after_deduction, 87.4);
+    assert.equal(jia.deduction, null);
+    assert.equal(jia.net, null);
+    assert.equal(jia.in_draft, true);
+    assert.equal(Object.hasOwn(jia, "reason"), false);
+    assert.equal(yi.gross, 0);
+    assert.equal(yi.mistake_total, 3);
+    assert.equal(yi.after_deduction, -3);
+    assert.equal(yi.in_draft, false);
+    assert.equal(body.totals.gross, 100);
+    assert.equal(body.totals.mistake_total, 15.6);
+    assert.equal(body.totals.after_deduction, 84.4);
+    assert.equal(
+      body.totals.after_deduction,
+      afterDeductionAmount(body.totals.gross, body.totals.mistake_total)
+    );
+  });
+
+  it("treats a person with no draft row as gross 0", () => {
+    const body = buildRealtimeSalary("2026-10", [], [{ person_name: "乙", mistake_total: 2.5 }]);
+    assert.equal(body.people.length, 1);
+    assert.equal(body.people[0].gross, 0);
+    assert.equal(body.people[0].after_deduction, -2.5);
+    assert.equal(body.totals.gross, 0);
+    assert.equal(body.totals.after_deduction, -2.5);
+    assert.equal(body.as_of, null);
+  });
+
+  it("uses the api after_deduction and falls back to gross minus mistake", () => {
+    assert.equal(shownAfterDeduction({ gross: 10, mistake_total: 3, after_deduction: 7 }), 7);
+    assert.equal(shownAfterDeduction({ gross: 10.1, mistake_total: 0.2 }), 9.9);
+    assert.equal(afterDeductionAmount(0, 4), -4);
   });
 });
 

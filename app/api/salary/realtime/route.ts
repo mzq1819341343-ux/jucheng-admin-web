@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
+import { readSalaryActor } from "@/lib/salary-actor";
+import { loadMistakeTotals } from "@/lib/salary-mistake-query";
 import {
   buildRealtimeSalary,
   isYearMonth,
   realtimeReadDecision,
   type SalaryRealtimeDraftRow,
 } from "@/lib/salary-realtime";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/salary/realtime?month=YYYY-MM
- * 只读 public.salary_realtime_draft。用登录用户的 JWT（Cookie 会话）查询，RLS 生效。
- * 不使用 service role，未登录时也不做匿名直查。
- * 不写库，也不读 salary_monthly / salary_detail_import。
+ * 草案仍用登录用户 JWT 读 salary_realtime_draft（RLS）。
+ * 失误合计调用 security definer salary_mistake_totals，只拿按人 sum。
+ * 不 SELECT 事由，不写草案，不读 salary_monthly / salary_detail_import。
  */
 
 function json(body: unknown, status: number) {
@@ -37,45 +38,34 @@ export async function GET(request: Request) {
   if (!isYearMonth(month)) {
     return json({ error: "month must match YYYY-MM" }, 400);
   }
-  if (!isSupabaseConfigured()) {
-    return json({ error: "unauthenticated" }, 401);
-  }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return json({ error: "unauthenticated" }, 401);
-  }
+  const actor = await readSalaryActor();
+  if (!actor.ok) return json({ error: actor.error }, actor.status);
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .maybeSingle();
-  if (profileError) {
-    return json({ error: "role lookup failed" }, 500);
-  }
-
-  const role = typeof profile?.role === "string" ? profile.role : null;
-  const status = realtimeReadDecision({ month, authenticated: true, role });
+  const status = realtimeReadDecision({ month, authenticated: true, role: actor.role });
   if (status !== 200) {
     // staff 以及其它非 owner/partner 在这里返回 403。禁止改成 people: []。
+    // 403 发生在任何草案或失误查询之前。
     return json({ error: "forbidden" }, 403);
   }
 
-  const { data, error } = await supabase
-    .from("salary_realtime_draft")
-    .select(
-      "person_name, user_id, as_of, base_amount, door_amount, online_amount, store_amount, accessories_amount, gross_amount, deduction_amount, net_amount, caliber"
-    )
-    .eq("month", month)
-    .order("person_name", { ascending: true });
-  if (error) {
-    return json({ error: "query failed" }, 500);
+  const [draftResult, mistakeResult] = await Promise.all([
+    actor.supabase
+      .from("salary_realtime_draft")
+      .select(
+        "person_name, user_id, as_of, base_amount, door_amount, online_amount, store_amount, accessories_amount, gross_amount, deduction_amount, net_amount, caliber"
+      )
+      .eq("month", month)
+      .order("person_name", { ascending: true }),
+    loadMistakeTotals(actor.supabase, month),
+  ]);
+
+  if (draftResult.error || !mistakeResult.ok) {
+    return json({ error: mistakeResult.ok ? "query failed" : mistakeResult.error }, 500);
   }
 
-  return json(buildRealtimeSalary(month, (data ?? []) as SalaryRealtimeDraftRow[]), 200);
+  return json(
+    buildRealtimeSalary(month, (draftResult.data ?? []) as SalaryRealtimeDraftRow[], mistakeResult.rows),
+    200
+  );
 }
