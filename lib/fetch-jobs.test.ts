@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   FETCH_JOBS_NOT_READY,
+  dedupeFetchJobMessages,
   fetchJobCreateBody,
   fetchJobFailureMessage,
   fetchJobsLatestPath,
@@ -29,6 +30,15 @@ describe("fetch job create", () => {
     const parsed = parseFetchJobCreate(200, { ok: true }, true);
     assert.equal(parsed.ok, false);
     if (!parsed.ok) assert.equal(parsed.message, "下发没有返回任务号");
+  });
+
+  it("shows one line when dispatch and status both say the route is not ready", () => {
+    assert.deepEqual(dedupeFetchJobMessages(FETCH_JOBS_NOT_READY, FETCH_JOBS_NOT_READY), [FETCH_JOBS_NOT_READY]);
+    assert.deepEqual(dedupeFetchJobMessages("", FETCH_JOBS_NOT_READY), [FETCH_JOBS_NOT_READY]);
+    assert.deepEqual(dedupeFetchJobMessages("月份或范围不正确", "未登录，无法读取抓取状态"), [
+      "月份或范围不正确",
+      "未登录，无法读取抓取状态",
+    ]);
   });
 
   it("maps a missing route to the not-ready message", () => {

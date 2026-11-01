@@ -20,6 +20,17 @@
 
 export const FETCH_JOBS_NOT_READY = "任务接口未就绪";
 
+/** 下发和读取如果失败成同一句（常见是「任务接口未就绪」），卡片只留一行。 */
+export function dedupeFetchJobMessages(dispatchError: string, statusError: string): string[] {
+  const lines: string[] = [];
+  for (const raw of [dispatchError, statusError]) {
+    const message = raw.trim();
+    if (message === "" || lines.includes(message)) continue;
+    lines.push(message);
+  }
+  return lines;
+}
+
 export const FETCH_JOBS_CREATE_PATH = "/api/ops/fetch-jobs";
 
 export function fetchJobsLatestPath(month: string): string {
