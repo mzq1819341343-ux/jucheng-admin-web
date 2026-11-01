@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FETCH_JOBS_CREATE_PATH,
   FETCH_JOBS_NOT_READY,
+  dedupeFetchJobMessages,
   fetchJobCreateBody,
   fetchJobsLatestPath,
   fetchLegLabel,
@@ -113,6 +114,7 @@ export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
   }
 
   const when = latest?.at ? formatShanghaiDateTime(latest.at) : null;
+  const alerts = dedupeFetchJobMessages(dispatchError, statusError);
 
   return (
     <section aria-label="数据抓取" aria-busy={busy}>
@@ -162,16 +164,11 @@ export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
               <span className="tag tag-ok">{dispatchMessage}</span>
             </p>
           ) : null}
-          {dispatchError ? (
-            <p className="empty" role="alert">
-              {dispatchError}
+          {alerts.map((message) => (
+            <p className="empty" role="alert" key={message}>
+              {message}
             </p>
-          ) : null}
-          {statusError ? (
-            <p className="empty" role="alert">
-              {statusError}
-            </p>
-          ) : null}
+          ))}
           {statusMessage ? <p className="page-desc">{statusMessage}</p> : null}
           {latest && !latest.empty ? (
             <dl className="fetch-jobs-lines">
