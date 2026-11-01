@@ -67,7 +67,8 @@ export default async function SalaryPage() {
         </Suspense>
 
         {/* 员工表：老板可改 public.employees，合伙人只读，店员不渲染。
-            保存只写名单。成功后再 GET /api/salary/realtime。占位草案与底薪同步由服务端完成。 */}
+            保存只写名单。成功后再 POST /api/salary/employee-draft，并 GET /api/salary/realtime。
+            浏览器不写 salary_realtime_draft。 */}
         {user.role === "owner" || user.role === "partner" ? (
           <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
             <EmployeeRoster user={user} />
