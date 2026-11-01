@@ -66,6 +66,13 @@ export interface RealtimeSalaryPerson {
   online: number;
   store: number;
   accessories: number;
+  /**
+   * 手填补贴。migration_016 的 subsidy_amount 还没进响应时省略；
+   * 列落地后缺省为 0。页面只在字段存在时展示。
+   */
+  subsidy?: number;
+  /** 手填奖金。与 subsidy 同时出现或同时省略。 */
+  bonus?: number;
   gross: number;
   deduction: number | null;
   net: number | null;
@@ -83,6 +90,10 @@ export interface RealtimeSalaryTotals {
   online: number;
   store: number;
   accessories: number;
+  /** 手填补贴合计。列未进响应时省略。 */
+  subsidy?: number;
+  /** 手填奖金合计。与 subsidy 同时出现或同时省略。 */
+  bonus?: number;
   gross: number;
   deduction: number | null;
   net: number | null;
@@ -113,6 +124,8 @@ export interface SalaryRealtimeDraftRow {
   online_amount?: unknown;
   store_amount?: unknown;
   accessories_amount?: unknown;
+  subsidy_amount?: unknown;
+  bonus_amount?: unknown;
   gross_amount?: unknown;
   deduction_amount?: unknown;
   net_amount?: unknown;
@@ -140,6 +153,156 @@ function moneyOrNull(value: unknown): number | null {
 function sumMoney(values: number[]): number {
   const cents = values.reduce((sum, value) => sum + Math.round(value * 100), 0);
   return cents / 100;
+}
+
+/**
+ * 应发 = 底薪 + 上门 + 线上 + 门店 + 配件 + 补贴 + 奖金。
+ * 只在补贴/奖金列已进入响应时使用；列未落地时仍展示草案里的 gross_amount。
+ * 页面只渲染这里算出的 gross，不再加一次。
+ */
+export function payableGross(parts: {
+  base: number;
+  door: number;
+  online: number;
+  store: number;
+  accessories: number;
+  subsidy: number;
+  bonus: number;
+}): number {
+  return sumMoney([
+    parts.base,
+    parts.door,
+    parts.online,
+    parts.store,
+    parts.accessories,
+    parts.subsidy,
+    parts.bonus,
+  ]);
+}
+
+export function payableGrossFromDraft(
+  row: SalaryRealtimeDraftRow,
+  subsidy: number,
+  bonus: number
+): number {
+  return payableGross({
+    base: moneyNumber(row.base_amount),
+    door: moneyNumber(row.door_amount),
+    online: moneyNumber(row.online_amount),
+    store: moneyNumber(row.store_amount),
+    accessories: moneyNumber(row.accessories_amount),
+    subsidy,
+    bonus,
+  });
+}
+
+const HAND_AMOUNT_TEXT = /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
+const MAX_HAND_AMOUNT = 9_999_999_999.99;
+const MAX_PERSON_NAME = 200;
+
+/** 补贴 / 奖金：允许 0，最多两位小数。负数、空串、布尔拒绝。 */
+export function parseHandFillAmount(value: unknown): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value < 0 || value > MAX_HAND_AMOUNT) return null;
+    const cents = Math.round(value * 100);
+    if (Math.abs(value * 100 - cents) > 1e-6) return null;
+    return cents / 100;
+  }
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!HAND_AMOUNT_TEXT.test(text)) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n) || n < 0 || n > MAX_HAND_AMOUNT) return null;
+  return Math.round(n * 100) / 100;
+}
+
+export function moneyToDb(amount: number): string {
+  return (Math.round(amount * 100) / 100).toFixed(2);
+}
+
+export interface HandFillPatch {
+  month: string;
+  person_name: string;
+  subsidy: number;
+  bonus: number;
+}
+
+/**
+ * 老板手填只接受 month、person_name、subsidy_amount、bonus_amount。
+ * 带上 gross 或其它金额列则整份拒绝，避免页面另写一套应发。
+ */
+export function parseHandFillPatchBody(
+  body: unknown
+): { ok: true; value: HandFillPatch } | { ok: false; error: string } {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { ok: false, error: "invalid body" };
+  }
+  const rec = body as Record<string, unknown>;
+  for (const key of Object.keys(rec)) {
+    if (
+      key !== "month" &&
+      key !== "person_name" &&
+      key !== "subsidy_amount" &&
+      key !== "bonus_amount"
+    ) {
+      return { ok: false, error: "only subsidy_amount and bonus_amount can be changed" };
+    }
+  }
+  const month = typeof rec.month === "string" ? rec.month : null;
+  if (!isYearMonth(month)) return { ok: false, error: "month must match YYYY-MM" };
+  if (typeof rec.person_name !== "string") {
+    return { ok: false, error: "person_name is required" };
+  }
+  const personName = rec.person_name.trim();
+  if (personName === "" || personName.length > MAX_PERSON_NAME) {
+    return { ok: false, error: "person_name is required" };
+  }
+  if (!Object.prototype.hasOwnProperty.call(rec, "subsidy_amount")) {
+    return { ok: false, error: "subsidy_amount and bonus_amount are required" };
+  }
+  if (!Object.prototype.hasOwnProperty.call(rec, "bonus_amount")) {
+    return { ok: false, error: "subsidy_amount and bonus_amount are required" };
+  }
+  const subsidy = parseHandFillAmount(rec.subsidy_amount);
+  if (subsidy === null) return { ok: false, error: "subsidy_amount must be zero or greater" };
+  const bonus = parseHandFillAmount(rec.bonus_amount);
+  if (bonus === null) return { ok: false, error: "bonus_amount must be zero or greater" };
+  return {
+    ok: true,
+    value: { month, person_name: personName, subsidy, bonus },
+  };
+}
+
+/** 手填写入只给 owner。未登录 401；合伙人 / 店员 / 其它角色 403。 */
+export function handFillWriteDecision(input: {
+  authenticated: boolean;
+  role: string | null;
+}): 401 | 403 | 200 {
+  if (!input.authenticated) return 401;
+  if (input.role === "owner") return 200;
+  return 403;
+}
+
+/**
+ * PostgREST / Postgres 表示 subsidy_amount 或 bonus_amount 还不存在。
+ * 其它查询错误不能当成「列还没落地」，否则会把权限或网络问题吞掉。
+ */
+export function isMissingHandFillColumn(error: {
+  code?: string | null;
+  message?: string | null;
+}): boolean {
+  const message = error.message ?? "";
+  if (!message.includes("subsidy_amount") && !message.includes("bonus_amount")) return false;
+  if (error.code === "42703" || error.code === "PGRST204") return true;
+  const lower = message.toLowerCase();
+  return lower.includes("does not exist") || lower.includes("schema cache");
+}
+
+/** 响应里两列都是数字时，页面才展示补贴 / 奖金。 */
+export function handFillShown(body: {
+  totals: { subsidy?: number; bonus?: number };
+}): boolean {
+  return typeof body.totals.subsidy === "number" && typeof body.totals.bonus === "number";
 }
 
 function sumNullableMoney(values: Array<number | null>): number | null {
@@ -207,8 +370,10 @@ function mergeMistakeCents(rows: readonly MistakeTotalInput[]): Map<string, numb
 export function buildRealtimeSalary(
   month: string,
   rows: readonly SalaryRealtimeDraftRow[],
-  mistakeTotals: readonly MistakeTotalInput[] = []
+  mistakeTotals: readonly MistakeTotalInput[] = [],
+  options?: { handFill?: boolean }
 ): RealtimeSalaryResponse {
+  const handFill = options?.handFill === true;
   const mistakeCents = mergeMistakeCents(mistakeTotals);
   const people: RealtimeSalaryPerson[] = [];
   const seen = new Set<string>();
@@ -219,7 +384,11 @@ export function buildRealtimeSalary(
 
   for (const row of rows) {
     if (typeof row.person_name !== "string" || row.person_name === "") continue;
-    const gross = moneyNumber(row.gross_amount);
+    const subsidy = moneyNumber(row.subsidy_amount);
+    const bonus = moneyNumber(row.bonus_amount);
+    const gross = handFill
+      ? payableGrossFromDraft(row, subsidy, bonus)
+      : moneyNumber(row.gross_amount);
     const mistake = mistakeCents.get(row.person_name) ?? 0;
     const person: RealtimeSalaryPerson = {
       person_key: row.person_name,
@@ -237,6 +406,10 @@ export function buildRealtimeSalary(
       after_deduction: (toCents(gross) - mistake) / 100,
       in_draft: true,
     };
+    if (handFill) {
+      person.subsidy = subsidy;
+      person.bonus = bonus;
+    }
     people.push(person);
     seen.add(row.person_name);
 
@@ -269,13 +442,37 @@ export function buildRealtimeSalary(
       mistake_total: cents / 100,
       after_deduction: -cents / 100,
       in_draft: false,
+      ...(handFill ? { subsidy: 0, bonus: 0 } : {}),
     });
   }
 
   people.sort((a, b) => (a.person_key < b.person_key ? -1 : a.person_key > b.person_key ? 1 : 0));
 
+  const totals: RealtimeSalaryTotals = {
+    base: sumMoney(people.map((p) => p.base)),
+    door: sumMoney(people.map((p) => p.door)),
+    online: sumMoney(people.map((p) => p.online)),
+    store: sumMoney(people.map((p) => p.store)),
+    accessories: sumMoney(people.map((p) => p.accessories)),
+    gross: sumMoney(people.map((p) => p.gross)),
+    deduction: sumNullableMoney(people.map((p) => p.deduction)),
+    net: sumNullableMoney(people.map((p) => p.net)),
+    mistake_total: sumMoney(people.map((p) => p.mistake_total)),
+    after_deduction: sumMoney(people.map((p) => p.after_deduction)),
+  };
+  if (handFill) {
+    totals.subsidy = sumMoney(people.map((p) => p.subsidy ?? 0));
+    totals.bonus = sumMoney(people.map((p) => p.bonus ?? 0));
+  }
+
   if (people.length === 0) {
-    return { month, as_of: null, caliber: null, people: [], totals: { ...EMPTY_TOTALS } };
+    return {
+      month,
+      as_of: null,
+      caliber: null,
+      people: [],
+      totals: handFill ? { ...EMPTY_TOTALS, subsidy: 0, bonus: 0 } : { ...EMPTY_TOTALS },
+    };
   }
 
   return {
@@ -283,18 +480,7 @@ export function buildRealtimeSalary(
     as_of: asOf,
     caliber,
     people,
-    totals: {
-      base: sumMoney(people.map((p) => p.base)),
-      door: sumMoney(people.map((p) => p.door)),
-      online: sumMoney(people.map((p) => p.online)),
-      store: sumMoney(people.map((p) => p.store)),
-      accessories: sumMoney(people.map((p) => p.accessories)),
-      gross: sumMoney(people.map((p) => p.gross)),
-      deduction: sumNullableMoney(people.map((p) => p.deduction)),
-      net: sumNullableMoney(people.map((p) => p.net)),
-      mistake_total: sumMoney(people.map((p) => p.mistake_total)),
-      after_deduction: sumMoney(people.map((p) => p.after_deduction)),
-    },
+    totals,
   };
 }
 
