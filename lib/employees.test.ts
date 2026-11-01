@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  DOOR_BASE_NOTE,
+  ROSTER_EDIT_NOTE,
+  ROSTER_READ_NOTE,
   ROSTER_SAVED_MESSAGE,
   baseSalaryLabel,
   coerceEmployeeRow,
   duplicateName,
   parseEmployeeWrite,
-  payrollIgnoresTableBase,
   sortEmployees,
   type EmployeeRow,
 } from "./employees.ts";
@@ -24,15 +24,13 @@ function row(partial: Partial<EmployeeRow> & Pick<EmployeeRow, "id" | "person_na
 }
 
 describe("employees roster labels", () => {
-  it("keeps a base field for 上门 but marks payroll as zero", () => {
-    assert.equal(payrollIgnoresTableBase("上门"), true);
-    assert.equal(baseSalaryLabel("上门"), `底薪（元，${DOOR_BASE_NOTE}）`);
-    assert.match(baseSalaryLabel("上门"), /计薪按 0、不跟表/);
+  it("uses the table base label for 上门 and 门店", () => {
+    assert.equal(baseSalaryLabel("上门"), "底薪（元）");
+    assert.equal(baseSalaryLabel("门店"), "底薪（元）");
+    assert.equal(`${baseSalaryLabel("上门")}${ROSTER_EDIT_NOTE}${ROSTER_READ_NOTE}`.includes("计薪按 0"), false);
   });
 
   it("uses the table base for 门店, including a boss stored as 门店", () => {
-    assert.equal(payrollIgnoresTableBase("门店"), false);
-    assert.equal(baseSalaryLabel("门店"), "底薪（元）");
     const boss = parseEmployeeWrite({
       person_name: "老板",
       base_salary: "8000",
@@ -41,14 +39,10 @@ describe("employees roster labels", () => {
       user_id: "",
     });
     assert.equal(boss.ok, true);
-    if (boss.ok) {
-      assert.equal(boss.value.base_salary, 8000);
-      assert.equal(payrollIgnoresTableBase(boss.value.work_role), false);
-    }
+    if (boss.ok) assert.equal(boss.value.base_salary, 8000);
   });
 
-  it("still ignores the table when a person named 老板 is marked 上门", () => {
-    assert.equal(payrollIgnoresTableBase("上门"), true);
+  it("keeps the entered base when the role is 上门", () => {
     const parsed = parseEmployeeWrite({
       person_name: "老板",
       base_salary: "8000",
@@ -62,6 +56,8 @@ describe("employees roster labels", () => {
 
   it("uses the exact save confirmation and does not invent payroll fields", () => {
     assert.equal(ROSTER_SAVED_MESSAGE, "已进测算名单");
+    assert.match(ROSTER_EDIT_NOTE, /重新读取人效/);
+    assert.match(ROSTER_EDIT_NOTE, /补贴和奖金/);
   });
 });
 

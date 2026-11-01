@@ -3,29 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 import { money2 } from "@/lib/format";
 import {
-  DOOR_BASE_NOTE,
   EMPLOYEE_COLUMNS,
   EMPLOYMENT_STATUSES,
+  ROSTER_EDIT_NOTE,
+  ROSTER_READ_NOTE,
   ROSTER_SAVED_MESSAGE,
   WORK_ROLES,
   baseSalaryLabel,
   coerceEmployeeRow,
   duplicateName,
   parseEmployeeWrite,
-  payrollIgnoresTableBase,
   sortEmployees,
   type EmployeeRow,
   type EmployeeWrite,
   type EmploymentStatus,
   type WorkRole,
 } from "@/lib/employees";
+import { requestSalaryRealtimeRefresh } from "@/lib/salary-realtime-refresh";
 import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
 
 /**
  * 员工表：老板维护 public.employees，合伙人只读，店员工资页不挂本卡。
  * 写入走浏览器 Supabase 客户端，权限交给现有 RLS（owner 全权，partner 只 select）。
- * 成功只提示「已进测算名单」。本卡不算工资，不打人效接口，不触发 ops 的上传/落库开关。
+ * 成功提示「已进测算名单」，并请人效卡重新 GET realtime。
+ * 占位草案和底薪同步由服务端完成。本卡不写 salary_realtime_draft，不触发上传/落库开关。
  */
 
 export interface RosterMember {
@@ -171,6 +173,7 @@ export default function EmployeeRosterCard({
       setMsg(ROSTER_SAVED_MESSAGE);
       setEditingId(null);
       if (!previous) resetAddForm();
+      requestSalaryRealtimeRefresh();
     }
     setBusy(false);
   }
@@ -217,11 +220,7 @@ export default function EmployeeRosterCard({
         <span className="salary-kind salary-kind-draft">测算名单</span>
       </h2>
       <div className="card">
-        <p className="page-desc employee-roster-note">
-          {canEdit
-            ? `保存只写入测算名单，不算工资，也不重跑人效。在职人员会在下次计薪后出现在人效卡，人效卡仍读原来的实时草案。上门一行仍可填底薪，但${DOOR_BASE_NOTE}。门店与老板按表内底薪。`
-            : `只读。名单由老板维护。在职人员会在下次计薪后出现在人效卡，人效卡仍读原来的实时草案。上门底薪：${DOOR_BASE_NOTE}。门店与老板按表内底薪。`}
-        </p>
+        <p className="page-desc employee-roster-note">{canEdit ? ROSTER_EDIT_NOTE : ROSTER_READ_NOTE}</p>
 
         {msg ? (
           <p className="access-msg employee-roster-msg" role="status" ref={msgRef}>
@@ -255,14 +254,7 @@ export default function EmployeeRosterCard({
                       <td>
                         {editing ? (
                           <>
-                            <label
-                              className={
-                                payrollIgnoresTableBase(editRole)
-                                  ? "employee-cell-label is-door"
-                                  : "employee-cell-label"
-                              }
-                              htmlFor={`emp-base-${row.id}`}
-                            >
+                            <label className="employee-cell-label" htmlFor={`emp-base-${row.id}`}>
                               {baseSalaryLabel(editRole)}
                             </label>
                             <input
@@ -274,12 +266,7 @@ export default function EmployeeRosterCard({
                             />
                           </>
                         ) : (
-                          <>
-                            {money2(row.base_salary)}
-                            {payrollIgnoresTableBase(row.work_role) ? (
-                              <span className="employee-base-note">{DOOR_BASE_NOTE}</span>
-                            ) : null}
-                          </>
+                          money2(row.base_salary)
                         )}
                       </td>
                       <td>
@@ -396,9 +383,7 @@ export default function EmployeeRosterCard({
                 />
               </div>
               <div className="field">
-                <label htmlFor="emp-base" className={payrollIgnoresTableBase(role) ? "is-door-label" : undefined}>
-                  {baseSalaryLabel(role)}
-                </label>
+                <label htmlFor="emp-base">{baseSalaryLabel(role)}</label>
                 <input
                   id="emp-base"
                   value={base}

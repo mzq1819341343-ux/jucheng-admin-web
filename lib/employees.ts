@@ -1,9 +1,9 @@
 /**
  * public.employees 测算名单（migration_012，表已在库）。
- * 只做行的形状、校验和展示标签。不计算工资，不读订单，不触发草案。
+ * 只做行的形状、校验和展示标签。不计算工资，不读订单，不写 salary_realtime_draft。
  *
- * 计薪脚本对 work_role=上门 强制底薪 0，表里的 base_salary 不采用。
- * 门店行按表内底薪。老板要计底薪时记成门店（角色只有上门 / 门店两档）。
+ * 上门与门店都保存并展示表内 base_salary。占位草案和底薪同步由服务端完成。
+ * 老板要计底薪时可以记成门店（角色只有上门 / 门店两档），上门同样按所填底薪。
  */
 
 export const WORK_ROLES = ["上门", "门店"] as const;
@@ -18,8 +18,13 @@ export const EMPLOYEE_COLUMNS =
 /** 保存成功后页面上的那一句。只在写入 employees 成功时使用。 */
 export const ROSTER_SAVED_MESSAGE = "已进测算名单";
 
-/** 上门行底薪旁的固定说明。表仍保存填写值。 */
-export const DOOR_BASE_NOTE = "计薪按 0、不跟表";
+/** 老板看到的说明。保存只写 employees，成功后再读人效。 */
+export const ROSTER_EDIT_NOTE =
+  "保存写入测算名单。占位草案和底薪同步由服务端完成，保存成功后会重新读取人效。上门与门店都按表内底薪保存和显示。底薪同步更新底薪和应发，补贴和奖金仍以人效卡里已手填的值为准。";
+
+/** 合伙人看到的说明。 */
+export const ROSTER_READ_NOTE =
+  "只读。名单由老板维护。上门与门店都按表内底薪。人效读取实时草案。";
 
 const NAME_MAX = 40;
 const SALARY_MAX = 9_999_999_999.99;
@@ -51,13 +56,8 @@ export function isEmploymentStatus(value: string): value is EmploymentStatus {
   return (EMPLOYMENT_STATUSES as readonly string[]).includes(value);
 }
 
-/** 上门：计薪忽略表内底薪。门店（含记在门店上的老板）跟表。 */
-export function payrollIgnoresTableBase(workRole: string): boolean {
-  return workRole === "上门";
-}
-
-export function baseSalaryLabel(workRole: string): string {
-  if (payrollIgnoresTableBase(workRole)) return `底薪（元，${DOOR_BASE_NOTE}）`;
+/** 上门与门店同一标签。底薪就是表内填写值。 */
+export function baseSalaryLabel(_workRole: string): string {
   return "底薪（元）";
 }
 

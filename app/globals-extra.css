@@ -64,8 +64,8 @@ table.report.payroll-split td:last-child {
 .contract-card .plain li { margin-bottom: 10px; }
 .salary-import-table { min-width: 940px; }
 /* 人效按人表：列不换行，窄屏由 .table-wrap 横向滚动，汇总 KPI 留在表外 */
-table.report.salary-people { min-width: 860px; }
-table.report.salary-people.salary-people-hand { min-width: 1120px; }
+table.report.salary-people { min-width: 960px; }
+table.report.salary-people.salary-people-hand { min-width: 1220px; }
 td.salary-hand-cell { white-space: normal; }
 input.salary-hand-input {
   width: 6.5rem;
@@ -87,24 +87,48 @@ input.salary-hand-input {
   align-items: center;
   justify-content: flex-end;
 }
-/* 员工表：窄屏跟工资表一样横向滚动；上门底薪说明允许换行 */
+/* 员工表：窄屏跟工资表一样横向滚动；底薪标签允许换行 */
 table.report.employee-roster { min-width: 760px; }
 table.report.employee-roster td { vertical-align: top; }
 .employee-roster-note { margin-top: 0; }
 .employee-roster-msg { margin: 0 0 14px; }
-.employee-cell-label,
-.employee-base-note {
+.employee-cell-label {
   display: block;
-  margin-top: 4px;
+  margin-top: 0;
+  margin-bottom: 6px;
   font-size: 12px;
   letter-spacing: 0.02em;
   white-space: normal;
   line-height: 1.45;
+  text-align: right;
+  color: var(--muted);
+  font-weight: 600;
 }
-.employee-cell-label { margin-top: 0; margin-bottom: 6px; text-align: right; color: var(--muted); font-weight: 600; }
-.employee-cell-label.is-door,
-.employee-base-note,
-.field label.is-door-label { color: var(--notice-text); font-weight: 700; }
+.fetch-jobs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.fetch-jobs-actions .btn { min-height: 44px; }
+.fetch-jobs-status { margin-top: 14px; }
+.fetch-jobs-lines {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 0;
+}
+.fetch-jobs-lines div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+}
+.fetch-jobs-lines dt {
+  min-width: 3.5em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.fetch-jobs-lines dd { margin: 0; }
 table.report.employee-roster .inline-input { width: 100%; max-width: 168px; }
 .employee-row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .employee-row-actions .btn { min-height: 36px; padding: 4px 12px; }
@@ -694,6 +718,7 @@ footer.site-footer {
   .biz-card { padding: 26px 24px 24px; }
   .form-row { flex-direction: column; gap: 0; }
   .form-row .field { flex: 1 1 auto; width: 100%; }
+  .fetch-jobs-actions .btn { flex: 1 1 100%; }
   .login-wrap { padding: 40px 18px 48px; }
   .login-brand-name { font-size: 52px; }
   .login-card { padding: 26px 22px 22px; }
