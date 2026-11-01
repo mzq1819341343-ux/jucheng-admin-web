@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
+import RealtimePayrollExport from "@/components/RealtimePayrollExport";
 import { money2 } from "@/lib/format";
 import {
   MISTAKE_DISCARD_MESSAGE,
@@ -17,6 +18,8 @@ import {
 } from "@/lib/salary-mistake";
 import {
   formatShanghaiDateTime,
+  handFillShown,
+  parseHandFillAmount,
   shanghaiYearMonth,
   showAccessoriesColumn,
   shownAfterDeduction,
@@ -33,6 +36,17 @@ import {
 
 type Phase = "loading" | "ready" | "error";
 type SalaryRole = "owner" | "partner";
+
+const HAND_DISCARD_MESSAGE = "补贴或奖金还有未保存的修改，继续会丢掉这些内容。确定放弃？";
+const BOTH_DISCARD_MESSAGE =
+  "失误扣款、补贴或奖金还有未保存的修改，继续会丢掉这些内容。确定放弃？";
+
+function exportNotice(phase: Phase, count: number): string | null {
+  if (phase === "loading") return "正在读取本月人效，暂时不能导出。";
+  if (phase === "error") return "草案没有读出来，暂时不能导出。";
+  if (count === 0) return "暂无按人明细，没有可导出的内容。";
+  return null;
+}
 
 interface EditorLine extends MistakeLineInput {
   key: string;
@@ -67,10 +81,22 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
   const [payload, setPayload] = useState<RealtimeSalaryResponse | null>(null);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [editorDirty, setEditorDirty] = useState(false);
+  const [handDirty, setHandDirty] = useState(false);
   const dirtyRef = useRef(false);
+  const handDirtyRef = useRef(false);
+  const handDirtyKeys = useRef(new Set<string>());
   const acceptedLeaveRef = useRef(false);
   const lastSignatureRef = useRef("");
   const salaryHrefRef = useRef("");
+
+  const onHandDirtyChange = useCallback((personKey: string, dirty: boolean) => {
+    const keys = handDirtyKeys.current;
+    if (dirty) keys.add(personKey);
+    else keys.delete(personKey);
+    const next = keys.size > 0;
+    handDirtyRef.current = next;
+    setHandDirty((current) => (current === next ? current : next));
+  }, []);
 
   const onDirtyChange = useCallback((dirty: boolean, signature: string) => {
     if (signature !== lastSignatureRef.current) {
@@ -84,8 +110,16 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
 
   function confirmDiscard(): boolean {
     if (acceptedLeaveRef.current) return true;
-    if (!dirtyRef.current) return true;
-    if (!window.confirm(MISTAKE_DISCARD_MESSAGE)) return false;
+    const mistakeDirty = dirtyRef.current;
+    const subsidyDirty = handDirtyRef.current;
+    if (!mistakeDirty && !subsidyDirty) return true;
+    const message =
+      mistakeDirty && subsidyDirty
+        ? BOTH_DISCARD_MESSAGE
+        : mistakeDirty
+          ? MISTAKE_DISCARD_MESSAGE
+          : HAND_DISCARD_MESSAGE;
+    if (!window.confirm(message)) return false;
     acceptedLeaveRef.current = true;
     return true;
   }
@@ -139,17 +173,19 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
   }, [month, loadPayload]);
 
   useEffect(() => {
-    if (!editorDirty) return;
+    if (!editorDirty && !handDirty) return;
     salaryHrefRef.current = window.location.href;
 
+    const unsaved = () => dirtyRef.current || handDirtyRef.current;
+
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (!dirtyRef.current || acceptedLeaveRef.current) return;
+      if (!unsaved() || acceptedLeaveRef.current) return;
       event.preventDefault();
       event.returnValue = "";
     };
 
     const onClick = (event: MouseEvent) => {
-      if (!dirtyRef.current || acceptedLeaveRef.current) return;
+      if (!unsaved() || acceptedLeaveRef.current) return;
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -166,7 +202,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
     };
 
     const onPopState = () => {
-      if (!dirtyRef.current || acceptedLeaveRef.current) return;
+      if (!unsaved() || acceptedLeaveRef.current) return;
       const backTo = salaryHrefRef.current;
       if (!backTo) return;
       if (!navigationLeavesSalary(window.location.href, backTo)) return;
@@ -195,7 +231,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
       window.removeEventListener("popstate", onPopState);
       document.removeEventListener("click", onClick, true);
     };
-  }, [editorDirty]);
+  }, [editorDirty, handDirty]);
 
   const refreshQuiet = useCallback(() => {
     const ctrl = new AbortController();
@@ -206,8 +242,10 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
   const empty = phase === "ready" && people.length === 0;
   const showPeople = phase === "ready" && payload !== null && people.length > 0;
   const showAccessories = payload ? showAccessoriesColumn(payload) : false;
+  const handFill = payload ? handFillShown(payload) : false;
   const headcount = people.filter((person) => person.in_draft).length;
-  const columns = (showAccessories ? 1 : 0) + 8;
+  const columns = (showAccessories ? 1 : 0) + (handFill ? 2 : 0) + 8;
+  const exportNote = exportNotice(phase, people.length);
   const afterTotal = payload
     ? shownAfterDeduction({
         gross: payload.totals.gross,
@@ -251,6 +289,12 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
           />
         </div>
       </div>
+
+      <RealtimePayrollExport
+        month={month}
+        source={exportNote === null && payload ? { people: payload.people, totals: payload.totals } : null}
+        notice={exportNote}
+      />
 
       {phase === "loading" ? (
         <div className="skel skel-block" style={{ marginTop: 16 }} aria-hidden="true" />
@@ -318,7 +362,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
               按人明细
             </h3>
             <div className="table-wrap">
-              <table className="report salary-people">
+              <table className={handFill ? "report salary-people salary-people-hand" : "report salary-people"}>
                 <thead>
                   <tr>
                     <th>姓名</th>
@@ -327,6 +371,12 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                     <th>线上（元）</th>
                     <th>门店（元）</th>
                     {showAccessories ? <th>配件（元）</th> : null}
+                    {handFill ? (
+                      <>
+                        <th>补贴（元）</th>
+                        <th>奖金（元）</th>
+                      </>
+                    ) : null}
                     <th>应发（元）</th>
                     <th>失误扣款（元）</th>
                     <th title="应发 − 失误扣款">实发（元）</th>
@@ -342,6 +392,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                         person={person}
                         after={after}
                         showAccessories={showAccessories}
+                        handFill={handFill}
                         canEdit={canEdit}
                         open={open}
                         columns={columns}
@@ -349,6 +400,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                         onToggle={() => toggle(person.person_key)}
                         onSaved={refreshQuiet}
                         onDirtyChange={onDirtyChange}
+                        onHandDirtyChange={onHandDirtyChange}
                       />
                     );
                   })}
@@ -359,6 +411,12 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                     <td>{money2(payload.totals.online)}</td>
                     <td>{money2(payload.totals.store)}</td>
                     {showAccessories ? <td>{money2(payload.totals.accessories)}</td> : null}
+                    {handFill ? (
+                      <>
+                        <td>{money2(payload.totals.subsidy ?? 0)}</td>
+                        <td>{money2(payload.totals.bonus ?? 0)}</td>
+                      </>
+                    ) : null}
                     <td>{money2(payload.totals.gross)}</td>
                     <td>{money2(payload.totals.mistake_total ?? 0)}</td>
                     <td>{money2(afterTotal)}</td>
@@ -373,8 +431,12 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
             ) : null}
             <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
               {canEdit
-                ? "实发 = 应发 − 失误扣款。编辑只改失误明细，不回写应发草案，也不发布月度工资。表里还没有的人，本轮不能从这里新增。"
-                : "失误扣款只显示每人合计和上方合计，不显示事由，也不能修改。应发仍是实时草案，本卡不改草案、不发布月度工资。"}
+                ? handFill
+                  ? "补贴、奖金由老板手填并保存。应发按底薪 + 上门 + 线上 + 门店 + 配件 + 补贴 + 奖金，由接口计算后展示。实发 = 应发 − 失误扣款。编辑失误只改失误明细，不发布月度工资。草案里没有的人，不能从这里手填。"
+                  : "实发 = 应发 − 失误扣款。编辑只改失误明细，不回写应发草案，也不发布月度工资。表里还没有的人，本轮不能从这里新增。"
+                : handFill
+                  ? "补贴、奖金只显示，不能修改。失误扣款只显示每人合计和上方合计，不显示事由，也不能修改。应发按接口结果展示，本卡不改草案、不发布月度工资。"
+                  : "失误扣款只显示每人合计和上方合计，不显示事由，也不能修改。应发仍是实时草案，本卡不改草案、不发布月度工资。"}
             </p>
           </div>
         </>
@@ -387,6 +449,7 @@ function PersonRows({
   person,
   after,
   showAccessories,
+  handFill,
   canEdit,
   open,
   columns,
@@ -394,10 +457,12 @@ function PersonRows({
   onToggle,
   onSaved,
   onDirtyChange,
+  onHandDirtyChange,
 }: {
   person: RealtimeSalaryPerson;
   after: number;
   showAccessories: boolean;
+  handFill: boolean;
   canEdit: boolean;
   open: boolean;
   columns: number;
@@ -405,7 +470,9 @@ function PersonRows({
   onToggle: () => void;
   onSaved: () => Promise<void>;
   onDirtyChange: (dirty: boolean, signature: string) => void;
+  onHandDirtyChange: (personKey: string, dirty: boolean) => void;
 }) {
+  const canFill = canEdit && handFill && person.in_draft;
   return (
     <>
       <tr onClick={canEdit ? onToggle : undefined} style={canEdit ? { cursor: "pointer" } : undefined}>
@@ -430,6 +497,24 @@ function PersonRows({
         <td>{money2(person.online)}</td>
         <td>{money2(person.store)}</td>
         {showAccessories ? <td>{money2(person.accessories)}</td> : null}
+        {handFill ? (
+          canFill ? (
+            <HandFillCells
+              key={`${person.person_key}:${person.subsidy ?? 0}:${person.bonus ?? 0}`}
+              month={month}
+              person={person}
+              onDirty={onHandDirtyChange}
+              onSaved={onSaved}
+            />
+          ) : (
+            <>
+              <td>{money2(person.subsidy ?? 0)}</td>
+              <td title={person.in_draft ? undefined : "草案里没有该人，补贴和奖金为 0"}>
+                {money2(person.bonus ?? 0)}
+              </td>
+            </>
+          )
+        ) : null}
         <td>{money2(person.gross)}</td>
         <td>{money2(person.mistake_total ?? 0)}</td>
         <td style={after < 0 ? { color: "var(--negative)" } : undefined}>{money2(after)}</td>
@@ -446,6 +531,130 @@ function PersonRows({
           </td>
         </tr>
       ) : null}
+    </>
+  );
+}
+
+function formatHand(value: number | undefined): string {
+  const n = typeof value === "number" && Number.isFinite(value) ? value : 0;
+  return n.toFixed(2);
+}
+
+function sameHand(text: string, server: number | undefined): boolean {
+  const parsed = parseHandFillAmount(text.trim() === "" ? "0" : text.trim());
+  const target = typeof server === "number" && Number.isFinite(server) ? server : 0;
+  return parsed !== null && parsed === target;
+}
+
+function HandFillCells({
+  month,
+  person,
+  onDirty,
+  onSaved,
+}: {
+  month: string;
+  person: RealtimeSalaryPerson;
+  onDirty: (personKey: string, dirty: boolean) => void;
+  onSaved: () => Promise<void>;
+}) {
+  const [subsidyText, setSubsidyText] = useState(() => formatHand(person.subsidy));
+  const [bonusText, setBonusText] = useState(() => formatHand(person.bonus));
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const dirty = !sameHand(subsidyText, person.subsidy) || !sameHand(bonusText, person.bonus);
+
+  useEffect(() => {
+    onDirty(person.person_key, dirty);
+  }, [dirty, onDirty, person.person_key]);
+
+  useEffect(() => {
+    return () => onDirty(person.person_key, false);
+  }, [onDirty, person.person_key]);
+
+  async function onSave(event: { stopPropagation: () => void }) {
+    event.stopPropagation();
+    const subsidy = parseHandFillAmount(subsidyText.trim() === "" ? "0" : subsidyText.trim());
+    const bonus = parseHandFillAmount(bonusText.trim() === "" ? "0" : bonusText.trim());
+    if (subsidy === null || bonus === null) {
+      setError("补贴和奖金须为不小于 0 的金额，最多两位小数");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/salary/realtime", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          month,
+          person_name: person.person_key,
+          subsidy_amount: subsidy,
+          bonus_amount: bonus,
+        }),
+      });
+      if (res.status === 403) {
+        setError("当前角色不能修改补贴和奖金");
+        return;
+      }
+      if (res.status === 409) {
+        setError("补贴和奖金列还没就绪，暂时不能保存");
+        return;
+      }
+      if (!res.ok) {
+        setError("保存失败，请重试");
+        return;
+      }
+      await onSaved();
+    } catch {
+      setError("保存失败，请重试");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <td className="salary-hand-cell" onClick={(event) => event.stopPropagation()}>
+        <input
+          className="salary-hand-input"
+          inputMode="decimal"
+          aria-label={`${person.display_name} 补贴（元）`}
+          value={subsidyText}
+          disabled={busy}
+          onChange={(event) => {
+            setSubsidyText(event.target.value);
+            setError("");
+          }}
+        />
+      </td>
+      <td className="salary-hand-cell" onClick={(event) => event.stopPropagation()}>
+        <div className="salary-hand-save">
+          <input
+            className="salary-hand-input"
+            inputMode="decimal"
+            aria-label={`${person.display_name} 奖金（元）`}
+            value={bonusText}
+            disabled={busy}
+            onChange={(event) => {
+              setBonusText(event.target.value);
+              setError("");
+            }}
+          />
+          <button
+            type="button"
+            className="btn btn-ghost salary-row-edit"
+            disabled={busy || !dirty}
+            onClick={(event) => void onSave(event)}
+          >
+            {busy ? "保存中" : "保存"}
+          </button>
+        </div>
+        {error ? (
+          <p className="empty" role="alert" style={{ margin: "6px 0 0" }}>
+            {error}
+          </p>
+        ) : null}
+      </td>
     </>
   );
 }
