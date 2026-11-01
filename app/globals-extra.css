@@ -87,6 +87,27 @@ input.salary-hand-input {
   align-items: center;
   justify-content: flex-end;
 }
+/* 员工表：窄屏跟工资表一样横向滚动；上门底薪说明允许换行 */
+table.report.employee-roster { min-width: 760px; }
+table.report.employee-roster td { vertical-align: top; }
+.employee-roster-note { margin-top: 0; }
+.employee-roster-msg { margin: 0 0 14px; }
+.employee-cell-label,
+.employee-base-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  white-space: normal;
+  line-height: 1.45;
+}
+.employee-cell-label { margin-top: 0; margin-bottom: 6px; text-align: right; color: var(--muted); font-weight: 600; }
+.employee-cell-label.is-door,
+.employee-base-note,
+.field label.is-door-label { color: var(--notice-text); font-weight: 700; }
+table.report.employee-roster .inline-input { width: 100%; max-width: 168px; }
+.employee-row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.employee-row-actions .btn { min-height: 36px; padding: 4px 12px; }
 tr.mistake-editor > td {
   background: var(--bg-2);
   text-align: left;
