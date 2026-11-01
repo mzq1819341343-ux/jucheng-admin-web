@@ -484,8 +484,13 @@ export function buildRealtimeSalary(
   };
 }
 
-/** 人和合计都是 0 / 空时不展示配件列。 */
-export function showAccessoriesColumn(body: RealtimeSalaryResponse): boolean {
-  if (body.totals.accessories !== 0) return true;
-  return body.people.some((person) => person.accessories !== 0);
+/**
+ * 配件列始终露出。缺字段或当月没有抓到时金额是 0，列仍在。
+ * 真源由后端写入（加盟后台配件进销存 × 30%），这里不编数。
+ */
+export const ACCESSORIES_SOURCE_NOTE =
+  "配件金额来自加盟后台配件进销存 × 30%。当月没有抓到时显示 0。数字由后端写入。";
+
+export function showAccessoriesColumn(_body: RealtimeSalaryResponse): boolean {
+  return true;
 }

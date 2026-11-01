@@ -17,6 +17,7 @@ import {
   type SalaryMistakeDetail,
 } from "@/lib/salary-mistake";
 import {
+  ACCESSORIES_SOURCE_NOTE,
   formatShanghaiDateTime,
   handFillShown,
   parseHandFillAmount,
@@ -26,6 +27,7 @@ import {
   type RealtimeSalaryPerson,
   type RealtimeSalaryResponse,
 } from "@/lib/salary-realtime";
+import { SALARY_REALTIME_REFRESH_EVENT } from "@/lib/salary-realtime-refresh";
 
 /**
  * 实时工资 · 人效卡。老板 / 合伙人由工资页渲染；店员整卡不渲染。
@@ -88,6 +90,8 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
   const acceptedLeaveRef = useRef(false);
   const lastSignatureRef = useRef("");
   const salaryHrefRef = useRef("");
+  const inflightRef = useRef<AbortController | null>(null);
+  const hasPayloadRef = useRef(false);
 
   const onHandDirtyChange = useCallback((personKey: string, dirty: boolean) => {
     const keys = handDirtyKeys.current;
@@ -126,10 +130,17 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
 
   const loadPayload = useCallback(async (targetMonth: string, signal: AbortSignal, quiet: boolean) => {
     if (!quiet) {
+      hasPayloadRef.current = false;
       setPhase("loading");
       setMessage("");
       setPayload(null);
     }
+    const fail = (text: string) => {
+      if (signal.aborted) return;
+      if (quiet && hasPayloadRef.current) return;
+      setPhase("error");
+      setMessage(text);
+    };
     try {
       const res = await fetch(`/api/salary/realtime?month=${encodeURIComponent(targetMonth)}`, {
         cache: "no-store",
@@ -144,33 +155,38 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
         } catch {
           code = "";
         }
-        if (signal.aborted) return;
-        setPhase("error");
-        setMessage(messageFor(res.status, code));
+        fail(messageFor(res.status, code));
         return;
       }
       const body = (await res.json()) as RealtimeSalaryResponse;
       if (signal.aborted) return;
       if (!body || !Array.isArray(body.people) || !body.totals) {
-        setPhase("error");
-        setMessage("实时工资草案读取失败");
+        fail("实时工资草案读取失败");
         return;
       }
+      hasPayloadRef.current = true;
       setPayload(body);
       setPhase("ready");
     } catch {
-      if (signal.aborted) return;
-      setPhase("error");
-      setMessage("实时工资草案读取失败");
+      fail("实时工资草案读取失败");
     }
   }, []);
 
+  const beginLoad = useCallback(
+    (targetMonth: string, quiet: boolean) => {
+      inflightRef.current?.abort();
+      const ctrl = new AbortController();
+      inflightRef.current = ctrl;
+      return loadPayload(targetMonth, ctrl.signal, quiet);
+    },
+    [loadPayload]
+  );
+
   useEffect(() => {
-    const ctrl = new AbortController();
     setOpenKey(null);
-    void loadPayload(month, ctrl.signal, false);
-    return () => ctrl.abort();
-  }, [month, loadPayload]);
+    void beginLoad(month, false);
+    return () => inflightRef.current?.abort();
+  }, [month, beginLoad]);
 
   useEffect(() => {
     if (!editorDirty && !handDirty) return;
@@ -233,10 +249,15 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
     };
   }, [editorDirty, handDirty]);
 
-  const refreshQuiet = useCallback(() => {
-    const ctrl = new AbortController();
-    return loadPayload(month, ctrl.signal, true);
-  }, [loadPayload, month]);
+  const refreshQuiet = useCallback(() => beginLoad(month, true), [beginLoad, month]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void refreshQuiet();
+    };
+    window.addEventListener(SALARY_REALTIME_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(SALARY_REALTIME_REFRESH_EVENT, onRefresh);
+  }, [refreshQuiet]);
 
   const people = payload?.people ?? [];
   const empty = phase === "ready" && people.length === 0;
@@ -370,7 +391,7 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                     <th>上门（元）</th>
                     <th>线上（元）</th>
                     <th>门店（元）</th>
-                    {showAccessories ? <th>配件（元）</th> : null}
+                    {showAccessories ? <th title={ACCESSORIES_SOURCE_NOTE}>配件（元）</th> : null}
                     {handFill ? (
                       <>
                         <th>补贴（元）</th>
@@ -429,6 +450,9 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
                 口径：{payload.caliber}
               </p>
             ) : null}
+            <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
+              {ACCESSORIES_SOURCE_NOTE}
+            </p>
             <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
               {canEdit
                 ? handFill

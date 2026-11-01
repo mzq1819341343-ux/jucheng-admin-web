@@ -2,6 +2,7 @@ import { Fragment, Suspense } from "react";
 import loadable from "next/dynamic";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
+import FetchJobsCard from "@/components/FetchJobsCard";
 import RealtimePayrollCard from "@/components/RealtimePayrollCard";
 
 /**
@@ -66,12 +67,15 @@ export default async function SalaryPage() {
         </Suspense>
 
         {/* 员工表：老板可改 public.employees，合伙人只读，店员不渲染。
-            保存只写名单。人效卡仍走下面的 GET /api/salary/realtime，本卡不算工资。 */}
+            保存只写名单。成功后再 GET /api/salary/realtime。占位草案与底薪同步由服务端完成。 */}
         {user.role === "owner" || user.role === "partner" ? (
           <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
             <EmployeeRoster user={user} />
           </Suspense>
         ) : null}
+
+        {/* 数据抓取：只下发 /api/ops/fetch-jobs，状态只读 latest。店员不渲染。 */}
+        {user.role === "owner" || user.role === "partner" ? <FetchJobsCard role={user.role} /> : null}
 
         {/* 实时工资人效：老板 / 合伙人看按人草案（GET /api/salary/realtime）；
             店员整卡不渲染。失误合计同卡展示，事由与编辑仅老板。

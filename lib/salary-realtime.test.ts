@@ -120,7 +120,17 @@ describe("buildRealtimeSalary", () => {
     assert.equal(body.totals.gross, 4011.5);
     assert.equal(body.totals.deduction, null);
     assert.equal(body.totals.net, null);
-    assert.equal(showAccessoriesColumn(body), false);
+    assert.equal(showAccessoriesColumn(body), true);
+    assert.equal(body.totals.accessories, 0);
+  });
+
+  it("maps a missing accessories amount to 0 and still shows the column", () => {
+    const body = buildRealtimeSalary("2026-11", [
+      { person_name: "甲", base_amount: 2000, gross_amount: 2000 },
+    ]);
+    assert.equal(body.people[0]?.accessories, 0);
+    assert.equal(body.totals.accessories, 0);
+    assert.equal(showAccessoriesColumn(body), true);
   });
 
   it("shows accessories when any person is non-zero and sums nullable deduction", () => {
