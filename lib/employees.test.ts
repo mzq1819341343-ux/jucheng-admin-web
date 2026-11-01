@@ -58,6 +58,7 @@ describe("employees roster labels", () => {
     assert.equal(ROSTER_SAVED_MESSAGE, "已进测算名单");
     assert.match(ROSTER_EDIT_NOTE, /重新读取人效/);
     assert.match(ROSTER_EDIT_NOTE, /补贴和奖金/);
+    assert.match(ROSTER_EDIT_NOTE, /占位闸未开时不写入草案/);
   });
 });
 

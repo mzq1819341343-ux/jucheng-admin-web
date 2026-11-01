@@ -19,6 +19,8 @@ import {
   type EmploymentStatus,
   type WorkRole,
 } from "@/lib/employees";
+import { chooseEmployeeDraftMode, type DraftFollowUp } from "@/lib/employee-draft-ui";
+import { postEmployeeDraft } from "@/lib/employee-draft-client";
 import { requestSalaryRealtimeRefresh } from "@/lib/salary-realtime-refresh";
 import { createBrowserSupabase, isSupabaseConfigured } from "@/lib/supabase/config";
 import { runOptimistic } from "@/lib/optimistic";
@@ -26,8 +28,8 @@ import { runOptimistic } from "@/lib/optimistic";
 /**
  * 员工表：老板维护 public.employees，合伙人只读，店员工资页不挂本卡。
  * 写入走浏览器 Supabase 客户端，权限交给现有 RLS（owner 全权，partner 只 select）。
- * 成功提示「已进测算名单」，并请人效卡重新 GET realtime。
- * 占位草案和底薪同步由服务端完成。本卡不写 salary_realtime_draft，不触发上传/落库开关。
+ * 成功提示「已进测算名单」，再请服务端 Route 占位或同步底薪，并重读人效。
+ * 本卡不写 salary_realtime_draft，不跑脚本。闸未开时不报已写入草案。
  */
 
 export interface RosterMember {
@@ -73,6 +75,7 @@ export default function EmployeeRosterCard({
 }) {
   const [rows, setRows] = useState<EmployeeRow[]>(() => sortEmployees(initialRows));
   const [msg, setMsg] = useState<string | null>(null);
+  const [draftNote, setDraftNote] = useState<DraftFollowUp | null>(null);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
   const [base, setBase] = useState("2000");
@@ -87,9 +90,9 @@ export default function EmployeeRosterCard({
   const msgRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    if (msg !== ROSTER_SAVED_MESSAGE) return;
+    if (msg !== ROSTER_SAVED_MESSAGE && !draftNote) return;
     msgRef.current?.scrollIntoView({ block: "nearest" });
-  }, [msg]);
+  }, [msg, draftNote]);
 
   const offline = demo || !isSupabaseConfigured();
 
@@ -108,6 +111,7 @@ export default function EmployeeRosterCard({
     setEditStatus(row.employment_status);
     setEditAccount(row.user_id ?? "");
     setMsg(null);
+    setDraftNote(null);
   }
 
   async function persist(value: EmployeeWrite, previous: EmployeeRow | null) {
@@ -128,6 +132,7 @@ export default function EmployeeRosterCard({
       setRows(sortEmployees(next));
       setEditingId(null);
       if (!previous) resetAddForm();
+      setDraftNote(null);
       setMsg("演示模式不落库，未进测算名单");
       return;
     }
@@ -135,6 +140,7 @@ export default function EmployeeRosterCard({
     const snapshot = rows;
     setBusy(true);
     setMsg(null);
+    setDraftNote(null);
     const ok = await runOptimistic<EmployeeRow>({
       apply: () => {
         const draft = previous
@@ -173,6 +179,18 @@ export default function EmployeeRosterCard({
       setMsg(ROSTER_SAVED_MESSAGE);
       setEditingId(null);
       if (!previous) resetAddForm();
+      const mode = chooseEmployeeDraftMode(previous, value);
+      if (mode) {
+        const note = await postEmployeeDraft({
+          mode,
+          person_name: value.person_name,
+          base_salary: value.base_salary,
+          work_role: value.work_role,
+          employment_status: value.employment_status,
+          user_id: value.user_id,
+        });
+        setDraftNote(note);
+      }
       requestSalaryRealtimeRefresh();
     }
     setBusy(false);
@@ -189,10 +207,12 @@ export default function EmployeeRosterCard({
     });
     if (!parsed.ok) {
       setMsg(parsed.error);
+      setDraftNote(null);
       return;
     }
     if (duplicateName(rows, parsed.value.person_name)) {
       setMsg("这个姓名已在名单里");
+      setDraftNote(null);
       return;
     }
     await persist(parsed.value, null);
@@ -208,6 +228,7 @@ export default function EmployeeRosterCard({
     });
     if (!parsed.ok) {
       setMsg(parsed.error);
+      setDraftNote(null);
       return;
     }
     await persist(parsed.value, row);
@@ -222,10 +243,23 @@ export default function EmployeeRosterCard({
       <div className="card">
         <p className="page-desc employee-roster-note">{canEdit ? ROSTER_EDIT_NOTE : ROSTER_READ_NOTE}</p>
 
-        {msg ? (
-          <p className="access-msg employee-roster-msg" role="status" ref={msgRef}>
-            {msg === ROSTER_SAVED_MESSAGE ? <span className="tag tag-ok">{msg}</span> : msg}
-          </p>
+        {msg || draftNote ? (
+          <div ref={msgRef}>
+            {msg ? (
+              <p className="access-msg employee-roster-msg" role="status">
+                {msg === ROSTER_SAVED_MESSAGE ? <span className="tag tag-ok">{msg}</span> : msg}
+              </p>
+            ) : null}
+            {draftNote ? (
+              <p className="access-msg employee-roster-msg" role={draftNote.tone === "error" ? "alert" : "status"}>
+                {draftNote.tone === "error" ? (
+                  draftNote.text
+                ) : (
+                  <span className={draftNote.tone === "ok" ? "tag tag-ok" : "tag tag-pending"}>{draftNote.text}</span>
+                )}
+              </p>
+            ) : null}
+          </div>
         ) : null}
 
         {rows.length === 0 ? (
