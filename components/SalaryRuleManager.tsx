@@ -5,7 +5,8 @@ import type { SalaryRule } from "@/lib/data";
 import { money2 } from "@/lib/format";
 import {
   COMMISSION_RULES_EMPTY,
-  formatCommissionRuleLines,
+  salaryRuleClientView,
+  type CommissionRuleLine,
 } from "@/lib/commission-rules";
 import CommissionRuleText from "@/components/CommissionRuleText";
 import SalaryRuleVersionPreview from "@/components/SalaryRuleVersionPreview";
@@ -17,19 +18,24 @@ import { runOptimistic } from "@/lib/optimistic";
  * - 真实模式：新增 / 删除直接写 salary_rules（RLS 仅 owner 可写），updated_by 记当前用户；
  * - 演示模式：仅本地状态演示，不落库。
  * 规则结构（岗位/底薪/提成 JSON）是可配置骨架，老板发来正式体系后在此录入。
+ * 表格只收 salaryRuleClientView：显示列用短句，原始 commission_rules 不过客户端边界。
  */
+type SalaryRuleRow = Omit<SalaryRule, "commission_rules"> & {
+  commissionLines: CommissionRuleLine[];
+};
+
 export default function SalaryRuleManager({
   initialRules,
   demo,
   userId,
   months = [],
 }: {
-  initialRules: SalaryRule[];
+  initialRules: SalaryRuleRow[];
   demo: boolean;
   userId: string | null;
   months?: string[];
 }) {
-  const [rules, setRules] = useState<SalaryRule[]>(initialRules);
+  const [rules, setRules] = useState<SalaryRuleRow[]>(initialRules);
   // 指令53 D2：双版本预览跟随最近编辑生效月的规则（默认第一条），保存后即时翻转。
   const [previewRuleId, setPreviewRuleId] = useState<string | null>(initialRules[0]?.id ?? null);
   const [title, setTitle] = useState("");
@@ -76,7 +82,7 @@ export default function SalaryRuleManager({
       setMsg("生效起始月格式应为 YYYY-MM（可留空）");
       return;
     }
-    const draft: SalaryRule = {
+    const draft = salaryRuleClientView({
       id: `local-${Date.now()}`,
       title: title.trim(),
       base_salary: base,
@@ -84,7 +90,7 @@ export default function SalaryRuleManager({
       note: note.trim() || null,
       effective_from: eff === "" ? null : eff,
       updated_at: new Date().toISOString(),
-    };
+    });
     if (demo || !isSupabaseConfigured()) {
       setRules([draft, ...rules]);
       setPreviewRuleId(draft.id);
@@ -112,7 +118,7 @@ export default function SalaryRuleManager({
           .insert({
             title: draft.title,
             base_salary: draft.base_salary,
-            commission_rules: draft.commission_rules,
+            commission_rules: commission,
             note: draft.note,
             effective_from: draft.effective_from,
             updated_by: userId,
@@ -122,8 +128,9 @@ export default function SalaryRuleManager({
         return { data: data as SalaryRule | null, error };
       },
       commit: (data) => {
-        setRules([data, ...rules]);
-        setPreviewRuleId(data.id);
+        const row = salaryRuleClientView(data);
+        setRules([row, ...rules]);
+        setPreviewRuleId(row.id);
       },
       onError: (m) => setMsg(`保存失败，已回滚：${m}`),
     });
@@ -201,7 +208,7 @@ export default function SalaryRuleManager({
                   <td style={{ textAlign: "left" }}>{r.title}</td>
                   <td>{r.base_salary === null ? "待定" : money2(r.base_salary)}</td>
                   <td className="commission-cell">
-                    <CommissionRulesCell rules={r.commission_rules} baseSalary={r.base_salary} />
+                    <CommissionRulesCell lines={r.commissionLines} />
                   </td>
                   <td style={{ textAlign: "left", whiteSpace: "normal" }}>{r.note ?? "—"}</td>
                   <td>
@@ -265,17 +272,10 @@ export default function SalaryRuleManager({
 }
 
 /**
- * 「提成规则」列：中文多行，与「工资怎么算」同一套句子。
+ * 「提成规则」列：只渲染已经格式化的短句。
  * 空 / 无法解析显示「暂无提成细则」；未知键只留一行降色说明，不输出 JSON。
  */
-function CommissionRulesCell({
-  rules,
-  baseSalary,
-}: {
-  rules: SalaryRule["commission_rules"];
-  baseSalary: number | null;
-}) {
-  const lines = formatCommissionRuleLines(rules, baseSalary);
+function CommissionRulesCell({ lines }: { lines: CommissionRuleLine[] }) {
   if (lines.length === 0) {
     return <span style={{ color: "var(--muted)" }}>{COMMISSION_RULES_EMPTY}</span>;
   }
@@ -300,7 +300,7 @@ function EffectiveFromEditor({
   demo,
   onSaved,
 }: {
-  rule: SalaryRule;
+  rule: SalaryRuleRow;
   demo: boolean;
   onSaved: (id: string, value: string | null) => void;
 }) {

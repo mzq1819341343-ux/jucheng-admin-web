@@ -9,11 +9,13 @@ import { PAYROLL_CALIBER as CALIBER } from "./realtime-payroll";
  * - base_breakdown → 底薪（拆分：基础 / 全勤 / 拉新）
  * - online_order_pct → 线上订单提成
  * - store_tiers → 门店提成（订单金额不含券阶梯，取最高达成档）
- * - accessories_tiers → 配件提成
+ * - accessories_tiers → 配件提成（业绩阶梯）
+ * - accessories_pct → 配件提成（实付 × n%，现行口径；不再使用阶梯）
  * - door_profit_pct → 上门提成
  *
  * 空对象、非对象、解析失败 → 空数组，调用方显示「暂无提成细则」。
  * 顶层未知键不展开原文，只加一行「其它规则：已隐藏技术原文」。
+ * 过客户端边界用 salaryRuleClientView：页面载荷里只留短句，不带原始键名。
  */
 
 export const COMMISSION_RULES_EMPTY = "暂无提成细则";
@@ -24,11 +26,12 @@ const KNOWN_KEYS = new Set([
   "online_order_pct",
   "store_tiers",
   "accessories_tiers",
+  "accessories_pct",
   "door_profit_pct",
 ]);
 
 export type CommissionRuleLine = {
-  id: "base" | "online" | "store" | "accessories" | "door" | "hidden";
+  id: "base" | "online" | "store" | "accessories" | "accessoriesPaid" | "door" | "hidden";
   /** 含结尾冒号的加粗标签；隐藏行没有标签。 */
   label: string;
   body: string;
@@ -44,8 +47,9 @@ export function commissionRuleLineText(line: CommissionRuleLine): string {
 
 export function formatCommissionRuleLines(
   commissionRules: unknown,
-  baseSalary: number | null = null,
+  baseSalary: unknown = null,
 ): CommissionRuleLine[] {
+  const salary = asNum(baseSalary);
   const cr = asRulesObject(commissionRules);
   if (!cr) return [];
 
@@ -57,7 +61,7 @@ export function formatCommissionRuleLines(
     const attendance = asNum(base.attendance);
     const newCustomer = asNum(base.new_customer);
     const baseTotal =
-      baseSalary ??
+      salary ??
       (basic !== null || attendance !== null || newCustomer !== null
         ? (basic ?? 0) + (attendance ?? 0) + (newCustomer ?? 0)
         : null);
@@ -115,6 +119,17 @@ export function formatCommissionRuleLines(
     });
   }
 
+  const accessoriesPct = asNum(cr.accessories_pct);
+  if (accessoriesPct !== null) {
+    lines.push({
+      id: "accessoriesPaid",
+      label: "配件提成：",
+      body: `实付 × ${accessoriesPct}%`,
+      note: null,
+      muted: false,
+    });
+  }
+
   const doorPct = asNum(cr.door_profit_pct);
   if (doorPct !== null) {
     lines.push({
@@ -161,8 +176,30 @@ function asRulesObject(value: unknown): Record<string, unknown> | null {
   return asObj(value);
 }
 
+/** 数据库 numeric 常以字符串回来（如 "2000.00"）。只接受纯数字，避免把说明文字当成金额。 */
 function asNum(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value.trim())) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+type RuleWithCommission = {
+  commission_rules?: unknown;
+  base_salary?: unknown;
+};
+
+/** 给客户端表格的行：去掉 commission_rules，避免 RSC 载荷把原始 JSON 打进页面。 */
+export function salaryRuleClientView<T extends RuleWithCommission>(
+  rule: T,
+): Omit<T, "commission_rules"> & { commissionLines: CommissionRuleLine[] } {
+  const { commission_rules: raw, ...rest } = rule;
+  return {
+    ...rest,
+    commissionLines: formatCommissionRuleLines(raw, rule.base_salary),
+  };
 }
 
 function asObj(value: unknown): Record<string, unknown> | null {
