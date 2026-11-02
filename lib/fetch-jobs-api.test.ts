@@ -6,9 +6,13 @@ import {
   allocateFetchJobId,
   fetchJobsReadDecision,
   fetchJobsWriteDecision,
+  fetchRunsFailureLog,
   isFetchRunsUnavailable,
+  isTransientFetchQueryError,
   parseFetchJobCreateBody,
   queuedFetchRun,
+  retryFetchRunsRead,
+  shouldRetryFetchRunsRead,
   toLatestResponse,
 } from "./fetch-jobs-api.ts";
 
@@ -160,5 +164,92 @@ describe("missing salary_fetch_runs", () => {
     );
     assert.equal(isFetchRunsUnavailable({ code: "42501", message: "permission denied for table salary_fetch_runs" }), false);
     assert.equal(isFetchRunsUnavailable(null), false);
+  });
+});
+
+describe("latest read retry", () => {
+  it("retries network, timeout, and intermittent PostgREST only", () => {
+    assert.equal(shouldRetryFetchRunsRead({ code: "", message: "TypeError: fetch failed" }), true);
+    assert.equal(shouldRetryFetchRunsRead({ code: null, message: "connect ETIMEDOUT" }), true);
+    assert.equal(
+      shouldRetryFetchRunsRead({ code: "57014", message: "canceling statement due to statement timeout" }),
+      true
+    );
+    assert.equal(
+      shouldRetryFetchRunsRead({
+        code: "PGRST003",
+        message: "Timed out acquiring connection from the connection pool",
+      }),
+      true
+    );
+    assert.equal(isTransientFetchQueryError({ code: "08006", message: "connection failure" }), true);
+    assert.equal(shouldRetryFetchRunsRead({ code: "42501", message: "permission denied for table salary_fetch_runs" }), false);
+    assert.equal(
+      shouldRetryFetchRunsRead({ code: "42501", message: "permission denied after statement timeout" }),
+      false
+    );
+    assert.equal(
+      shouldRetryFetchRunsRead({ code: "42P01", message: 'relation "salary_fetch_runs" does not exist' }),
+      false
+    );
+    assert.equal(
+      shouldRetryFetchRunsRead({
+        code: "PGRST205",
+        message: "Could not find the table 'public.salary_fetch_runs' in the schema cache",
+      }),
+      false
+    );
+    assert.equal(shouldRetryFetchRunsRead({ code: "42703", message: 'column "old_machine" does not exist' }), false);
+    assert.equal(shouldRetryFetchRunsRead({ code: "23505", message: "duplicate key value violates unique constraint" }), false);
+    assert.equal(shouldRetryFetchRunsRead(null), false);
+  });
+
+  it("runs the same query a second time only after a transient error", async () => {
+    let calls = 0;
+    const recovered = await retryFetchRunsRead(async () => {
+      calls += 1;
+      if (calls === 1) return { data: null, error: { code: "", message: "TypeError: fetch failed" } };
+      return { data: { job_id: "fj_1" }, error: null };
+    });
+    assert.equal(calls, 2);
+    assert.equal(recovered.error, null);
+    assert.equal(recovered.data?.job_id, "fj_1");
+
+    calls = 0;
+    const denied = await retryFetchRunsRead(async () => {
+      calls += 1;
+      return { data: null, error: { code: "42501", message: "permission denied" } };
+    });
+    assert.equal(calls, 1);
+    assert.equal(denied.error?.code, "42501");
+
+    calls = 0;
+    const missing = await retryFetchRunsRead(async () => {
+      calls += 1;
+      return { data: null, error: { code: "42P01", message: 'relation "salary_fetch_runs" does not exist' } };
+    });
+    assert.equal(calls, 1);
+
+    calls = 0;
+    const stillDown = await retryFetchRunsRead(async () => {
+      calls += 1;
+      return { data: null, error: { code: "57014", message: "statement timeout" } };
+    });
+    assert.equal(calls, 2);
+    assert.equal(stillDown.error?.code, "57014");
+  });
+
+  it("logs only the supabase code and message", () => {
+    const logged = fetchRunsFailureLog({
+      code: "57014",
+      message: "canceling statement due to statement timeout",
+      details: "SUPABASE_SERVICE_ROLE_KEY=secret",
+      hint: "eyJhbGciOiJIUzI1NiJ9.secret",
+    });
+    assert.deepEqual(logged, {
+      code: "57014",
+      message: "canceling statement due to statement timeout",
+    });
+    assert.equal(JSON.stringify(logged).includes("secret"), false);
   });
 });

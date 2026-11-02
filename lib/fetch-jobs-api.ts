@@ -242,3 +242,73 @@ export function isFetchRunsUnavailable(error: {
   return /relation ["'](?:public\.)?salary_fetch_runs["'] does not exist/i.test(message)
     || (/could not find the table/i.test(message) && message.includes("salary_fetch_runs"));
 }
+
+/** Postgres 连接类、超时、死锁，以及 PostgREST 连不上库 / schema cache 还没好。 */
+const TRANSIENT_FETCH_QUERY_CODES = new Set([
+  "08000",
+  "08001",
+  "08003",
+  "08004",
+  "08006",
+  "08007",
+  "08P01",
+  "40001",
+  "40P01",
+  "53300",
+  "55P03",
+  "57014",
+  "57P01",
+  "57P02",
+  "57P03",
+  "PGRST000",
+  "PGRST001",
+  "PGRST002",
+  "PGRST003",
+]);
+
+const TRANSIENT_FETCH_QUERY_MESSAGE =
+  /fetch failed|failed to fetch|networkerror|network error|network request failed|timeout|timed out|econnreset|etimedout|eai_again|enotfound|econnrefused|epipe|socket hang up|und_err_|temporarily unavailable|bad gateway|gateway timeout|service unavailable|connection (?:terminated|reset|refused|closed)|could not connect/i;
+
+/**
+ * 网络、超时、间歇性 PostgREST。缺表、缺列、权限、唯一约束不是这类。
+ * 已有明确的非瞬时 code 时，不因为 message 里碰巧出现 timeout 就重试。
+ */
+export function isTransientFetchQueryError(error: {
+  code?: string | null;
+  message?: string | null;
+} | null | undefined): boolean {
+  if (!error) return false;
+  const code = (error.code ?? "").trim();
+  if (TRANSIENT_FETCH_QUERY_CODES.has(code) || code.startsWith("08")) return true;
+  if (code !== "") return false;
+  return TRANSIENT_FETCH_QUERY_MESSAGE.test(error.message ?? "");
+}
+
+/** 缺表不重试。只有瞬时错误才把同一条查询再跑一次。 */
+export function shouldRetryFetchRunsRead(error: {
+  code?: string | null;
+  message?: string | null;
+} | null | undefined): boolean {
+  if (!error || isFetchRunsUnavailable(error)) return false;
+  return isTransientFetchQueryError(error);
+}
+
+/** 同一条查询最多再跑一次。第二次的结果原样返回，由路由决定 503 / 500。 */
+export async function retryFetchRunsRead<T extends { error: { code?: string | null; message?: string | null } | null }>(
+  query: () => PromiseLike<T>
+): Promise<T> {
+  const first = await query();
+  if (!first.error || !shouldRetryFetchRunsRead(first.error)) return first;
+  return query();
+}
+
+/** 失败日志只留 code 和 message，不带 details、hint 或密钥。 */
+export function fetchRunsFailureLog(error: {
+  code?: string | null;
+  message?: string | null;
+}): { code: string | null; message: string | null } {
+  return {
+    code: typeof error.code === "string" ? error.code : null,
+    message: typeof error.message === "string" ? error.message : null,
+  };
+}

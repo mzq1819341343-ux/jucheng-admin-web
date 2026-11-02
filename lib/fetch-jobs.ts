@@ -87,6 +87,16 @@ export function fetchJobFailureMessage(status: number, action: "dispatch" | "sta
   return action === "dispatch" ? "任务下发失败" : "抓取状态读取失败";
 }
 
+/** 第一次状态读取失败后，仍显示「正在读取上次抓取」，稍等再试一次。 */
+export const FETCH_STATUS_RETRY_DELAY_MS = 400;
+
+/**
+ * 401/403 的登录与角色提示立刻显示。断网（status 为 null）和其它状态先静默再试一次。
+ */
+export function shouldRetryFetchStatusRead(status: number | null): boolean {
+  return status !== 401 && status !== 403;
+}
+
 export function parseFetchJobCreate(
   status: number,
   body: unknown,
