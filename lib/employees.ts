@@ -18,9 +18,24 @@ export const EMPLOYEE_COLUMNS =
 /** 保存成功后页面上的那一句。只在写入 employees 成功时使用。 */
 export const ROSTER_SAVED_MESSAGE = "已进测算名单";
 
-/** 老板看到的说明。保存只写 employees，成功后再读人效。 */
-export const ROSTER_EDIT_NOTE =
-  "保存写入测算名单。占位草案和底薪同步由服务端完成，保存成功后会重新读取人效。占位闸未开时不写入草案。上门与门店都按表内底薪保存和显示。底薪同步更新底薪和应发，补贴和奖金仍以人效卡里已手填的值为准。";
+/** 与闸无关：上门与门店都按表内底薪。 */
+const ROSTER_TABLE_BASE_NOTE = "上门与门店都按表内底薪保存和显示。";
+
+/**
+ * 老板看到的说明。闸开时写入当月草案占位，底薪变更同步草案底薪与应发。
+ * 补贴奖金口径仍以人效卡手填为准。
+ */
+export const ROSTER_EDIT_NOTE_OPEN =
+  "保存写入测算名单；新人在职可进当月实时草案占位，底薪变更同步当月草案底薪与应发；补贴奖金仍以人效卡手填为准。" +
+  ROSTER_TABLE_BASE_NOTE;
+
+/** 老板看到的说明。闸关时保存仍只写测算名单，不写入草案。 */
+export const ROSTER_EDIT_NOTE_CLOSED =
+  "保存写入测算名单；占位闸关闭时不写入草案；人效仍读已有实时草案。" + ROSTER_TABLE_BASE_NOTE;
+
+export function rosterEditNote(gateOpen: boolean): string {
+  return gateOpen ? ROSTER_EDIT_NOTE_OPEN : ROSTER_EDIT_NOTE_CLOSED;
+}
 
 /** 合伙人看到的说明。 */
 export const ROSTER_READ_NOTE =

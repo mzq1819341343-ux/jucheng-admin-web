@@ -130,6 +130,43 @@ table.report.employee-roster td { vertical-align: top; }
 }
 .fetch-jobs-lines dd { margin: 0; }
 table.report.employee-roster .inline-input { width: 100%; max-width: 168px; }
+/* 工资仪表盘：桌面按人表，窄屏改成合计加每人一行，展开看分项 */
+.salary-dashboard-note { margin: 8px 0 0; }
+.salary-dashboard-fetch { margin-top: 4px; }
+.salary-dashboard-desktop { display: block; }
+.salary-dashboard-mobile { display: none; }
+table.report.salary-dashboard { min-width: 1180px; }
+.salary-dashboard-total {
+  margin: 0;
+  padding: 4px 0 12px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.salary-dashboard-person { border-bottom: 1px solid var(--border-soft); }
+.salary-dashboard-person summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 0;
+  font-variant-numeric: tabular-nums;
+}
+.salary-dashboard-break { margin: 0; padding: 0 0 12px; }
+.salary-dashboard-break > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 16px;
+  padding: 3px 0;
+}
+.salary-dashboard-break dt { color: var(--muted); }
+.salary-dashboard-break dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 720px) {
+  .salary-dashboard-desktop { display: none; }
+  .salary-dashboard-mobile { display: block; }
+}
 .employee-row-actions { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .employee-row-actions .btn { min-height: 36px; padding: 4px 12px; }
 tr.mistake-editor > td {
