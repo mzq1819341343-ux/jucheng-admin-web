@@ -4,12 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   FETCH_JOBS_CREATE_PATH,
   FETCH_JOBS_NOT_READY,
+  FETCH_STATUS_RETRY_DELAY_MS,
   dedupeFetchJobMessages,
   fetchJobCreateBody,
   fetchJobsLatestPath,
   fetchLegLabel,
   parseFetchJobCreate,
   parseFetchJobLatest,
+  shouldRetryFetchStatusRead,
   type FetchJobLatest,
   type FetchJobScope,
 } from "@/lib/fetch-jobs";
@@ -28,6 +30,25 @@ async function readJson(res: Response): Promise<{ json: boolean; body: unknown }
   } catch {
     return { json: false, body: null };
   }
+}
+
+function pause(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal.aborted) {
+      resolve();
+      return;
+    }
+    let timer: ReturnType<typeof setTimeout>;
+    const finish = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    timer = setTimeout(() => {
+      signal.removeEventListener("abort", finish);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", finish, { once: true });
+  });
 }
 
 export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
@@ -51,27 +72,40 @@ export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
     }
     setStatusError("");
     setStatusMessage("正在读取上次抓取");
-    try {
-      const res = await fetch(fetchJobsLatestPath(targetMonth), { cache: "no-store", signal });
-      if (signal.aborted) return;
-      const parsedBody = await readJson(res);
-      if (signal.aborted) return;
-      if (monthRef.current !== targetMonth) return;
-      const parsed = parseFetchJobLatest(res.status, parsedBody.body, parsedBody.json);
-      if (!parsed.ok) {
-        setLatest(null);
-        setStatusMessage("");
-        setStatusError(parsed.message);
-        return;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let retry = false;
+      try {
+        const res = await fetch(fetchJobsLatestPath(targetMonth), { cache: "no-store", signal });
+        if (signal.aborted) return;
+        const parsedBody = await readJson(res);
+        if (signal.aborted) return;
+        if (monthRef.current !== targetMonth) return;
+        const parsed = parseFetchJobLatest(res.status, parsedBody.body, parsedBody.json);
+        if (parsed.ok) {
+          setLatest(parsed.latest);
+          setStatusError("");
+          setStatusMessage(parsed.latest.empty ? "这个月还没有抓取记录。" : "");
+          return;
+        }
+        retry = attempt === 0 && shouldRetryFetchStatusRead(res.status);
+        if (!retry) {
+          setLatest(null);
+          setStatusMessage("");
+          setStatusError(parsed.message);
+          return;
+        }
+      } catch {
+        if (signal.aborted) return;
+        retry = attempt === 0 && shouldRetryFetchStatusRead(null);
+        if (!retry) {
+          setLatest(null);
+          setStatusMessage("");
+          setStatusError(FETCH_JOBS_NOT_READY);
+          return;
+        }
       }
-      setLatest(parsed.latest);
-      setStatusError("");
-      setStatusMessage(parsed.latest.empty ? "这个月还没有抓取记录。" : "");
-    } catch {
-      if (signal.aborted) return;
-      setLatest(null);
-      setStatusMessage("");
-      setStatusError(FETCH_JOBS_NOT_READY);
+      await pause(FETCH_STATUS_RETRY_DELAY_MS, signal);
+      if (signal.aborted || monthRef.current !== targetMonth) return;
     }
   }, []);
 

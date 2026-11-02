@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   FETCH_JOBS_NOT_READY,
+  FETCH_STATUS_RETRY_DELAY_MS,
   dedupeFetchJobMessages,
   fetchJobCreateBody,
   fetchJobFailureMessage,
@@ -9,6 +10,7 @@ import {
   fetchLegLabel,
   parseFetchJobCreate,
   parseFetchJobLatest,
+  shouldRetryFetchStatusRead,
 } from "./fetch-jobs.ts";
 
 describe("fetch job create", () => {
@@ -78,6 +80,18 @@ describe("fetch job latest", () => {
     const missing = parseFetchJobLatest(404, "<html>", false);
     assert.equal(missing.ok, false);
     if (!missing.ok) assert.equal(missing.message, FETCH_JOBS_NOT_READY);
+  });
+
+  it("retries a status read once unless the failure is login or role", () => {
+    assert.equal(shouldRetryFetchStatusRead(401), false);
+    assert.equal(shouldRetryFetchStatusRead(403), false);
+    assert.equal(shouldRetryFetchStatusRead(500), true);
+    assert.equal(shouldRetryFetchStatusRead(503), true);
+    assert.equal(shouldRetryFetchStatusRead(null), true);
+    assert.equal(fetchJobFailureMessage(401, "status"), "未登录，无法读取抓取状态");
+    assert.equal(fetchJobFailureMessage(403, "status"), "当前角色不能查看抓取状态");
+    assert.equal(fetchJobFailureMessage(500, "status"), "抓取状态读取失败");
+    assert.equal(FETCH_STATUS_RETRY_DELAY_MS >= 200 && FETCH_STATUS_RETRY_DELAY_MS <= 800, true);
   });
 
   it("keeps a running leg out of the success label", () => {

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { readSalaryActor } from "@/lib/salary-actor";
 import {
   fetchJobsReadDecision,
+  fetchRunsFailureLog,
   isFetchRunsUnavailable,
+  retryFetchRunsRead,
   toLatestResponse,
   type FetchRunRow,
 } from "@/lib/fetch-jobs-api";
@@ -49,16 +51,20 @@ export async function GET(request: Request) {
   const db = createServiceRoleClient();
   if (!db) return json({ error: "fetch jobs unavailable" }, 503);
 
-  const result = await db
-    .from("salary_fetch_runs")
-    .select(LATEST_SELECT)
-    .eq("month", month)
-    .order("created_at", { ascending: false })
-    .order("job_id", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const readLatest = () =>
+    db
+      .from("salary_fetch_runs")
+      .select(LATEST_SELECT)
+      .eq("month", month)
+      .order("created_at", { ascending: false })
+      .order("job_id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+  const result = await retryFetchRunsRead(readLatest);
   if (result.error) {
     if (isFetchRunsUnavailable(result.error)) return json({ error: "fetch jobs unavailable" }, 503);
+    console.error("salary_fetch_runs latest failed", fetchRunsFailureLog(result.error));
     return json({ error: "query failed" }, 500);
   }
   return json(toLatestResponse((result.data ?? null) as FetchRunRow | null), 200);
