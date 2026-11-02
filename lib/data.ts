@@ -23,6 +23,7 @@ import {
 import {
   getSiteTargets as getSiteTargetsImpl,
   getSalaryRules as getSalaryRulesImpl,
+  getEmployees as getEmployeesImpl,
   getPublicSalaryRule as getPublicSalaryRuleImpl,
   getMySalary as getMySalaryImpl,
   getAllSalaryMonthly as getAllSalaryMonthlyImpl,
@@ -49,6 +50,7 @@ export const getFetchRefreshMarker = cache(getFetchRefreshMarkerImpl);
 
 export const getSiteTargets = cache(getSiteTargetsImpl);
 export const getSalaryRules = cache(getSalaryRulesImpl);
+export const getEmployees = cache(getEmployeesImpl);
 export const getPublicSalaryRule = cache(getPublicSalaryRuleImpl);
 export const getMySalary = cache(getMySalaryImpl);
 export const getAllSalaryMonthly = cache(getAllSalaryMonthlyImpl);

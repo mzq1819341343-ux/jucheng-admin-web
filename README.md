@@ -11,7 +11,7 @@
 
 - 禁止把工资原表和个人工资金额写进仓库。按人草案只在登录后从数据库读出，源码里不写姓名对应金额。
 - 禁止把密钥、密码写进代码。真值只填本地 `.env.local` 与 Vercel 项目里已有的环境变量，仓库里只有 `.env.example`。
-- 实时工资草案走只读 `GET /api/salary/realtime`（`salary_realtime_draft`）。已发布月度工资仍只走 `salary_monthly`。`lib/realtime-payroll.ts` 只留计薪口径，不放汇总额。上传开关在 ops 仓，`UPLOAD` / `APPLY` 保持 false。
+- 实时工资草案走 `GET /api/salary/realtime`（`salary_realtime_draft`）。`subsidy_amount` / `bonus_amount` 未落地时响应不带这两列，页面也不展示；落地后应发按底薪+上门+线上+门店+配件+补贴+奖金，老板 `PATCH` 只写补贴、奖金和这份应发。员工保存成功后，老板会话另调 `POST /api/salary/employee-draft`：服务端用 service role 给当月草案占位或同步底薪。闸是 `ALLOW_EMPLOYEE_DRAFT_WRITE`，默认关，不复用 `ALLOW_APPLY_REALTIME_DRAFT`。`2026-10` 拒绝。浏览器、店员和合伙人会话不写草案。已发布月度工资仍只走 `salary_monthly`。`lib/realtime-payroll.ts` 只留计薪口径，不放汇总额。上传开关在 ops 仓，`UPLOAD` / `APPLY` 保持 false。
 
 ## 本地运行
 

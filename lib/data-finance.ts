@@ -12,6 +12,8 @@ import { realMode, type CurrentUser } from "./data-core";
 import { STORE_LABEL, COST_TYPE_LABEL, STORE_SHORT_LABEL, type StoreScope, type CostType } from "./stores";
 import { EXPENSE_SCOPE_LABEL, type ExpenseScope, type ExpenseStatus } from "./expenses";
 import { money2 } from "./format";
+import { EMPLOYEE_COLUMNS, coerceEmployeeRow, sortEmployees, type EmployeeRow } from "./employees";
+export type { EmployeeRow };
 export type { StoreScope, CostType };
 export type { ExpenseScope, ExpenseStatus };
 export { EXPENSE_SCOPE_LABEL };
@@ -141,6 +143,32 @@ if (!error && data) return data as SalaryRule[];
 // 空态
 }
 return [];
+}
+
+/**
+ * 测算名单 public.employees（migration_012）。
+ * 老板与合伙人可读（RLS：owner 全权，partner 只 select）。店员不查。
+ * 演示 / 未登录返回空，不灌数。这里只读表，不算工资。
+ */
+export async function getEmployees(user: CurrentUser): Promise<EmployeeRow[]> {
+if (user.role !== "owner" && user.role !== "partner") return [];
+if (!realMode(user)) return [];
+try {
+const supabase = await createServerSupabase();
+const { data, error } = await supabase
+.from("employees")
+.select(EMPLOYEE_COLUMNS)
+.order("person_name", { ascending: true });
+if (error || !data) return [];
+const rows: EmployeeRow[] = [];
+for (const item of data) {
+const row = coerceEmployeeRow(item);
+if (row) rows.push(row);
+}
+return sortEmployees(rows);
+} catch {
+return [];
+}
 }
 
 /**

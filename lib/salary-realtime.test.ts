@@ -4,6 +4,12 @@ import {
   afterDeductionAmount,
   buildRealtimeSalary,
   formatShanghaiDateTime,
+  handFillShown,
+  handFillWriteDecision,
+  isMissingHandFillColumn,
+  parseHandFillAmount,
+  parseHandFillPatchBody,
+  payableGross,
   realtimeReadDecision,
   shanghaiYearMonth,
   showAccessoriesColumn,
@@ -114,7 +120,17 @@ describe("buildRealtimeSalary", () => {
     assert.equal(body.totals.gross, 4011.5);
     assert.equal(body.totals.deduction, null);
     assert.equal(body.totals.net, null);
-    assert.equal(showAccessoriesColumn(body), false);
+    assert.equal(showAccessoriesColumn(body), true);
+    assert.equal(body.totals.accessories, 0);
+  });
+
+  it("maps a missing accessories amount to 0 and still shows the column", () => {
+    const body = buildRealtimeSalary("2026-11", [
+      { person_name: "甲", base_amount: 2000, gross_amount: 2000 },
+    ]);
+    assert.equal(body.people[0]?.accessories, 0);
+    assert.equal(body.totals.accessories, 0);
+    assert.equal(showAccessoriesColumn(body), true);
   });
 
   it("shows accessories when any person is non-zero and sums nullable deduction", () => {
@@ -204,6 +220,62 @@ describe("buildRealtimeSalary", () => {
     assert.equal(body.as_of, null);
   });
 
+  it("keeps stored gross and omits subsidy until hand-fill columns are in the response", () => {
+    const body = buildRealtimeSalary("2026-10", [
+      {
+        person_name: "甲",
+        base_amount: 2000,
+        subsidy_amount: 50,
+        bonus_amount: 20,
+        gross_amount: 2000,
+      },
+    ]);
+    assert.equal(Object.hasOwn(body.people[0], "subsidy"), false);
+    assert.equal(Object.hasOwn(body.people[0], "bonus"), false);
+    assert.equal(Object.hasOwn(body.totals, "subsidy"), false);
+    assert.equal(body.people[0].gross, 2000);
+    assert.equal(handFillShown(body), false);
+  });
+
+  it("adds subsidy and bonus into gross only when the columns are present", () => {
+    const body = buildRealtimeSalary(
+      "2026-10",
+      [
+        {
+          person_name: "甲",
+          base_amount: 2000,
+          door_amount: 10,
+          online_amount: 1,
+          store_amount: 3,
+          accessories_amount: 4,
+          subsidy_amount: null,
+          bonus_amount: "6.00",
+          gross_amount: 2000,
+        },
+      ],
+      [{ person_name: "甲", mistake_total: 1.5 }, { person_name: "乙", mistake_total: 2 }],
+      { handFill: true }
+    );
+    const jia = body.people.find((person) => person.person_key === "甲");
+    const yi = body.people.find((person) => person.person_key === "乙");
+    assert.ok(jia);
+    assert.ok(yi);
+    assert.equal(jia.subsidy, 0);
+    assert.equal(jia.bonus, 6);
+    assert.equal(jia.gross, 2024);
+    assert.equal(jia.after_deduction, 2022.5);
+    assert.equal(jia.deduction, null);
+    assert.equal(yi.subsidy, 0);
+    assert.equal(yi.bonus, 0);
+    assert.equal(yi.gross, 0);
+    assert.equal(yi.in_draft, false);
+    assert.equal(body.totals.subsidy, 0);
+    assert.equal(body.totals.bonus, 6);
+    assert.equal(body.totals.gross, 2024);
+    assert.equal(handFillShown(body), true);
+    assert.equal(payableGross({ base: 0.1, door: 0.2, online: 0, store: 0, accessories: 0, subsidy: 0, bonus: 0 }), 0.3);
+  });
+
   it("uses the api after_deduction and falls back to gross minus mistake", () => {
     assert.equal(shownAfterDeduction({ gross: 10, mistake_total: 3, after_deduction: 7 }), 7);
     assert.equal(shownAfterDeduction({ gross: 10.1, mistake_total: 0.2 }), 9.9);
@@ -219,5 +291,54 @@ describe("Shanghai calendar", () => {
 
   it("formats as_of in Shanghai local time", () => {
     assert.equal(formatShanghaiDateTime("2026-10-30T04:00:00.000Z"), "2026-10-30 12:00");
+  });
+});
+
+describe("hand fill patch", () => {
+  it("allows owner only, and accepts zero subsidy and bonus", () => {
+    assert.equal(handFillWriteDecision({ authenticated: false, role: "owner" }), 401);
+    assert.equal(handFillWriteDecision({ authenticated: true, role: "partner" }), 403);
+    assert.equal(handFillWriteDecision({ authenticated: true, role: "staff" }), 403);
+    assert.equal(handFillWriteDecision({ authenticated: true, role: "owner" }), 200);
+    assert.equal(parseHandFillAmount(0), 0);
+    assert.equal(parseHandFillAmount("12.5"), 12.5);
+    assert.equal(parseHandFillAmount("-1"), null);
+    assert.equal(parseHandFillAmount(""), null);
+    const parsed = parseHandFillPatchBody({
+      month: "2026-11",
+      person_name: " 甲 ",
+      subsidy_amount: 0,
+      bonus_amount: "2.50",
+    });
+    assert.deepEqual(parsed, { ok: true, value: { month: "2026-11", person_name: "甲", subsidy: 0, bonus: 2.5 } });
+  });
+
+  it("rejects a client-supplied gross so the page cannot write a second formula", () => {
+    const parsed = parseHandFillPatchBody({
+      month: "2026-11",
+      person_name: "甲",
+      subsidy_amount: 1,
+      bonus_amount: 1,
+      gross_amount: 99,
+    });
+    assert.equal(parsed.ok, false);
+  });
+
+  it("treats a missing subsidy or bonus column as absent, and other errors as real failures", () => {
+    assert.equal(
+      isMissingHandFillColumn({
+        code: "42703",
+        message: 'column salary_realtime_draft.subsidy_amount does not exist',
+      }),
+      true
+    );
+    assert.equal(
+      isMissingHandFillColumn({
+        code: "PGRST204",
+        message: "Could not find the 'bonus_amount' column of 'salary_realtime_draft' in the schema cache",
+      }),
+      true
+    );
+    assert.equal(isMissingHandFillColumn({ code: "42501", message: "permission denied for table salary_realtime_draft" }), false);
   });
 });

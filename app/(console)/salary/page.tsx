@@ -2,6 +2,7 @@ import { Fragment, Suspense } from "react";
 import loadable from "next/dynamic";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
+import FetchJobsCard from "@/components/FetchJobsCard";
 import RealtimePayrollCard from "@/components/RealtimePayrollCard";
 
 /**
@@ -15,10 +16,14 @@ const SalaryRuleManager = loadable(() => import("@/components/SalaryRuleManager"
 const SalaryMonthlyImporter = loadable(() => import("@/components/SalaryMonthlyImporter"), {
   loading: () => <div className="skel skel-block" aria-hidden="true" />,
 });
+const EmployeeRosterCard = loadable(() => import("@/components/EmployeeRosterCard"), {
+  loading: () => <div className="skel skel-block" aria-hidden="true" />,
+});
 import {
   getCurrentUser,
   getPublicSalaryRule,
   getSalaryRules,
+  getEmployees,
   getMySalary,
   getAllSalaryMonthly,
   getSalaryStoreAgg,
@@ -62,6 +67,18 @@ export default async function SalaryPage() {
           <PublicSalaryRule user={user} />
         </Suspense>
 
+        {/* 员工表：老板可改 public.employees，合伙人只读，店员不渲染。
+            保存只写名单。成功后再 POST /api/salary/employee-draft，并 GET /api/salary/realtime。
+            浏览器不写 salary_realtime_draft。 */}
+        {user.role === "owner" || user.role === "partner" ? (
+          <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
+            <EmployeeRoster user={user} />
+          </Suspense>
+        ) : null}
+
+        {/* 数据抓取：只下发 /api/ops/fetch-jobs，状态只读 latest。店员不渲染。 */}
+        {user.role === "owner" || user.role === "partner" ? <FetchJobsCard role={user.role} /> : null}
+
         {/* 实时工资人效：老板 / 合伙人看按人草案（GET /api/salary/realtime）；
             店员整卡不渲染。失误合计同卡展示，事由与编辑仅老板。
             已发布月度工资仍走下方 salary_monthly。 */}
@@ -80,6 +97,18 @@ export default async function SalaryPage() {
         </Suspense>
       </main>
     </>
+  );
+}
+
+async function EmployeeRoster({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
+  const [rows, { members }] = await Promise.all([getEmployees(user), getAllMembers()]);
+  return (
+    <EmployeeRosterCard
+      initialRows={rows}
+      members={members.map((member) => ({ id: member.id, display_name: member.display_name }))}
+      canEdit={user.role === "owner"}
+      demo={user.demo}
+    />
   );
 }
 
