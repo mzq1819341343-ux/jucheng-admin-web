@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { readFileSync } from "node:fs";
 import {
-  ROSTER_EDIT_NOTE,
+  ROSTER_EDIT_NOTE_CLOSED,
+  ROSTER_EDIT_NOTE_OPEN,
   ROSTER_READ_NOTE,
   ROSTER_SAVED_MESSAGE,
   baseSalaryLabel,
   coerceEmployeeRow,
   duplicateName,
   parseEmployeeWrite,
+  rosterEditNote,
   sortEmployees,
   type EmployeeRow,
 } from "./employees.ts";
@@ -27,7 +30,12 @@ describe("employees roster labels", () => {
   it("uses the table base label for 上门 and 门店", () => {
     assert.equal(baseSalaryLabel("上门"), "底薪（元）");
     assert.equal(baseSalaryLabel("门店"), "底薪（元）");
-    assert.equal(`${baseSalaryLabel("上门")}${ROSTER_EDIT_NOTE}${ROSTER_READ_NOTE}`.includes("计薪按 0"), false);
+    assert.equal(
+      `${baseSalaryLabel("上门")}${ROSTER_EDIT_NOTE_OPEN}${ROSTER_EDIT_NOTE_CLOSED}${ROSTER_READ_NOTE}`.includes(
+        "计薪按 0",
+      ),
+      false,
+    );
   });
 
   it("uses the table base for 门店, including a boss stored as 门店", () => {
@@ -56,9 +64,39 @@ describe("employees roster labels", () => {
 
   it("uses the exact save confirmation and does not invent payroll fields", () => {
     assert.equal(ROSTER_SAVED_MESSAGE, "已进测算名单");
-    assert.match(ROSTER_EDIT_NOTE, /重新读取人效/);
-    assert.match(ROSTER_EDIT_NOTE, /补贴和奖金/);
-    assert.match(ROSTER_EDIT_NOTE, /占位闸未开时不写入草案/);
+  });
+
+  it("selects the open or closed permanent note from gateOpen", () => {
+    assert.equal(rosterEditNote(true), ROSTER_EDIT_NOTE_OPEN);
+    assert.equal(rosterEditNote(false), ROSTER_EDIT_NOTE_CLOSED);
+    assert.equal(
+      ROSTER_EDIT_NOTE_OPEN.startsWith(
+        "保存写入测算名单；新人在职可进当月实时草案占位，底薪变更同步当月草案底薪与应发；补贴奖金仍以人效卡手填为准。",
+      ),
+      true,
+    );
+    assert.match(ROSTER_EDIT_NOTE_OPEN, /上门与门店都按表内底薪保存和显示/);
+    assert.equal(ROSTER_EDIT_NOTE_OPEN.includes("占位闸"), false);
+    assert.equal(
+      ROSTER_EDIT_NOTE_CLOSED.startsWith(
+        "保存写入测算名单；占位闸关闭时不写入草案；人效仍读已有实时草案。",
+      ),
+      true,
+    );
+    assert.match(ROSTER_EDIT_NOTE_CLOSED, /上门与门店都按表内底薪保存和显示/);
+    assert.equal(ROSTER_EDIT_NOTE_CLOSED.includes("新人在职"), false);
+    assert.equal(ROSTER_EDIT_NOTE_CLOSED.includes("占位闸未开时不写入草案"), false);
+  });
+
+  it("passes gateOpen from the salary server component into the roster card", () => {
+    const page = readFileSync(new URL("../app/(console)/salary/page.tsx", import.meta.url), "utf8");
+    const card = readFileSync(new URL("../components/EmployeeRosterCard.tsx", import.meta.url), "utf8");
+    assert.match(page, /employeeDraftGateOpen\(process\.env\)/);
+    assert.match(page, /gateOpen=\{gateOpen\}/);
+    assert.equal(page.includes("NEXT_PUBLIC_ALLOW_EMPLOYEE_DRAFT_WRITE"), false);
+    assert.match(card, /rosterEditNote\(gateOpen\)/);
+    assert.equal(card.includes("占位闸未开时不写入草案"), false);
+    assert.equal(card.includes("NEXT_PUBLIC_"), false);
   });
 });
 

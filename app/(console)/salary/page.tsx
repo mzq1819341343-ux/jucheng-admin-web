@@ -4,6 +4,7 @@ import KpiCard, { KpiValue } from "@/components/KpiCard";
 import SalaryRuleCard from "@/components/SalaryRuleCard";
 import FetchJobsCard from "@/components/FetchJobsCard";
 import RealtimePayrollCard from "@/components/RealtimePayrollCard";
+import SalaryDashboardCard from "@/components/SalaryDashboardCard";
 
 /**
  * 指令170 C1/C6：老板区两个重型客户端组件（规则管理器含双版本预览、CSV 导入器）
@@ -34,6 +35,8 @@ import {
 } from "@/lib/data";
 import { STORE_LABEL } from "@/lib/stores";
 import { money, money2 } from "@/lib/format";
+import { employeeDraftGateOpen } from "@/lib/employee-draft";
+import { salaryDashboardVisible } from "@/lib/salary-dashboard";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +63,9 @@ export default async function SalaryPage() {
           {user.demo ? "｜演示模式（表单仅本地演示，不落库）" : ""}
           ｜工资由老板录入，本站不展示工资原表。
         </p>
+
+        {/* 仪表盘：老板 / 合伙人只读当月草案与上次抓取。店员不渲染。不写草案、不下发抓取。 */}
+        {salaryDashboardVisible(user.role) ? <SalaryDashboardCard /> : null}
 
         {/* 规则卡与角色区互相独立，并行取数，不再先等 getPublicSalaryRule 再查工资行。 */}
         <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
@@ -101,12 +107,14 @@ export default async function SalaryPage() {
 
 async function EmployeeRoster({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
   const [rows, { members }] = await Promise.all([getEmployees(user), getAllMembers()]);
+  const gateOpen = employeeDraftGateOpen(process.env);
   return (
     <EmployeeRosterCard
       initialRows={rows}
       members={members.map((member) => ({ id: member.id, display_name: member.display_name }))}
       canEdit={user.role === "owner"}
       demo={user.demo}
+      gateOpen={gateOpen}
     />
   );
 }

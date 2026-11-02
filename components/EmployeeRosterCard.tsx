@@ -5,7 +5,6 @@ import { money2 } from "@/lib/format";
 import {
   EMPLOYEE_COLUMNS,
   EMPLOYMENT_STATUSES,
-  ROSTER_EDIT_NOTE,
   ROSTER_READ_NOTE,
   ROSTER_SAVED_MESSAGE,
   WORK_ROLES,
@@ -13,6 +12,7 @@ import {
   coerceEmployeeRow,
   duplicateName,
   parseEmployeeWrite,
+  rosterEditNote,
   sortEmployees,
   type EmployeeRow,
   type EmployeeWrite,
@@ -67,11 +67,14 @@ export default function EmployeeRosterCard({
   members,
   canEdit,
   demo,
+  gateOpen,
 }: {
   initialRows: EmployeeRow[];
   members: RosterMember[];
   canEdit: boolean;
   demo: boolean;
+  /** 服务端 ALLOW_EMPLOYEE_DRAFT_WRITE。只选永久说明，不代替保存后的跟进文案。 */
+  gateOpen: boolean;
 }) {
   const [rows, setRows] = useState<EmployeeRow[]>(() => sortEmployees(initialRows));
   const [msg, setMsg] = useState<string | null>(null);
@@ -241,7 +244,7 @@ export default function EmployeeRosterCard({
         <span className="salary-kind salary-kind-draft">测算名单</span>
       </h2>
       <div className="card">
-        <p className="page-desc employee-roster-note">{canEdit ? ROSTER_EDIT_NOTE : ROSTER_READ_NOTE}</p>
+        <p className="page-desc employee-roster-note">{canEdit ? rosterEditNote(gateOpen) : ROSTER_READ_NOTE}</p>
 
         {msg || draftNote ? (
           <div ref={msgRef}>
