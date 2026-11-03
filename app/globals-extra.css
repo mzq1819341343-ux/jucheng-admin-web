@@ -190,7 +190,7 @@ button.salary-row-edit { margin-left: 8px; min-height: 32px; padding: 4px 10px; 
   white-space: nowrap;
 }
 .status-badge.is-done { color: var(--green); background: rgba(127, 176, 105, 0.12); }
-.status-badge.is-pending { color: var(--gold); background: rgba(216, 178, 90, 0.1); }
+.status-badge.is-pending { color: var(--primary); background: rgba(37, 99, 235, 0.1); }
 .status-badge.is-overdue { color: var(--negative); background: var(--negative-bg); border-color: var(--negative); margin-top: 4px; }
 .salary-import-table td { vertical-align: top; }
 .import-row-error td { background: var(--negative-bg); }
@@ -258,7 +258,7 @@ table.report tr.total td { font-weight: 700; background: var(--card-hover); bord
   bottom: 0;
   left: 0;
   width: 45%;
-  background: linear-gradient(100deg, transparent, rgba(217, 180, 60, 0.28), transparent);
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
   transform: translateX(-170%) skewX(-12deg);
   animation: sheen 3.6s ease-in-out infinite;
   pointer-events: none;
@@ -309,7 +309,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .field select:focus, .field textarea:focus {
   outline: none;
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 /* 并排表单行（工资规则 / 门店成本录入，指令41） */
 .form-row { display: flex; gap: 14px; flex-wrap: wrap; }
@@ -330,12 +330,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .inline-input:focus {
   outline: none;
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 .field input:focus {
   outline: none;
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.18);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 .error { color: var(--error); margin: 10px 0; font-size: 14.5px; }
 .notice {
@@ -444,7 +444,7 @@ footer.site-footer {
   z-index: -1;
   pointer-events: none;
   background-image:
-    radial-gradient(circle, rgba(201, 162, 39, 0.32) 1px, transparent 1.7px),
+    radial-gradient(circle, rgba(37, 99, 235, 0.32) 1px, transparent 1.7px),
     linear-gradient(rgba(128, 140, 165, 0.09) 1px, transparent 1px),
     linear-gradient(90deg, rgba(128, 140, 165, 0.09) 1px, transparent 1px);
   background-size: 132px 132px, 34px 34px, 34px 34px;
@@ -498,7 +498,7 @@ footer.site-footer {
    span 自首帧即占位（backwards 填充），容器尺寸不变、无 CLS；落稳保留静态轻金 glow，字本身不循环。 */
 .ink-char {
   display: inline-block;
-  text-shadow: 0 0 14px rgba(201, 162, 39, 0.28);
+  text-shadow: 0 0 14px rgba(37, 99, 235, 0.28);
   animation: inkChar 0.55s cubic-bezier(0.22, 0.8, 0.32, 1) backwards;
   animation-delay: calc(var(--ink-base, 0.25s) + var(--i, 0) * var(--ink-step, 0.075s));
 }
@@ -521,7 +521,7 @@ footer.site-footer {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(238, 211, 122, 0.95) 0%, rgba(201, 162, 39, 0.35) 45%, transparent 72%);
+  background: radial-gradient(circle, rgba(191, 219, 254, 0.95) 0%, rgba(37, 99, 235, 0.35) 45%, transparent 72%);
   opacity: 0.18;
   animation: techDotBreathe 5.6s ease-in-out infinite;
 }
@@ -542,7 +542,7 @@ footer.site-footer {
   left: -8%;
   width: 52%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.32), rgba(243, 224, 158, 0.5), rgba(201, 162, 39, 0.32), transparent);
+  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.32), rgba(191, 219, 254, 0.55), rgba(37, 99, 235, 0.32), transparent);
   opacity: 0;
   animation: techLineSweep 9s linear infinite;
 }
@@ -561,7 +561,7 @@ footer.site-footer {
      能量线 1px→2px、峰值 0.55→0.80、双条（b 条走弱化关键帧 0.42）；墨迹放慢到 2.25s 落稳。 */
   .login-wrap::before {
     background-image:
-      radial-gradient(circle, rgba(201, 162, 39, 0.5) 1px, transparent 1.7px),
+      radial-gradient(circle, rgba(37, 99, 235, 0.5) 1px, transparent 1.7px),
       linear-gradient(rgba(148, 162, 190, 0.19) 1px, transparent 1px),
       linear-gradient(90deg, rgba(148, 162, 190, 0.19) 1px, transparent 1px);
     -webkit-mask-image: radial-gradient(ellipse 106% 84% at 50% 40%, black 34%, transparent 88%);
@@ -585,7 +585,7 @@ footer.site-footer {
   /* 能量线加粗提亮：1px→2px、渐变峰 0.5→0.85、扫过峰值 0.55→0.80；a 条 7s 一圈必见，b 条放开并走弱化关键帧 */
   .tech-line {
     height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.5), rgba(243, 224, 158, 0.85), rgba(201, 162, 39, 0.5), transparent);
+    background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5), rgba(191, 219, 254, 0.85), rgba(37, 99, 235, 0.5), transparent);
   }
   .tech-line--a { animation-duration: 7s; }
   .tech-line--b { display: block; animation-name: techLineSweepSoft; animation-duration: 9.5s; }
@@ -658,75 +658,66 @@ footer.site-footer {
 }
 .login-title { font-size: 24px; }
 
-/* 中宽（901–1180px）：收起品牌装饰字，保证顶栏单行不溢出 */
-@media (max-width: 1180px) and (min-width: 901px) {
-  .brand-slogan, .brand-en { display: none; }
-  .topbar-inner { gap: 22px; padding: 16px 24px; }
-  .menu { gap: 20px; }
-}
-
-/* ---------- 响应式 · 导航收起（指令37：≤900px 汉堡 + 抽屉） ---------- */
+/* ---------- 响应式 · 左栏收成抽屉（≤900px 汉堡） ---------- */
 @media (max-width: 900px) {
-  .nav-burger { display: inline-flex; }
-  .topbar-inner { padding: 12px 60px 12px 18px; gap: 14px; flex-wrap: wrap; }
-  .brand-en { display: none; }
-  .brand-slogan { letter-spacing: 1.5px; font-size: 12.5px; }
-  /* 菜单 / 用户区 / 演示条默认收起，.nav-open 时展开为抽屉面板 */
-  .menu, .userbox, .demo-bar { display: none; }
-  .topbar.nav-open .menu {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 0 0 100%;
-    order: 5;
-    padding: 8px 0 4px;
-    border-top: 1px solid var(--border-soft);
-  }
-  .topbar.nav-open .menu a {
+  .nav-mobile-bar {
     display: flex;
     align-items: center;
-    min-height: 44px;
-    padding: 10px 6px;
-    font-size: 16px;
-    border-bottom: none;
-    border-radius: 8px;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 80;
+    min-height: var(--nav-mobile-h);
+    padding: 4px 12px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
   }
-  .topbar.nav-open .menu a:hover { background: var(--card-hover); }
-  /* 抽屉内「更多」：面板静态展开（不浮动），与抽屉链接同节奏 */
-  .topbar.nav-open .menu-more { flex: 0 0 100%; }
-  .topbar.nav-open .menu-more summary {
-    display: flex;
+  .nav-mobile-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .nav-burger {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
     align-items: center;
-    min-height: 44px;
-    padding: 10px 6px;
-    font-size: 16px;
-    border-bottom: none;
-    border-radius: 8px;
-  }
-  .topbar.nav-open .menu-more-panel {
-    position: static;
-    min-width: 0;
-    padding: 0 0 4px 16px;
+    justify-content: center;
     background: transparent;
-    border: none;
-    box-shadow: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 19px;
+    line-height: 1;
+    cursor: pointer;
+    flex: none;
   }
-  .topbar.nav-open .userbox {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    flex: 0 0 100%;
-    order: 6;
-    padding: 10px 0 12px;
-    border-top: 1px solid var(--border-soft);
+  .nav-burger:hover { border-color: var(--primary); color: var(--primary); }
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    top: var(--nav-mobile-h);
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    background: rgba(15, 23, 42, 0.45);
   }
-  .topbar.nav-open .demo-bar {
-    display: flex;
-    max-width: none;
-    margin: 0;
-    padding: 12px 18px 16px;
+  .sidebar {
+    top: var(--nav-mobile-h);
+    width: min(280px, 86vw);
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    z-index: 70;
   }
+  .sidebar.is-open { transform: translateX(0); }
+  .sidebar .menu a { min-height: 44px; font-size: 16px; }
+  .app-main,
+  body:has(.app-shell) .site-footer { margin-left: 0; }
+  .demo-bar { padding: 12px 16px; }
   .demo-note { font-size: 14px; }
 }
 
@@ -750,7 +741,7 @@ footer.site-footer {
   .card.table-wrap { padding: 14px 12px; }
   h1.page-title { font-size: 30px; }
   .section-title { font-size: 20px; margin: 40px 0 16px; }
-  .container { padding: 36px 18px 56px; }
+  .container { padding: 20px 18px 56px; }
   .biz-name { font-size: 25px; }
   .biz-card { padding: 26px 24px 24px; }
   .form-row { flex-direction: column; gap: 0; }
@@ -766,16 +757,12 @@ footer.site-footer {
   .kpi-hero .kpi-value { --kpi-fs: 50px; }
   .hero-net .kpi-value { --kpi-fs: 52px; }
   .biz-grid { grid-template-columns: 1fr; }
-  /* 指令52-6：≤400 临界收紧——品牌口号让位给汉堡区；英雄标签字距收窄防贴边 */
-  .brand-slogan { display: none; }
-  .brand-name { font-size: 28px; }
   .hero-net { padding: 24px 18px 22px; }
   .hero-net-label { letter-spacing: 0.08em; font-size: 13px; }
 }
 /* 折叠/拆解行标签允许收缩换行，金额保持不换行（指令52-6） */
 .net-line > span:first-child { min-width: 0; }
 .drill > summary .drill-name { min-width: 0; }
-.menu-more-panel { max-width: calc(100vw - 24px); }
 
 /* ---------- 报销分类统计行（指令46 B3/B6） ---------- */
 .cat-row {
@@ -857,7 +844,8 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 }
 
 /* ---------- 导航骨架（指令170 C5：loading.tsx 即时壳） ---------- */
-.skel { background: var(--card-2, #1a2438); border-radius: 10px; animation: skelPulse 1.4s ease-in-out infinite; }
+.skel { background: var(--border); border-radius: 10px; animation: skelPulse 1.4s ease-in-out infinite; }
+.sidebar .skel { background: rgba(232, 240, 250, 0.16); }
 .skel-eyebrow { width: 120px; height: 14px; margin: 6px 0 14px; }
 .skel-title { width: 240px; max-width: 60%; height: 34px; margin-bottom: 12px; }
 .skel-line { width: 420px; max-width: 85%; height: 14px; margin-bottom: 26px; }
@@ -869,4 +857,4 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 @media (max-width: 720px) { .skel-row { grid-template-columns: 1fr; } }
 
 /* ---------- 手册净化声明条（指令171） ---------- */
-.help-notice { margin: 14px 0 6px; padding: 12px 16px; border: 1px solid var(--gold, #C9A227); border-radius: 12px; color: var(--text); background: rgba(201, 162, 39, 0.08); font-size: 14.5px; line-height: 1.6; }
+.help-notice { margin: 14px 0 6px; padding: 12px 16px; border: 1px solid var(--primary); border-radius: 12px; color: var(--text); background: rgba(37, 99, 235, 0.08); font-size: 14.5px; line-height: 1.6; }
