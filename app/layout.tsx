@@ -20,8 +20,8 @@ export const metadata: Metadata = {
  */
 export const preferredRegion = "hkg1";
 
-/** 首帧渲染前从 localStorage 恢复主题（默认夜间），避免主题闪烁（指令34） */
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("jucheng-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();`;
+/** 本轮固定日间。忽略已存的夜间偏好，避免首帧闪回藏青金（指令34 的防闪脚本保留，只锁白天）。 */
+const THEME_INIT_SCRIPT = `(function(){try{document.documentElement.setAttribute("data-theme","light");}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" data-theme="dark" suppressHydrationWarning>
+    <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

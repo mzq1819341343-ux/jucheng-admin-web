@@ -1,75 +1,52 @@
 /* ============================================================
-   聚成公司后台 · 视觉体系（仅两套主题）
-   夜间（默认）：深藏青近黑 + 克制金色点缀（高端商务）
-   白天：html[data-theme="light"]，暖米浅底 + 同一金色点缀
-   颜色全部走 CSS 变量；主题切换由 ThemeToggle 写 data-theme + localStorage。
+   聚成公司后台 · 视觉体系（本轮只日间）
+   白底 + 蓝色主色；左侧栏深蓝。data-theme 固定 light，
+   不再提供藏青金夜间。--gold* 保留为别名，指向 primary，
+   既有强调色引用跟着变蓝，不改业务组件。
    ============================================================ */
 :root {
-  color-scheme: dark;
-  --bg: #0b1120;
-  --bg-2: #0d1425;
-  --card: #121a2c;
-  --card-hover: #17223a;
-  --border: #24314e;
-  --border-soft: #1c2946;
-  --text: #f2f5fa;
-  --muted: #93a1b8;
-  --label: #a9b8cf; /* KPI 标签/单位专用（指令39 第2轮）：比 muted 更亮，对比达标 */
-  --faint: #5f708f;
-  --gold: #c9a227;
-  --gold-bright: #d9b43c;
-  --gold-dim: rgba(201, 162, 39, 0.35);
-  --red: #e0655a;
-  --error: #e8837a;
-  --negative: #e8837a;
-  --negative-bg: rgba(224, 101, 90, 0.12);
-  --green: #43b581;
-  --on-gold: #0b1120;
-  --topbar-bg: rgba(14, 21, 38, 0.94);
-  --input-bg: #090e1a;
-  --thead-text: #b9c6dc;
-  --notice-bg: rgba(201, 162, 39, 0.07);
-  --notice-text: #e6d193;
-  --brand-glow: rgba(201, 162, 39, 0.38);
-  --card-highlight: rgba(255, 255, 255, 0.05);
-  --shadow: 0 18px 44px rgba(2, 6, 17, 0.5), 0 3px 10px rgba(2, 6, 17, 0.4);
-  --shadow-lift: 0 28px 64px rgba(2, 6, 17, 0.62), 0 6px 18px rgba(2, 6, 17, 0.45);
-  --serif: "Songti SC", "STSong", "Noto Serif SC", "SimSun", serif;
-  /* 楷体优先；本机没有楷体时落到系统中文黑体，避免缺字成方框。
-     末位用 sans-serif：Linux 上 serif 常是只有拉丁字形的字体。 */
-  --kaiti: "KaiTi", "楷体", "Kaiti SC", "STKaiti", "KaiTi_GB2312", "Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "微软雅黑", "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Droid Sans Fallback", sans-serif;
-}
-
-html[data-theme="light"] {
   color-scheme: light;
-  --bg: #f6f5f1;
-  --bg-2: #efeee8;
+  --bg: #f4f7fb;
+  --bg-2: #e7eef6;
   --card: #ffffff;
-  --card-hover: #faf9f5;
-  --border: #ddd9cf;
-  --border-soft: #e7e4db;
-  --text: #141a26;
-  --muted: #5c6577;
-  --label: #46536b; /* 浅底上约 7.4:1，强于 #5A6478 基线 */
-  --faint: #7c8496; /* 指令46 B7：原 #9aa1b1 在白底仅 2.59:1，页脚/占位符加深到达标装饰下限 */
-  --gold: #c9a227;
-  --gold-bright: #b28f1d;
-  --gold-dim: rgba(201, 162, 39, 0.45);
+  --card-hover: #f3f7fc;
+  --border: #d5deea;
+  --border-soft: #e4ebf3;
+  --text: #142033;
+  --muted: #5a6b82;
+  --label: #3e5168;
+  --faint: #6a7b94;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --on-primary: #ffffff;
+  /* 旧强调色名继续可用，值已换成主色蓝 */
+  --gold: var(--primary);
+  --gold-bright: var(--primary-hover);
+  --gold-dim: rgba(37, 99, 235, 0.35);
+  --on-gold: var(--on-primary);
   --red: #c0453b;
   --error: #c0453b;
   --negative: #a9342c;
   --negative-bg: rgba(192, 69, 59, 0.09);
   --green: #2e8b62;
-  --on-gold: #141a26;
-  --topbar-bg: rgba(250, 248, 243, 0.92);
+  --sidebar-bg: #0f2c59;
+  --sidebar-text: #e8f0fa;
+  --sidebar-muted: #8fa8c4;
+  --sidebar-active: #2563eb;
+  --sidebar-w: 240px;
+  --nav-mobile-h: 52px;
   --input-bg: #ffffff;
-  --thead-text: #4a5468;
-  --notice-bg: rgba(201, 162, 39, 0.1);
-  --notice-text: #7a5e10;
-  --brand-glow: rgba(201, 162, 39, 0.3);
+  --thead-text: #3e5168;
+  --notice-bg: rgba(37, 99, 235, 0.08);
+  --notice-text: #1e40af;
+  --brand-glow: rgba(37, 99, 235, 0.28);
   --card-highlight: rgba(255, 255, 255, 0);
-  --shadow: 0 18px 44px rgba(84, 72, 32, 0.13), 0 3px 10px rgba(84, 72, 32, 0.08);
-  --shadow-lift: 0 28px 64px rgba(84, 72, 32, 0.18), 0 6px 18px rgba(84, 72, 32, 0.1);
+  --shadow: 0 1px 2px rgba(20, 32, 51, 0.04), 0 8px 24px rgba(15, 44, 89, 0.06);
+  --shadow-lift: 0 12px 32px rgba(15, 44, 89, 0.1);
+  --serif: "Songti SC", "STSong", "Noto Serif SC", "SimSun", serif;
+  /* 楷体优先；本机没有楷体时落到系统中文黑体，避免缺字成方框。
+     末位用 sans-serif：Linux 上 serif 常是只有拉丁字形的字体。 */
+  --kaiti: "KaiTi", "楷体", "Kaiti SC", "STKaiti", "KaiTi_GB2312", "Songti SC", "STSong", "Noto Serif CJK SC", "Noto Serif SC", "Source Han Serif SC", "Source Han Serif CN", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "Microsoft YaHei", "微软雅黑", "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Droid Sans Fallback", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -86,19 +63,11 @@ html, body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 body {
-  background:
-    radial-gradient(1200px 520px at 50% -140px, #13223f 0%, rgba(11, 17, 32, 0) 60%),
-    var(--bg);
-  background-color: var(--bg);
-}
-html[data-theme="light"] body {
-  background:
-    radial-gradient(1200px 520px at 50% -140px, rgba(201, 162, 39, 0.08) 0%, rgba(246, 245, 241, 0) 60%),
-    var(--bg);
+  background: var(--bg);
   background-color: var(--bg);
 }
 
-::selection { background: rgba(201, 162, 39, 0.35); }
+::selection { background: rgba(37, 99, 235, 0.22); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -118,124 +87,118 @@ a:hover { text-decoration: none; }
   55%, 100% { transform: translateX(360%) skewX(-12deg); }
 }
 
-/* ---------- topbar ---------- */
-.topbar {
-  background: var(--topbar-bg);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  backdrop-filter: blur(10px);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-}
-.topbar-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 18px 32px;
-  display: flex;
-  align-items: center;
-  gap: 34px;
-  flex-wrap: nowrap; /* 指令51：桌面顶栏恒单行，次要链接走「更多」溢出菜单 */
-}
-.brand { display: flex; align-items: baseline; gap: 14px; flex: none; }
-.brand-name {
-  font-family: var(--serif);
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 5px;
-  line-height: 1;
-}
-.brand-slogan { color: var(--muted); font-size: 13.5px; letter-spacing: 3px; }
-.brand-en { color: var(--faint); font-size: 11px; letter-spacing: 5px; }
-.menu { display: flex; gap: 28px; flex: 1; flex-wrap: nowrap; align-items: center; min-width: 0; }
-.menu a {
-  color: var(--muted);
-  font-size: 15.5px;
-  padding: 6px 2px;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-.menu a:hover { color: var(--text); border-bottom-color: var(--gold); }
-/* 「更多」溢出菜单（指令51）：原生 details 下拉，无 JS 依赖 */
-.menu-more { position: relative; flex: none; }
-.menu-more summary {
-  list-style: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  color: var(--muted);
-  font-size: 15.5px;
-  padding: 6px 2px;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-  transition: color 0.2s ease, border-color 0.2s ease;
-}
-.menu-more summary::-webkit-details-marker { display: none; }
-.menu-more summary::after { content: "▾"; margin-left: 5px; font-size: 11px; color: var(--gold); }
-.menu-more summary:hover { color: var(--text); border-bottom-color: var(--gold); }
-.menu-more[open ] summary { color: var(--text); }
-.menu-more-panel {
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
-  z-index: 70;
-  min-width: 196px;
-  display: grid;
-  gap: 2px;
-  padding: 8px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
-}
-.menu-more-panel a {
-  padding: 10px 12px;
-  border-bottom: none;
-  border-radius: 8px;
-  font-size: 15px;
-}
-.menu-more-panel a:hover { background: var(--card-hover); border-bottom-color: transparent; }
-.userbox { display: flex; align-items: center; gap: 14px; flex: none; }
-.user-role { font-weight: 600; color: var(--gold); font-size: 14.5px; }
-.user-email { color: var(--muted); font-size: 13.5px; }
-.theme-toggle { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; border-radius: 10px; color: var(--label); }
-.theme-toggle svg { display: block; }
+/* ---------- 壳：左栏 + 内容 ---------- */
+.app-shell { min-height: 100vh; }
+.app-main { margin-left: var(--sidebar-w); min-width: 0; min-height: 100vh; }
+body:has(.app-shell) .site-footer { margin-left: var(--sidebar-w); }
 
-/* 汉堡按钮（指令37）：仅小屏出现，44×44 触控区，定位在顶栏右上角 */
-.nav-burger {
-  display: none;
-  position: absolute;
-  top: 10px;
-  right: 14px;
-  width: 44px;
-  height: 44px;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 19px;
-  line-height: 1;
-  cursor: pointer;
-  z-index: 60;
-  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.3s ease;
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  width: var(--sidebar-w);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 12px 16px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  overflow: hidden;
 }
-.nav-burger:hover { border-color: var(--gold); color: var(--gold); }
+.sidebar .brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 2px 10px 12px;
+  flex: none;
+}
+.sidebar .brand-name {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--sidebar-text);
+  letter-spacing: 4px;
+  line-height: 1.1;
+}
+.sidebar .brand-slogan {
+  color: var(--sidebar-muted);
+  font-size: 12px;
+  letter-spacing: 1px;
+  line-height: 1.45;
+}
+.sidebar .menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.sidebar .menu a {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--sidebar-text);
+  font-size: 14.5px;
+  line-height: 1.35;
+}
+.sidebar .menu a:hover {
+  background: rgba(59, 130, 246, 0.28);
+  color: #fff;
+}
+.sidebar .menu a[aria-current="page"] {
+  background: var(--sidebar-active);
+  color: #fff;
+  font-weight: 600;
+}
+.menu-rule {
+  height: 1px;
+  margin: 8px 10px;
+  background: rgba(232, 240, 250, 0.16);
+  flex: none;
+}
+.sidebar .userbox {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: auto;
+  padding: 12px 10px 0;
+  border-top: 1px solid rgba(232, 240, 250, 0.16);
+  flex: none;
+}
+.sidebar .user-role { font-weight: 600; color: var(--sidebar-text); font-size: 14px; }
+.sidebar .user-email { color: var(--sidebar-muted); font-size: 12.5px; word-break: break-all; }
+.sidebar .userbox .btn {
+  width: 100%;
+  color: var(--sidebar-text);
+  background: transparent;
+  border-color: rgba(232, 240, 250, 0.28);
+}
+.sidebar .userbox .btn:hover {
+  color: #fff;
+  background: rgba(59, 130, 246, 0.22);
+  border-color: #3b82f6;
+  transform: none;
+}
+
+.nav-mobile-bar { display: none; }
+.nav-backdrop { display: none; }
 
 .demo-bar {
-  max-width: 1280px;
-  margin: 0 auto 14px;
+  margin: 0;
   padding: 10px 32px;
   display: flex;
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
-  background: rgba(201, 162, 39, 0.06);
-  border-top: 1px dashed var(--gold-dim);
-  transition: background-color 0.3s ease;
+  background: rgba(37, 99, 235, 0.06);
+  border-bottom: 1px solid var(--border);
 }
 .demo-note { color: var(--muted); font-size: 13px; }
 .demo-switcher { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
@@ -260,7 +223,7 @@ a:hover { text-decoration: none; }
 .container {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 56px 32px 84px;
+  padding: 28px 32px 64px;
   animation: fadeUp 0.55s ease backwards;
 }
 /* 指令68-P1-T1（(b) 改良形）：总览页容器免入场动画——容器 fadeUp 会把英雄数字的
