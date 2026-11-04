@@ -93,6 +93,14 @@ a:hover { text-decoration: none; }
 body:has(.app-shell) .site-footer { margin-left: var(--sidebar-w); }
 
 .sidebar {
+  --nav-item-min: 2.5rem;
+  --nav-pad-y: 0.5rem;
+  --nav-pad-x: 0.75rem;
+  --nav-sub-indent: 0.7rem;
+  --nav-sub-fs: 0.84rem;
+  --nav-gap: 0.125rem;
+  --nav-fs: 0.9rem;
+  --nav-caret: 0.8rem;
   position: fixed;
   top: 0;
   left: 0;
@@ -132,23 +140,63 @@ body:has(.app-shell) .site-footer { margin-left: var(--sidebar-w); }
 .sidebar .menu {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--nav-gap);
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
-.sidebar .menu a {
+.sidebar .menu a,
+.sidebar .menu-group-toggle {
   display: flex;
   align-items: center;
-  min-height: 40px;
-  padding: 8px 12px;
+  width: 100%;
+  min-height: var(--nav-item-min);
+  padding: var(--nav-pad-y) var(--nav-pad-x);
+  border: 0;
   border-radius: 8px;
+  background: transparent;
   color: var(--sidebar-text);
-  font-size: 14.5px;
+  font: inherit;
+  font-size: var(--nav-fs);
   line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
 }
-.sidebar .menu a:hover {
+.sidebar .menu-group-toggle {
+  justify-content: space-between;
+  gap: var(--nav-pad-x);
+  font-weight: 600;
+}
+.sidebar .menu-caret {
+  width: var(--nav-caret);
+  height: var(--nav-caret);
+  flex: none;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  opacity: 0.75;
+}
+.sidebar .menu-group.is-open .menu-caret {
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.sidebar .menu-sub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--nav-gap);
+  margin: var(--nav-gap) 0 var(--nav-pad-y) var(--nav-sub-indent);
+  padding-left: var(--nav-sub-indent);
+  border-left: 1px solid rgba(232, 240, 250, 0.16);
+}
+.sidebar .menu-sub a {
+  font-size: var(--nav-sub-fs);
+}
+.sidebar .menu-sub[hidden] { display: none; }
+.sidebar .menu a:hover,
+.sidebar .menu-group-toggle:hover {
   background: rgba(59, 130, 246, 0.28);
+  color: #fff;
+}
+.sidebar .menu-group.is-active > .menu-group-toggle {
   color: #fff;
 }
 .sidebar .menu a[aria-current="page"] {
