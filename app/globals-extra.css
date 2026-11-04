@@ -677,7 +677,12 @@ footer.site-footer {
     z-index: 70;
   }
   .sidebar.is-open { transform: translateX(0); }
-  .sidebar .menu a { min-height: 44px; font-size: 16px; }
+  .sidebar {
+    --nav-item-min: 2.75rem;
+    --nav-fs: 1rem;
+    --nav-sub-fs: 1rem;
+    --nav-pad-y: 0.55rem;
+  }
   .app-main,
   body:has(.app-shell) .site-footer { margin-left: 0; }
   .demo-bar { padding: 12px 16px; }
@@ -1020,4 +1025,335 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   .salary-page .salary-ops {
     grid-template-columns: minmax(0, 1.55fr) minmax(var(--sal-ops-side), 0.85fr);
   }
+}
+
+.overview-page {
+  --ov-gap: 1rem;
+  --ov-stack: 1.75rem;
+  --ov-hero-pad-y: 1rem;
+  --ov-hero-pad-x: 1rem;
+  --ov-fold-pad-y: 0.2rem;
+  --ov-fold-pad-x: 1.25rem;
+  --ov-fold-num: 2rem;
+  --ov-block-gap: 1.75rem;
+  --ov-sight-min: 9.5rem;
+  --ov-note: 0.8125rem;
+  --ov-title: 1.5rem;
+  --ov-card-pad: 0.85rem 0.9rem;
+  --ov-card-value: 1.35rem;
+  --ov-card-label: 0.75rem;
+  --ov-chart-h: 9.5rem;
+  --ov-bar-h: 0.7rem;
+  --ov-cols: 6;
+  --ov-control: 2.75rem;
+  --ov-radius: 0.75rem;
+  --ov-c-recycle: #2563eb;
+  --ov-c-parts: #2e8b62;
+  --ov-c-online: #e07a2f;
+  --ov-quiet-pad-y: 0.9rem;
+  --ov-quiet-pad-x: 1.1rem;
+  --ov-quiet-name: 1.15rem;
+  --ov-quiet-title: 1rem;
+  --ov-wage-fs: clamp(1.75rem, 2.4vw, 2.25rem);
+}
+.overview-page .page-title { font-size: var(--ov-title); margin: 0; }
+.overview-page .ov-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--ov-gap);
+  flex-wrap: wrap;
+  margin-bottom: var(--ov-gap);
+}
+.overview-page .ov-toolbar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--ov-gap) * 0.5);
+  flex-wrap: wrap;
+}
+.overview-page .ov-query { color: var(--muted); font-size: var(--ov-note); }
+.overview-page .ov-month-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ov-control);
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--text);
+  font-size: var(--ov-note);
+}
+.overview-page .ov-month-btn[aria-current="page"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.overview-page .ov-metrics {
+  display: grid;
+  grid-template-columns: repeat(var(--ov-cols), minmax(0, 1fr));
+  gap: var(--ov-gap);
+}
+.overview-page .ov-metric,
+.overview-page .ov-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--ov-radius);
+  box-shadow: var(--shadow);
+}
+.overview-page .ov-metric { padding: var(--ov-card-pad); min-width: 0; }
+.overview-page .ov-metric-label,
+.overview-page .ov-panel-head h2 {
+  margin: 0;
+  color: var(--label);
+  font-size: var(--ov-card-label);
+  font-weight: 600;
+}
+.overview-page .ov-metric-value {
+  margin-top: calc(var(--ov-gap) * 0.35);
+  font-size: var(--ov-card-value);
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.overview-page .ov-metric-sub,
+.overview-page .ov-empty {
+  margin: calc(var(--ov-gap) * 0.35) 0 0;
+  color: var(--muted);
+  font-size: var(--ov-note);
+}
+.overview-page .ov-charts,
+.overview-page .ov-split,
+.overview-page .ov-rank {
+  display: grid;
+  gap: var(--ov-gap);
+  margin-top: var(--ov-gap);
+}
+.overview-page .ov-charts,
+.overview-page .ov-rank { grid-template-columns: 1fr 1fr; }
+.overview-page .ov-split { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+.overview-page .ov-panel { padding: var(--ov-card-pad); min-width: 0; }
+.overview-page .ov-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--ov-gap);
+  margin-bottom: calc(var(--ov-gap) * 0.6);
+}
+.overview-page .ov-panel-head span {
+  color: var(--muted);
+  font-size: var(--ov-note);
+  font-variant-numeric: tabular-nums;
+}
+.person-month {
+  --pm-gap: 1rem;
+  --pm-pad: 1.25rem;
+  --pm-cols: repeat(3, minmax(0, 1fr));
+}
+.person-month .pm-grid {
+  display: grid;
+  grid-template-columns: var(--pm-cols);
+  gap: var(--pm-gap);
+}
+.person-month .pm-field {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: var(--pm-pad);
+}
+.person-month .pm-label { color: var(--label); font-size: 0.8125rem; font-weight: 600; }
+.person-month .pm-value {
+  margin-top: calc(var(--pm-gap) * 0.35);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.person-month .pm-daily {
+  margin-top: var(--pm-gap);
+  padding: var(--pm-pad);
+  border-radius: 0.75rem;
+  background: var(--bg-2);
+  color: var(--muted);
+}
+.person-month .pm-note { margin: calc(var(--pm-gap) * 0.35) 0 0; font-size: 0.875rem; }
+@media (max-width: 720px) {
+  .person-month { --pm-cols: 1fr; --pm-pad: 1rem; }
+}
+#salary-people { scroll-margin-top: calc(var(--nav-mobile-h) + 0.75rem); }
+#salary-people:target { box-shadow: 0 0 0 2px var(--primary); }
+.overview-page a.ov-metric {
+  display: block;
+  color: inherit;
+}
+.overview-page a.ov-metric:hover { border-color: var(--primary); }
+.overview-page .ov-panel-head a { color: var(--primary); }
+.overview-page .ov-plot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--ov-gap) * 0.35);
+  min-height: var(--ov-chart-h);
+  border-radius: calc(var(--ov-radius) * 0.6);
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: var(--ov-note);
+}
+.overview-page .ov-plot-note { color: var(--faint); }
+.overview-page .ov-bar {
+  display: flex;
+  height: var(--ov-bar-h);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+.overview-page .ov-bar-recycle { display: block; width: 100%; background: var(--ov-c-recycle); }
+.overview-page .ov-legend {
+  list-style: none;
+  margin: var(--ov-gap) 0 0;
+  padding: 0;
+  display: grid;
+  gap: calc(var(--ov-gap) * 0.35);
+  color: var(--muted);
+  font-size: var(--ov-note);
+}
+.overview-page .ov-legend li { display: flex; align-items: center; gap: 0.45rem; }
+.overview-page .ov-swatch {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  flex: none;
+}
+.overview-page .ov-swatch-recycle { background: var(--ov-c-recycle); }
+.overview-page .ov-swatch-parts { background: var(--ov-c-parts); }
+.overview-page .ov-swatch-online { background: var(--ov-c-online); }
+.overview-page .ov-table { margin: 0; box-shadow: none; }
+.overview-page .ov-fold .hero-net .kpi-value { --kpi-fs: var(--ov-fold-num); }
+.overview-page .ov-fold { margin-top: var(--ov-gap); }
+.overview-page .ov-detail-stack {
+  display: grid;
+  gap: var(--ov-block-gap);
+  padding: var(--ov-gap) 0 var(--ov-block-gap);
+}
+.overview-page .ov-detail-block h3 {
+  margin: 0 0 calc(var(--ov-gap) * 0.65);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.overview-page .ov-fold,
+.overview-page .ov-detail-stack,
+.overview-page .ov-detail-block,
+.overview-page .ov-detail-block .ov-fold-body,
+.overview-page .ov-detail-block .net-panel,
+.overview-page .ov-detail-block .net-panel-breakdown,
+.overview-page .ov-detail-block .card,
+.overview-page .ov-detail-block .ov-wage {
+  min-width: 0;
+  max-width: 100%;
+}
+.overview-page .ov-detail-block .table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
+}
+.overview-page .ov-detail-block .hero-net,
+.overview-page .ov-detail-block .annual-strip { margin-top: 0; max-width: 100%; min-width: 0; }
+.overview-page .ov-detail-block .annual-strip { gap: 0.35rem 0.75rem; }
+.overview-page .ov-detail-block .annual-strip > span,
+.overview-page .ov-fold-note,
+.overview-page .ov-detail-block .hero-net-label,
+.overview-page .ov-detail-block .kpi-sub,
+.overview-page .ov-detail-block .kpi-label {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.overview-page .ov-detail-block .hero-net-label { letter-spacing: 0.04em; }
+.overview-page .ov-detail-block .net-line,
+.overview-page .ov-detail-block .drill > summary {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+.overview-page .ov-detail-block .sparkline {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+.overview-page .ov-detail-stack .ov-fold-body { padding-bottom: 0; }
+.overview-page .ov-detail-block .net-panel { margin-bottom: 0; }
+.overview-page .hero-net {
+  margin-top: var(--ov-gap);
+  padding: var(--ov-hero-pad-y) var(--ov-hero-pad-x);
+}
+.overview-page .ov-rates,
+.overview-page .annual-strip,
+.overview-page .ov-sight,
+.overview-page .ov-folds {
+  margin-top: var(--ov-gap);
+}
+.overview-page .ov-source,
+.overview-page .ov-marker .page-desc,
+.overview-page .ov-fold-note {
+  margin: 0 0 var(--ov-gap);
+  font-size: var(--ov-note);
+}
+.overview-page .ov-folds {
+  display: grid;
+  gap: var(--ov-gap);
+}
+.overview-page .ov-fold {
+  margin-top: 0;
+  padding: var(--ov-fold-pad-y) var(--ov-fold-pad-x) var(--ov-fold-pad-y);
+}
+.overview-page .ov-fold-body { padding-bottom: var(--ov-gap); }
+.overview-page .ov-fold .net-panel {
+  margin: 0 0 var(--ov-gap);
+  padding: 0 0 var(--ov-gap);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.overview-page .ov-wage { margin-bottom: var(--ov-gap); }
+.overview-page .ov-wage .kpi-value { --kpi-fs: var(--ov-wage-fs); }
+.overview-page .ov-sight.kpi-row-sm {
+  grid-template-columns: repeat(3, minmax(var(--ov-sight-min), 1fr));
+}
+.overview-page .section-title { margin: var(--ov-stack) 0 var(--ov-gap); }
+.overview-page .ov-quiet-title { font-size: var(--ov-quiet-title); }
+.overview-page .biz-card-quiet {
+  padding: var(--ov-quiet-pad-y) var(--ov-quiet-pad-x);
+  box-shadow: none;
+}
+.overview-page .biz-card-quiet .biz-name {
+  font-size: var(--ov-quiet-name);
+  margin-top: 0.2rem;
+}
+.overview-page .biz-card-quiet .biz-summary {
+  margin-top: 0.35rem;
+  font-size: var(--ov-note);
+}
+.overview-page .biz-card-quiet .biz-en { letter-spacing: 0.18em; }
+.overview-page .biz-card-quiet .biz-badge { margin-top: var(--ov-gap); }
+@media (max-width: 720px) {
+  .overview-page {
+    --ov-gap: 0.75rem;
+    --ov-stack: 1.25rem;
+    --ov-hero-pad-y: 0.85rem;
+    --ov-hero-pad-x: 0.85rem;
+    --ov-fold-pad-x: 0.85rem;
+    --ov-quiet-name: 1.05rem;
+    --ov-cols: 2;
+    --ov-card-value: 1.2rem;
+    --ov-chart-h: 7.5rem;
+    --ov-title: 1.35rem;
+    --ov-block-gap: 1.25rem;
+  }
+  .overview-page .ov-charts,
+  .overview-page .ov-split,
+  .overview-page .ov-rank { grid-template-columns: 1fr; }
 }

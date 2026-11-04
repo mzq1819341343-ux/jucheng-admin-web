@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import Link from "next/link";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import RealtimePayrollExport from "@/components/RealtimePayrollExport";
 import { money2 } from "@/lib/format";
@@ -296,7 +297,9 @@ export default function RealtimePayrollCard({
 
   return (
     <section aria-busy={phase === "loading"} aria-live="polite">
-      <h2 className="section-title">{summary === "table" ? "按人草案" : `实时工资 · 人效（${month}）`}</h2>
+      <h2 id={summary === "table" ? "salary-people" : undefined} className="section-title">
+        {summary === "table" ? "按人草案" : `实时工资 · 人效（${month}）`}
+      </h2>
 
       {monthProp === undefined ? (
         <div className="field salary-month">
@@ -340,7 +343,8 @@ export default function RealtimePayrollCard({
 
       {empty ? (
         <div className="card salary-gap">
-          <p className="empty">暂无数据</p>
+          <p className="empty">本月暂无草案</p>
+          <p className="page-desc">可切换月份，查看已有草案的月份。</p>
         </div>
       ) : null}
 
@@ -495,7 +499,12 @@ function PersonRows({
     <>
       <tr onClick={canEdit ? onToggle : undefined} style={canEdit ? { cursor: "pointer" } : undefined}>
         <td>
-          {person.display_name}
+          <Link
+            href={`/salary/people/${encodeURIComponent(person.person_key)}?month=${encodeURIComponent(month)}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {person.display_name}
+          </Link>
           {canEdit ? (
             <button
               type="button"
