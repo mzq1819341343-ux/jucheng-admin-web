@@ -1204,8 +1204,49 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   font-weight: 700;
   color: var(--text);
 }
+.overview-page .ov-fold,
+.overview-page .ov-detail-stack,
+.overview-page .ov-detail-block,
+.overview-page .ov-detail-block .ov-fold-body,
+.overview-page .ov-detail-block .net-panel,
+.overview-page .ov-detail-block .net-panel-breakdown,
+.overview-page .ov-detail-block .card,
+.overview-page .ov-detail-block .ov-wage {
+  min-width: 0;
+  max-width: 100%;
+}
+.overview-page .ov-detail-block .table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
+}
 .overview-page .ov-detail-block .hero-net,
-.overview-page .ov-detail-block .annual-strip { margin-top: 0; }
+.overview-page .ov-detail-block .annual-strip { margin-top: 0; max-width: 100%; min-width: 0; }
+.overview-page .ov-detail-block .annual-strip { gap: 0.35rem 0.75rem; }
+.overview-page .ov-detail-block .annual-strip > span,
+.overview-page .ov-fold-note,
+.overview-page .ov-detail-block .hero-net-label,
+.overview-page .ov-detail-block .kpi-sub,
+.overview-page .ov-detail-block .kpi-label {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.overview-page .ov-detail-block .hero-net-label { letter-spacing: 0.04em; }
+.overview-page .ov-detail-block .net-line,
+.overview-page .ov-detail-block .drill > summary {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+}
+.overview-page .ov-detail-block .sparkline {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
 .overview-page .ov-detail-stack .ov-fold-body { padding-bottom: 0; }
 .overview-page .ov-detail-block .net-panel { margin-bottom: 0; }
 .overview-page .hero-net {
