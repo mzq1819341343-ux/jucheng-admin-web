@@ -152,18 +152,10 @@ export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
 
   return (
     <section aria-label="数据抓取" aria-busy={busy}>
-      <h2 className="section-title salary-head">
-        <span className="salary-head-text">数据抓取</span>
-        <span className="salary-kind salary-kind-draft">只下发任务</span>
-      </h2>
+      <h2 className="section-title">数据抓取</h2>
       <div className="card">
-        <p className="page-desc" style={{ marginTop: 0 }}>
-          {canDispatch
-            ? "按月份下发抓取任务。全部包含旧机和配件，也可以只抓配件。这里提交任务并查看上次结果。配件金额由后端按加盟后台配件进销存 × 30% 写入人效。"
-            : "按月份查看上次抓取结果。下发由老板操作。配件金额由后端按加盟后台配件进销存 × 30% 写入人效。"}
-        </p>
         <div className="form-row">
-          <div className="field" style={{ flex: "0 1 220px", marginBottom: 0 }}>
+          <div className="field salary-month">
             <label htmlFor="fetch-jobs-month">抓取月份</label>
             <input
               id="fetch-jobs-month"
@@ -203,7 +195,7 @@ export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
               {message}
             </p>
           ))}
-          {statusMessage ? <p className="page-desc">{statusMessage}</p> : null}
+          {statusMessage ? <p className="salary-meta">{statusMessage}</p> : null}
           {latest && !latest.empty ? (
             <dl className="fetch-jobs-lines">
               <div>

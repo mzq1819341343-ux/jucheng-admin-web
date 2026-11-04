@@ -242,11 +242,6 @@ export default function SalaryMonthlyImporter({
 
   return (
     <div>
-      <p className="page-desc" style={{ marginBottom: 16 }}>
-        粘贴 CSV 或选择 .csv 文件。员工标识可填成员 ID，或成员页显示名（新账号默认显示名为邮箱）；
-        导入后一律为<strong>未发布</strong>，员工不可见，核对无误后还需在工资数据中发布。
-        {demo ? " 当前为演示模式：只解析预览，不写库。" : ""}
-      </p>
       <div className="form-row">
         <div className="field">
           <label htmlFor="salary-import-file">选择 CSV 文件</label>
@@ -258,7 +253,7 @@ export default function SalaryMonthlyImporter({
           />
           {fileName ? <div className="access-msg">已读取：{fileName}</div> : null}
         </div>
-        <div className="field" style={{ display: "flex", alignItems: "flex-end" }}>
+        <div className="field salary-field-end">
           <button type="button" className="btn btn-ghost" onClick={downloadTemplate}>
             下载空表模板 CSV
           </button>
@@ -285,7 +280,7 @@ export default function SalaryMonthlyImporter({
             未匹配 {demo ? "演示不校验匹配" : `${unmatchedCount} 行`}
             {demo ? "；演示模式不写库" : ""}。
           </div>
-          <div className="table-wrap" style={{ marginTop: 14 }}>
+          <div className="table-wrap salary-gap">
             <table className="report salary-import-table">
               <thead>
                 <tr>
@@ -334,13 +329,15 @@ export default function SalaryMonthlyImporter({
               </tbody>
             </table>
           </div>
-          <button type="button" className="btn" disabled={busy || demo || readyRows.length === 0} onClick={onImport} style={{ marginTop: 16 }}>
-            确认导入（全部未发布）
-          </button>
-          {demo ? <span className="access-msg" style={{ marginLeft: 12 }}>演示模式不写库</span> : null}
+          <div className="salary-actions-row salary-gap">
+            <button type="button" className="btn" disabled={busy || demo || readyRows.length === 0} onClick={onImport}>
+              确认导入（全部未发布）
+            </button>
+            {demo ? <span className="access-msg">演示模式不写库</span> : null}
+          </div>
         </>
       ) : (
-        <p className="empty">尚无待导入数据。空表模板只有表头，不含任何人员数据。</p>
+        <p className="empty">尚无待导入数据</p>
       )}
       {message ? <div className="access-msg" role="status">{message}</div> : null}
     </div>

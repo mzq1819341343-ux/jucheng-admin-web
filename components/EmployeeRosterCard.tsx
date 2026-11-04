@@ -5,14 +5,12 @@ import { money2 } from "@/lib/format";
 import {
   EMPLOYEE_COLUMNS,
   EMPLOYMENT_STATUSES,
-  ROSTER_READ_NOTE,
   ROSTER_SAVED_MESSAGE,
   WORK_ROLES,
   baseSalaryLabel,
   coerceEmployeeRow,
   duplicateName,
   parseEmployeeWrite,
-  rosterEditNote,
   sortEmployees,
   type EmployeeRow,
   type EmployeeWrite,
@@ -67,14 +65,11 @@ export default function EmployeeRosterCard({
   members,
   canEdit,
   demo,
-  gateOpen,
 }: {
   initialRows: EmployeeRow[];
   members: RosterMember[];
   canEdit: boolean;
   demo: boolean;
-  /** 服务端 ALLOW_EMPLOYEE_DRAFT_WRITE。只选永久说明，不代替保存后的跟进文案。 */
-  gateOpen: boolean;
 }) {
   const [rows, setRows] = useState<EmployeeRow[]>(() => sortEmployees(initialRows));
   const [msg, setMsg] = useState<string | null>(null);
@@ -239,13 +234,8 @@ export default function EmployeeRosterCard({
 
   return (
     <section aria-label="员工表">
-      <h2 className="section-title salary-head">
-        <span className="salary-head-text">员工表</span>
-        <span className="salary-kind salary-kind-draft">测算名单</span>
-      </h2>
+      <h2 className="section-title">员工表</h2>
       <div className="card">
-        <p className="page-desc employee-roster-note">{canEdit ? rosterEditNote(gateOpen) : ROSTER_READ_NOTE}</p>
-
         {msg || draftNote ? (
           <div ref={msgRef}>
             {msg ? (
@@ -266,9 +256,7 @@ export default function EmployeeRosterCard({
         ) : null}
 
         {rows.length === 0 ? (
-          <p className="empty">
-            {canEdit ? "暂无员工。新增后进入测算名单，这里不预填任何人。" : "暂无员工。"}
-          </p>
+          <p className="empty">暂无员工</p>
         ) : (
           <div className="table-wrap">
             <table className="report employee-roster">
@@ -408,7 +396,7 @@ export default function EmployeeRosterCard({
         )}
 
         {canEdit ? (
-          <form onSubmit={onAdd} style={{ marginTop: rows.length === 0 ? 8 : 20 }}>
+          <form onSubmit={onAdd} className="salary-stack">
             <div className="form-row">
               <div className="field">
                 <label htmlFor="emp-name">姓名</label>

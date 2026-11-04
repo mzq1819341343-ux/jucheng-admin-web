@@ -88,15 +88,16 @@ describe("employees roster labels", () => {
     assert.equal(ROSTER_EDIT_NOTE_CLOSED.includes("占位闸未开时不写入草案"), false);
   });
 
-  it("passes gateOpen from the salary server component into the roster card", () => {
+  it("keeps the draft gate on the server route and off the salary page", () => {
     const page = readFileSync(new URL("../app/(console)/salary/page.tsx", import.meta.url), "utf8");
     const card = readFileSync(new URL("../components/EmployeeRosterCard.tsx", import.meta.url), "utf8");
-    assert.match(page, /employeeDraftGateOpen\(process\.env\)/);
-    assert.match(page, /gateOpen=\{gateOpen\}/);
+    const route = readFileSync(new URL("../app/api/salary/employee-draft/route.ts", import.meta.url), "utf8");
     assert.equal(page.includes("NEXT_PUBLIC_ALLOW_EMPLOYEE_DRAFT_WRITE"), false);
-    assert.match(card, /rosterEditNote\(gateOpen\)/);
+    assert.equal(card.includes("rosterEditNote"), false);
+    assert.equal(card.includes("ROSTER_READ_NOTE"), false);
     assert.equal(card.includes("占位闸未开时不写入草案"), false);
     assert.equal(card.includes("NEXT_PUBLIC_"), false);
+    assert.match(route, /employeeDraftGateOpen\(process\.env\)/);
   });
 });
 

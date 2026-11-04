@@ -24,10 +24,12 @@ describe("salary dashboard audience", () => {
 
   it("mounts the read-only card from the salary page for that audience", () => {
     const page = readFileSync(new URL("../app/(console)/salary/page.tsx", import.meta.url), "utf8");
+    const board = readFileSync(new URL("../components/SalaryLiveBoard.tsx", import.meta.url), "utf8");
     const card = readFileSync(new URL("../components/SalaryDashboardCard.tsx", import.meta.url), "utf8");
-    assert.match(page, /salaryDashboardVisible\(user\.role\) \? <SalaryDashboardCard \/>/);
+    assert.match(page, /<SalaryLiveBoard role=\{user\.role\} \/>/);
+    assert.match(board, /<SalaryDashboardCard month=\{month\} metricsOnly \/>/);
     assert.match(card, /\/api\/salary\/realtime\?month=/);
-    assert.match(card, /fetchJobsLatestPath/);
+    assert.equal(card.includes("fetchJobsLatestPath"), false);
     assert.equal(card.includes("FETCH_JOBS_CREATE_PATH"), false);
     assert.equal(card.includes('method: "POST"'), false);
     assert.equal(card.includes('method: "PATCH"'), false);
