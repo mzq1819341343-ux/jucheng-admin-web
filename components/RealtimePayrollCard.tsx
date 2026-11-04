@@ -343,7 +343,8 @@ export default function RealtimePayrollCard({
 
       {empty ? (
         <div className="card salary-gap">
-          <p className="empty">暂无数据</p>
+          <p className="empty">本月暂无草案</p>
+          <p className="page-desc">可切换月份，查看已有草案的月份。</p>
         </div>
       ) : null}
 

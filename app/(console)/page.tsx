@@ -37,8 +37,9 @@ import { loadMistakeTotals } from "@/lib/salary-mistake-query";
 import {
   buildRealtimeSalary,
   isMissingHandFillColumn,
+  isYearMonth,
   realtimeReadDecision,
-  type RealtimeSalaryTotals,
+  type RealtimeSalaryResponse,
   type SalaryRealtimeDraftRow,
   shanghaiYearMonth,
 } from "@/lib/salary-realtime";
@@ -97,7 +98,23 @@ function MetricSlot({
 const DRAFT_SELECT =
   "person_name, user_id, as_of, base_amount, door_amount, online_amount, store_amount, accessories_amount, gross_amount, deduction_amount, net_amount, caliber";
 
-async function loadPayrollTotals(month: string): Promise<RealtimeSalaryTotals | null> {
+async function loadLatestDraftMonth(): Promise<string | null> {
+  const actor = await readSalaryActor();
+  if (!actor.ok) return null;
+  if (realtimeReadDecision({ month: "2000-01", authenticated: true, role: actor.role }) !== 200) return null;
+  const { data, error } = await actor.supabase.from("salary_realtime_draft").select("month, person_name");
+  if (error || !data) return null;
+  let latest: string | null = null;
+  for (const row of data as { month?: unknown; person_name?: unknown }[]) {
+    const month = typeof row.month === "string" ? row.month : "";
+    const name = typeof row.person_name === "string" ? row.person_name.trim() : "";
+    if (!isYearMonth(month) || name === "") continue;
+    if (latest === null || month > latest) latest = month;
+  }
+  return latest;
+}
+
+async function loadPayrollTotals(month: string): Promise<RealtimeSalaryResponse | null> {
   const actor = await readSalaryActor();
   if (!actor.ok) return null;
   if (realtimeReadDecision({ month, authenticated: true, role: actor.role }) !== 200) return null;
@@ -118,7 +135,7 @@ async function loadPayrollTotals(month: string): Promise<RealtimeSalaryTotals | 
   }
   const mistakes = await loadMistakeTotals(actor.supabase, month);
   if (!mistakes.ok) return null;
-  return buildRealtimeSalary(month, rows, mistakes.rows, { handFill }).totals;
+  return buildRealtimeSalary(month, rows, mistakes.rows, { handFill });
 }
 
 export default async function OverviewPage({
@@ -161,7 +178,8 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
 
   const sensitive = canSeeSensitive(user.role);
   const withData = hasAihuishou && sensitive;
-  const [combinedMetrics, wandaMetrics, friendshipMetrics, costs, expenseInput, detailRows, allClaims, siteTargets, refreshMarker] =
+  const canReadPayroll = (user.role === "owner" || user.role === "partner") && realMode(user);
+  const [combinedMetrics, wandaMetrics, friendshipMetrics, costs, expenseInput, detailRows, allClaims, siteTargets, refreshMarker, latestDraftMonth] =
     await Promise.all([
       getMetrics("combined", user.role),
       hasAihuishou ? getMetrics("wanda", user.role) : Promise.resolve({ rows: [] as MetricRow[], fromDb: false }),
@@ -180,13 +198,14 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
       hasAihuishou
         ? getFetchRefreshMarker(user)
         : Promise.resolve<FetchRefreshMarker | null>(null),
+      canReadPayroll ? loadLatestDraftMonth() : Promise.resolve<string | null>(null),
     ]);
   const rows = combinedMetrics.rows;
   const latest = rows[rows.length - 1];
   const calendarMonth = shanghaiYearMonth();
   const prevCalendarMonth = shiftMonth(calendarMonth, -1);
   const requested = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : null;
-  const selected = requested ?? latest?.month ?? calendarMonth;
+  const selected = requested ?? latestDraftMonth ?? latest?.month ?? calendarMonth;
   const selectedRow = rows.find((r) => r.month === selected);
   const reviewMonths = rows.map((r) => ({ month: r.month, profit: r.profit ?? null, orders: r.orders ?? null }));
   if (!reviewMonths.some((r) => r.month === selected)) {
@@ -215,12 +234,12 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
     return { scope, row: source.find((r) => r.month === selected) };
   });
   const recycle = typeof selectedRow?.profit === "number" ? selectedRow.profit : null;
-  const payroll =
-    (user.role === "owner" || user.role === "partner") && realMode(user)
-      ? await loadPayrollTotals(selected)
-      : null;
+  const payroll = canReadPayroll ? await loadPayrollTotals(selected) : null;
+  const hasRoster = Boolean(payroll && payroll.people.length > 0);
   const reportsHref = `/business/aihuishou/reports?month=${selected}`;
-  const salaryHref = `/salary?month=${selected}#salary-people`;
+  const salaryHref = hasRoster
+    ? `/salary?month=${selected}#salary-people`
+    : `/salary?month=${selected}`;
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
   const wageNote = wageCheckNote(operating.annual);
@@ -369,27 +388,27 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
               <MetricSlot
                 href={salaryHref}
                 label="配件"
-                text={payroll ? `${money2(payroll.accessories)} 元` : "暂无"}
-                kind={payroll ? "num" : "note"}
+                text={hasRoster ? `${money2(payroll!.totals.accessories)} 元` : "暂无"}
+                kind={hasRoster ? "num" : "note"}
               />
               <MetricSlot
                 href={salaryHref}
                 label="网单"
-                text={payroll ? `${money2(payroll.online)} 元` : "暂无"}
-                kind={payroll ? "num" : "note"}
+                text={hasRoster ? `${money2(payroll!.totals.online)} 元` : "暂无"}
+                kind={hasRoster ? "num" : "note"}
               />
               <MetricSlot
                 href={salaryHref}
                 label="失误"
-                text={payroll ? `${money2(payroll.mistake_total)} 元` : "暂无"}
-                kind={payroll ? "num" : "note"}
+                text={hasRoster ? `${money2(payroll!.totals.mistake_total)} 元` : "暂无"}
+                kind={hasRoster ? "num" : "note"}
               />
               {sensitive ? (
                 <MetricSlot
                   href={salaryHref}
                   label="当月工资"
-                  text={typeof selectedRow?.wage_cost === "number" ? `${money(selectedRow.wage_cost)} 元` : "暂无"}
-                  kind={typeof selectedRow?.wage_cost === "number" ? "num" : "note"}
+                  text={hasRoster ? `${money2(payroll!.totals.gross)} 元` : "暂无"}
+                  kind={hasRoster ? "num" : "note"}
                   sub={monthLabel(selected)}
                 />
               ) : null}
