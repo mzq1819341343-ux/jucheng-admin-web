@@ -81,10 +81,17 @@ function NavFolder({
         onClick={() => setOpen((v) => !v)}
       >
         <span>{label}</span>
-        <span className="menu-caret" aria-hidden="true" />
       </button>
-      <div className="menu-sub" id={id} role="group" aria-label={label} hidden={!open}>
-        {children}
+      <div className="menu-sub-clip">
+        <div
+          className="menu-sub"
+          id={id}
+          role="group"
+          aria-label={label}
+          inert={!open ? true : undefined}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );
