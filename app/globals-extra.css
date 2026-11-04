@@ -16,10 +16,9 @@ table.report td.commission-cell {
   overflow-wrap: break-word;
 }
 .commission-lines > div + div { margin-top: 4px; }
-/* 工资页与规则卡：楷体，缺字落到系统中文（--kaiti），避免方框 */
-.salary-page,
-.rule-card {
-  font-family: var(--kaiti);
+/* 工资页与壳正文同一套字体。字阶、圆角、内边距、间距走 .salary-page 上的 --sal-*。 */
+.salary-page {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
 }
 .salary-page :where(input, button, select, textarea) {
   font-family: inherit;
@@ -880,7 +879,54 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 .salary-page .kpi-hero .kpi-value { --kpi-fs: var(--sal-fs-kpi); }
 .salary-page .kpi-label { font-size: var(--sal-fs-meta); margin-bottom: calc(var(--sal-gap) * 0.5); }
 .salary-page .kpi-wide { grid-column: auto; }
-.salary-page .salary-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.salary-page .salary-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+}
+.salary-page .salary-metrics > .kpi-card {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+}
+.salary-page .salary-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sal-gap);
+}
+.salary-page .salary-toolbar .salary-actions-row { margin-left: auto; }
+.salary-page .btn {
+  font-size: var(--sal-fs-body);
+  font-family: inherit;
+  border-radius: var(--sal-radius);
+}
+.salary-page .field label { font-size: var(--sal-fs-meta); margin-bottom: calc(var(--sal-gap) * 0.35); }
+.salary-page .salary-tier .field { margin-bottom: 0; }
+.salary-page .field input,
+.salary-page .field select,
+.salary-page .field textarea {
+  font-size: var(--sal-fs-body);
+  border-radius: var(--sal-radius);
+  min-height: var(--sal-control);
+}
+.salary-page .salary-tier {
+  display: grid;
+  gap: var(--sal-stack);
+}
+.salary-page .salary-tier-block { min-width: 0; }
+.salary-page .salary-tier .salary-subhead { margin-top: 0; }
+.salary-page .salary-tier-name {
+  margin: 0 0 calc(var(--sal-gap) * 0.35);
+  font-size: var(--sal-fs-body);
+  font-weight: 700;
+}
+.salary-page .salary-tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sal-gap);
+  align-items: end;
+}
+.salary-page .salary-tier-block .salary-tier-block + .salary-tier-block { margin-top: var(--sal-gap); }
 .salary-page .salary-main {
   display: flex;
   flex-direction: column;
@@ -966,7 +1012,9 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 .salary-page table.report td { font-size: var(--sal-fs-body); }
 .salary-page :where(input, select, textarea) { font-size: var(--sal-fs-body); }
 @container (max-width: 40rem) {
-  .salary-page .salary-metrics { grid-template-columns: minmax(0, 1fr); }
+  .salary-page .salary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .salary-page .salary-tier-grid { grid-template-columns: minmax(0, 1fr); }
+  .salary-page .salary-toolbar .salary-actions-row { margin-left: 0; }
 }
 @container (min-width: 64rem) {
   .salary-page .salary-ops {
