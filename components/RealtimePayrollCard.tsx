@@ -296,7 +296,9 @@ export default function RealtimePayrollCard({
 
   return (
     <section aria-busy={phase === "loading"} aria-live="polite">
-      <h2 className="section-title">{summary === "table" ? "按人草案" : `实时工资 · 人效（${month}）`}</h2>
+      <h2 id={summary === "table" ? "salary-people" : undefined} className="section-title">
+        {summary === "table" ? "按人草案" : `实时工资 · 人效（${month}）`}
+      </h2>
 
       {monthProp === undefined ? (
         <div className="field salary-month">

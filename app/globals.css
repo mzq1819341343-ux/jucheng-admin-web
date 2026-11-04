@@ -185,7 +185,6 @@ body:has(.app-shell) .site-footer { margin-left: var(--sidebar-w); }
   gap: var(--nav-gap);
   margin: var(--nav-gap) 0 var(--nav-pad-y) var(--nav-sub-indent);
   padding-left: var(--nav-sub-indent);
-  border-left: 1px solid rgba(232, 240, 250, 0.16);
 }
 .sidebar .menu-sub a {
   font-size: var(--nav-sub-fs);

@@ -1144,6 +1144,8 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   font-size: var(--ov-note);
   font-variant-numeric: tabular-nums;
 }
+#salary-people { scroll-margin-top: calc(var(--nav-mobile-h) + 0.75rem); }
+#salary-people:target { box-shadow: 0 0 0 2px var(--primary); }
 .overview-page a.ov-metric {
   display: block;
   color: inherit;
