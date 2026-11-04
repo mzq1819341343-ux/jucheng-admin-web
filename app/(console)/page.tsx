@@ -418,10 +418,12 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
               </section>
             </div>
 
-            <div className="ov-folds">
+            <details className="cost-details ov-fold">
+              <summary>更多经营明细</summary>
+              <div className="ov-detail-stack">
               {sensitive && heroOp && heroNet !== null ? (
-                <details className="cost-details ov-fold">
-                  <summary>净利</summary>
+                <section className="ov-detail-block" aria-label="净利">
+                  <h3>净利</h3>
                   <div className="ov-fold-body">
                     <section className="hero-net" aria-label="扣成本后净利">
                       <div className="hero-net-label">扣成本后净利 · {heroOp.month}（两店合计）</div>
@@ -443,11 +445,11 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                       </p>
                     ) : null}
                   </div>
-                </details>
+                </section>
               ) : null}
               {sensitive ? (
-                <details className="cost-details ov-fold">
-                  <summary>年回报</summary>
+                <section className="ov-detail-block" aria-label="年回报">
+                  <h3>年回报</h3>
                   <div className="annual-strip" aria-label="年回报率">
                     <span>
                       年回报率（{operating.annual.label}）{" "}
@@ -473,11 +475,11 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                       {money2(operating.annual.wageTotal)}）
                     </span>
                   </div>
-                </details>
+                </section>
               ) : null}
               {sensitive && latestOp ? (
-                <details className="cost-details ov-fold">
-                  <summary>花费拆分</summary>
+                <section className="ov-detail-block" aria-label="花费拆分">
+                  <h3>花费拆分</h3>
                   <section className="net-panel" aria-label="公司花费拆分">
                     <div>
                       <div className="net-panel-label">
@@ -593,11 +595,11 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                       </div>
                     </div>
                   </section>
-                </details>
+                </section>
               ) : null}
 
-              <details className="cost-details ov-fold">
-                <summary>月度走势</summary>
+              <section className="ov-detail-block" aria-label="月度走势">
+                <h3>月度走势</h3>
                 <div className="ov-fold-body">
                   <p className="page-desc ov-fold-note">
                     覆盖期累计 {int(totalOrders)} 单｜分润 {money(totalProfit)} 元｜上门 {int(totalDoor)} 单
@@ -657,11 +659,11 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                       : null}
                   </p>
                 </div>
-              </details>
+              </section>
 
               {sensitive && latestOp && latestOp.companyNetProfit !== null ? (
-                <details className="cost-details ov-fold">
-                  <summary>净利构成</summary>
+                <section className="ov-detail-block" aria-label="净利构成">
+                  <h3>净利构成</h3>
                   <div className="ov-fold-body">
                     <div className="net-panel-breakdown">
                       <div className="net-line">
@@ -702,9 +704,10 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                       {wageNote ? <span className="negative-text"> {wageNote}。</span> : null}
                     </p>
                   </div>
-                </details>
+                </section>
               ) : null}
-            </div>
+              </div>
+            </details>
 
             <h2 className="section-title">月度目标</h2>
             <MonthlyTargetCard

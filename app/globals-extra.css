@@ -1035,6 +1035,7 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   --ov-fold-pad-y: 0.2rem;
   --ov-fold-pad-x: 1.25rem;
   --ov-fold-num: 2rem;
+  --ov-block-gap: 1.75rem;
   --ov-sight-min: 9.5rem;
   --ov-note: 0.8125rem;
   --ov-title: 1.5rem;
@@ -1181,6 +1182,22 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 .overview-page .ov-swatch-online { background: var(--ov-c-online); }
 .overview-page .ov-table { margin: 0; box-shadow: none; }
 .overview-page .ov-fold .hero-net .kpi-value { --kpi-fs: var(--ov-fold-num); }
+.overview-page .ov-fold { margin-top: var(--ov-gap); }
+.overview-page .ov-detail-stack {
+  display: grid;
+  gap: var(--ov-block-gap);
+  padding: var(--ov-gap) 0 var(--ov-block-gap);
+}
+.overview-page .ov-detail-block h3 {
+  margin: 0 0 calc(var(--ov-gap) * 0.65);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.overview-page .ov-detail-block .hero-net,
+.overview-page .ov-detail-block .annual-strip { margin-top: 0; }
+.overview-page .ov-detail-stack .ov-fold-body { padding-bottom: 0; }
+.overview-page .ov-detail-block .net-panel { margin-bottom: 0; }
 .overview-page .hero-net {
   margin-top: var(--ov-gap);
   padding: var(--ov-hero-pad-y) var(--ov-hero-pad-x);
@@ -1246,6 +1263,7 @@ table.report tr.row-selected td { background: var(--notice-bg); }
     --ov-card-value: 1.2rem;
     --ov-chart-h: 7.5rem;
     --ov-title: 1.35rem;
+    --ov-block-gap: 1.25rem;
   }
   .overview-page .ov-charts,
   .overview-page .ov-split,
