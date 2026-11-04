@@ -3,7 +3,7 @@ import { PAYROLL_CALIBER as CALIBER } from "@/lib/realtime-payroll";
 
 /**
  * 操作手册（指令40-1）：全角色可见，登录后可达。
- * 内容只讲正式使用：三角色权限、登录与设密码、主题、业务入口、异常处理。
+ * 内容只讲正式使用：三角色权限、登录与设密码、侧栏导航、业务入口、异常处理。
  * 正文不读会话，可静态生成；角色名由布局里已经解析的会话填上。
  */
 export default function HelpPage() {
@@ -30,30 +30,30 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/overview.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/overview.png" alt="总览：扣成本后净利、双利润率与年回报率一行" loading="lazy" />
+              <img src="/help-shots/overview.png" alt="总览：左侧深蓝栏常显，扣成本后净利、双利润率与年回报率一行" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：总览英雄净利、双利润率与年回报率一行。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：总览左侧深蓝栏常显、菜单平铺；英雄净利、双利润率与年回报率一行。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
         </div>
 
         <h2 className="section-title">手机上怎么看</h2>
         <div className="card">
           <p style={{ margin: 0 }}>
-            手机打开本站即同一套页面：导航收进右上角菜单，总览先看英雄区净利；宽表（两店对比、权限矩阵、成本明细）在卡片内左右滑动查看，不会撑破屏幕。
+            桌面端左侧深蓝栏常显，菜单平铺，没有「更多」折叠。小屏时侧栏收起：点左上角汉堡图标打开抽屉，抽屉里是同一套平铺菜单，底栏显示当前角色、掩码邮箱和退出。点导航链接、点遮罩，或按 Esc，抽屉都会关闭。总览先看英雄区净利；宽表（两店对比、权限矩阵、成本明细）在卡片内左右滑动查看，不会撑破屏幕。
           </p>
           <figure className="help-shot">
             <a href="/help-shots/mobile-overview.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/mobile-overview.png" alt="手机 390 宽总览：英雄净利、双利润率、年回报一行、月度目标与业务卡单列排布" loading="lazy" />
+              <img src="/help-shots/mobile-overview.png" alt="手机：左上汉堡打开的深蓝抽屉，菜单平铺，底栏为角色、掩码邮箱和退出" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：手机上的总览——卡片单列、数字不溢出。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：手机点左上汉堡打开抽屉——菜单平铺，底栏是角色、掩码邮箱和退出。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
           <figure className="help-shot">
             <a href="/help-shots/mobile-expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/mobile-expenses.png" alt="手机 390 宽报销页：汇总卡、建单表单、状态筛选与台账单列排布" loading="lazy" />
+              <img src="/help-shots/mobile-expenses.png" alt="手机报销页：左上汉堡，汇总卡单列" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：手机上的报销页——表单纵排、筛选 chips 同行、台账在卡片内滑动。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：手机报销页——左上汉堡，汇总卡单列。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -357,9 +357,9 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/expenses.png" alt="报销页：按状态筛选（全部 / 未报销 / 已报销）与当前筛选小计" loading="lazy" />
+              <img src="/help-shots/expenses.png" alt="报销页：左侧深蓝栏常显，汇总卡与建单表单" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：报销页状态筛选 chips（图中落在「未报销」）与当前筛选小计。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：报销页左侧深蓝栏常显，汇总卡与建单表单。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -537,17 +537,14 @@ export default function HelpPage() {
               首次使用时，老板会发送邀请邮件：点击邮件中的链接进入「设置登录密码」页，设置至少 8 位的密码后即自动登录。邀请链接过期时，请联系老板重发。
             </li>
             <li>
-              <strong>切换昼夜主题：</strong>点击页面右上角的主题切换图标——夜间时显示太阳图标，点一下切到白天；白天时显示月亮图标，点一下切回夜间。选择会保存在本机，下次打开自动沿用。
-            </li>
-            <li>
-              <strong>进入业务板块：</strong>在「公司总览」页点击业务板块卡片，或使用顶部导航进入。板块内可查看仪表盘与报表。
+              <strong>进入业务板块：</strong>在「公司总览」页点击业务板块卡片，或使用左侧导航进入。板块内可查看仪表盘与报表。
             </li>
             <li>
               <strong>查看数据更新情况：</strong>「数据刷新状态」页列出各数据源的最近更新时间与状态。
               尚无抓取记录时，「最近抓取 / 导入日志」会直接显示「暂无抓取记录（管道已备未启用）」，不会列出示例记录；有记录后才逐行显示真实日志。
             </li>
             <li>
-              <strong>查看工资与成本：</strong>顶部导航「工资」（店员显示为「我的薪酬」）查看与自己相关的工资；
+              <strong>查看工资与成本：</strong>侧栏菜单「工资」（店员显示为「我的薪酬」）查看与自己相关的工资；
               门店成本在爱回收板块的「门店成本」页（仅老板 / 合伙人可见）。
             </li>
             <li>
