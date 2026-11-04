@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import KpiCard, { KpiValue } from "@/components/KpiCard";
+import { KpiValue } from "@/components/KpiCard";
 import { SectionSkeleton } from "@/components/PageSkeleton";
 import Sparkline from "@/components/Sparkline";
 import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
@@ -24,12 +24,15 @@ import {
   type SalaryDetailImportRow,
   type SiteTarget,
   type FetchRefreshMarker,
+  type MetricRow,
 } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import { isOverdueUnreimbursed } from "@/lib/expenses";
 import MonthlyTargetCard from "@/components/MonthlyTargetCard";
 import { money, money2, int, pct } from "@/lib/format";
-import { STORE_SHORT_LABEL, COST_TYPE_LABEL, type CostType, type StoreScope } from "@/lib/stores";
+import { buildTargetReviewRows } from "@/lib/targets";
+import { shanghaiYearMonth } from "@/lib/salary-realtime";
+import { STORE_LABEL, STORE_SHORT_LABEL, COST_TYPE_LABEL, type CostType, type StoreScope } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
 
@@ -41,16 +44,54 @@ function DeniedNotice() {
   );
 }
 
+function shiftMonth(ym: string, delta: number) {
+  const [year, month] = ym.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthLabel(ym: string) {
+  const [year, month] = ym.split("-");
+  return `${year}年${Number(month)}月`;
+}
+
+function monthHref(month: string, denied?: string) {
+  const query = new URLSearchParams();
+  query.set("month", month);
+  if (denied) query.set("denied", denied);
+  return `/?${query.toString()}`;
+}
+
+function MetricSlot({
+  label,
+  text,
+  kind,
+  sub,
+}: {
+  label: string;
+  text: string;
+  kind: "num" | "note";
+  sub?: string;
+}) {
+  return (
+    <article className="ov-metric">
+      <div className="ov-metric-label">{label}</div>
+      <div className={kind === "num" ? "ov-metric-value" : "ov-empty"}>{text}</div>
+      {sub ? <div className="ov-metric-sub">{sub}</div> : null}
+    </article>
+  );
+}
+
 export default async function OverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ denied?: string }>;
+  searchParams: Promise<{ denied?: string; month?: string }>;
 }) {
-  const { denied } = await searchParams;
+  const { denied, month } = await searchParams;
   return (
     <main className="container calm no-enter overview-page">
       <Suspense fallback={<OverviewFallback denied={denied} />}>
-        <OverviewContent denied={denied} />
+        <OverviewContent denied={denied} monthParam={month} />
       </Suspense>
     </main>
   );
@@ -60,14 +101,14 @@ function OverviewFallback({ denied }: { denied?: string }) {
   return (
     <>
       <div className="skel skel-eyebrow" />
-      <h1 className="page-title">聚成总后台</h1>
+      <h1 className="page-title">经营概览</h1>
       {denied ? <DeniedNotice /> : null}
       <SectionSkeleton />
     </>
   );
 }
 
-async function OverviewContent({ denied }: { denied?: string }) {
+async function OverviewContent({ denied, monthParam }: { denied?: string; monthParam?: string }) {
   const user = await getCurrentUser();
   const { businesses, grantedIds } = await getMyBusinesses(user);
   const hasAihuishou = canAccessBusiness(grantedIds, "aihuishou");
@@ -81,9 +122,11 @@ async function OverviewContent({ denied }: { denied?: string }) {
 
   const sensitive = canSeeSensitive(user.role);
   const withData = hasAihuishou && sensitive;
-  const [{ rows }, costs, expenseInput, detailRows, allClaims, siteTargets, refreshMarker] =
+  const [combinedMetrics, wandaMetrics, friendshipMetrics, costs, expenseInput, detailRows, allClaims, siteTargets, refreshMarker] =
     await Promise.all([
       getMetrics("combined", user.role),
+      hasAihuishou ? getMetrics("wanda", user.role) : Promise.resolve({ rows: [] as MetricRow[], fromDb: false }),
+      hasAihuishou ? getMetrics("friendship", user.role) : Promise.resolve({ rows: [] as MetricRow[], fromDb: false }),
       withData ? getStoreCosts(user) : Promise.resolve<StoreCost[]>([]),
       withData
         ? getExpenseOperatingInput(user)
@@ -99,7 +142,17 @@ async function OverviewContent({ denied }: { denied?: string }) {
         ? getFetchRefreshMarker(user)
         : Promise.resolve<FetchRefreshMarker | null>(null),
     ]);
+  const rows = combinedMetrics.rows;
   const latest = rows[rows.length - 1];
+  const calendarMonth = shanghaiYearMonth();
+  const prevCalendarMonth = shiftMonth(calendarMonth, -1);
+  const requested = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : null;
+  const selected = requested ?? latest?.month ?? calendarMonth;
+  const selectedRow = rows.find((r) => r.month === selected);
+  const reviewMonths = rows.map((r) => ({ month: r.month, profit: r.profit ?? null, orders: r.orders ?? null }));
+  if (!reviewMonths.some((r) => r.month === selected)) {
+    reviewMonths.push({ month: selected, profit: null, orders: null });
+  }
   const totalProfit = rows.reduce((s, r) => s + (r.profit ?? 0), 0);
   const totalOrders = rows.reduce((s, r) => s + (r.orders ?? 0), 0);
   const totalDoor = rows.reduce((s, r) => s + (r.door_orders ?? 0), 0);
@@ -110,6 +163,19 @@ async function OverviewContent({ denied }: { denied?: string }) {
     salaryDetailByMonth: detailRows ? salaryDetailByMonth(detailRows) : null,
   });
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
+  const selectedOp = operating.months.find((m) => m.month === selected);
+  const companyNet: Record<string, number | null> = {};
+  for (const item of operating.months) companyNet[item.month] = item.companyNetProfit;
+  const profitTarget = buildTargetReviewRows({
+    months: reviewMonths,
+    targets: siteTargets.map((t) => ({ month: t.month, metric: t.metric, target_value: t.target_value })),
+    companyNetProfit: companyNet,
+  }).find((r) => r.month === selected && r.metric === "profit");
+  const storeLines = (["friendship", "wanda"] as StoreScope[]).map((scope) => {
+    const source = scope === "wanda" ? wandaMetrics.rows : friendshipMetrics.rows;
+    return { scope, row: source.find((r) => r.month === selected) };
+  });
+  const recycle = typeof selectedRow?.profit === "number" ? selectedRow.profit : null;
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
   const wageNote = wageCheckNote(operating.annual);
@@ -173,19 +239,38 @@ async function OverviewContent({ denied }: { denied?: string }) {
 
   return (
     <>
-        <div className="eyebrow">
-          <span className="eyebrow-cn">
-            {hasAihuishou ? `爱回收 · 最新月 ${latest?.month ?? "—"}` : "公司总览"}
-          </span>
-        </div>
-        <h1 className="page-title">聚成总后台</h1>
-
-        {hasAihuishou ? (
-          <p className="page-desc ov-source">
-            最新月份 {latest?.month}（两店合计）｜数据来源：爱回收驾驶舱 <span className="en">v3.3</span> 汇总（2026-01~09）
-            {user.demo ? "｜当前为演示模式" : ""}
-          </p>
-        ) : null}
+        <header className="ov-head">
+          <div>
+            <h1 className="page-title">经营概览</h1>
+            {hasAihuishou ? (
+              <p className="page-desc ov-source">
+                爱回收 · {monthLabel(selected)}
+                {user.demo ? " · 演示" : ""}
+              </p>
+            ) : (
+              <p className="page-desc ov-source">公司总览</p>
+            )}
+          </div>
+          {hasAihuishou ? (
+            <div className="ov-toolbar">
+              <span className="ov-query">查询月份 {monthLabel(selected)}</span>
+              <Link
+                href={monthHref(prevCalendarMonth, denied)}
+                className="ov-month-btn"
+                aria-current={selected === prevCalendarMonth ? "page" : undefined}
+              >
+                上月
+              </Link>
+              <Link
+                href={monthHref(calendarMonth, denied)}
+                className="ov-month-btn"
+                aria-current={selected === calendarMonth ? "page" : undefined}
+              >
+                本月
+              </Link>
+            </div>
+          ) : null}
+        </header>
         {refreshMarker ? (
           <div className="ov-marker">
             <FetchRefreshMarkerLine marker={refreshMarker} />
@@ -207,90 +292,189 @@ async function OverviewContent({ denied }: { denied?: string }) {
 
         {hasAihuishou ? (
           <>
-            {sensitive && heroOp && heroNet !== null ? (
-              <section className="hero-net" aria-label="扣成本后净利">
-                <div className="hero-net-label">扣成本后净利 · {heroOp.month}（两店合计）</div>
-                <KpiValue
-                  value={money(heroNet)}
-                  unit="元"
-                  tone={heroNet < 0 ? "negative" : "positive"}
+            <div className="ov-metrics">
+              <MetricSlot
+                label={`${monthLabel(selected)}门店回收`}
+                text={recycle === null ? "暂无" : `${money(recycle)} 元`}
+                kind={recycle === null ? "note" : "num"}
+                sub={
+                  selectedRow
+                    ? `${typeof selectedRow.orders === "number" ? `${int(selectedRow.orders)} 单` : "单量暂无"} · 上门 ${typeof selectedRow.door_orders === "number" ? `${int(selectedRow.door_orders)} 单` : "暂无"}`
+                    : undefined
+                }
+              />
+              <MetricSlot
+                label="目标达成"
+                text={
+                  !profitTarget || profitTarget.status === "未设定"
+                    ? "未设定"
+                    : profitTarget.status === "待核算" || profitTarget.rate === null
+                      ? profitTarget.status
+                      : `${profitTarget.rate.toFixed(1)}%`
+                }
+                kind={profitTarget?.rate != null && profitTarget.status !== "未设定" && profitTarget.status !== "待核算" ? "num" : "note"}
+                sub={
+                  profitTarget?.targetValue != null
+                    ? `回收目标 ${money(profitTarget.targetValue)} 元`
+                    : "回收目标未设定"
+                }
+              />
+              <MetricSlot label="配件" text="暂无" kind="note" />
+              <MetricSlot label="网单" text="暂无" kind="note" />
+              <MetricSlot label="失误" text="暂无" kind="note" />
+              {sensitive ? (
+                <MetricSlot
+                  label="当月工资"
+                  text={typeof selectedRow?.wage_cost === "number" ? `${money(selectedRow.wage_cost)} 元` : "暂无"}
+                  kind={typeof selectedRow?.wage_cost === "number" ? "num" : "note"}
+                  sub={monthLabel(selected)}
                 />
-                {heroMom ? <div className="hero-net-mom">{heroMom}</div> : null}
+              ) : null}
+            </div>
+
+            <div className="ov-charts">
+              <section className="ov-panel" aria-label="门店回收日走势">
+                <div className="ov-panel-head">
+                  <h2>{monthLabel(selected)}门店回收走势（按日）</h2>
+                  {recycle !== null ? <span>当月分润 {money(recycle)} 元</span> : null}
+                </div>
+                <div className="ov-plot">暂无</div>
               </section>
-            ) : null}
+              <section className="ov-panel" aria-label="配件日走势">
+                <div className="ov-panel-head">
+                  <h2>{monthLabel(selected)}配件销售走势（按日）</h2>
+                </div>
+                <div className="ov-plot">暂无</div>
+              </section>
+            </div>
 
-            {sensitive && latestOp ? (
-              <div className="kpi-row ov-rates">
-                <KpiCard
-                  label="利润率（分润）"
-                  value={latestOp.profitMargin === null ? "—" : latestOp.profitMargin.toFixed(1)}
-                  unit={latestOp.profitMargin === null ? undefined : "%"}
-                  sub="净利润 ÷ 当月分润"
-                  hint={
-                    latestOp.profitMargin === null
-                      ? "该月净利口径不完整，暂不出数"
-                      : `公司口径净利 ${money2(latestOp.companyNetProfit)} 元 ÷ 当月分润 ${money2(latestOp.profit)} 元`
-                  }
-                  tone={
-                    latestOp.profitMargin !== null && latestOp.profitMargin < 0
-                      ? "negative"
-                      : "default"
-                  }
-                />
-                <KpiCard
-                  label="利润率（营收）"
-                  value={latestOp.revenueMargin === null ? "—" : latestOp.revenueMargin.toFixed(1)}
-                  unit={latestOp.revenueMargin === null ? undefined : "%"}
-                  sub={latestOp.revenueMargin === null ? "营收口径待接入（订单金额数据缺失），接入后自动出数" : "净利润 ÷ 当月营收"}
-                  hint={
-                    latestOp.revenueMargin === null
-                      ? "营收口径待接入（订单金额数据缺失），接入后自动出数"
-                      : `公司口径净利 ${money2(latestOp.companyNetProfit)} 元 ÷ 当月营收 ${money2(latestOp.revenue)} 元`
-                  }
-                  tone={
-                    latestOp.revenueMargin !== null && latestOp.revenueMargin < 0
-                      ? "negative"
-                      : "default"
-                  }
-                />
-              </div>
-            ) : null}
+            <div className="ov-split">
+              <section className="ov-panel" aria-label="业务占比">
+                <div className="ov-panel-head">
+                  <h2>业务占比</h2>
+                  <span>{recycle !== null ? `${money(recycle)} 元` : "暂无"}</span>
+                </div>
+                {recycle !== null && recycle > 0 ? (
+                  <div className="ov-bar" aria-hidden="true">
+                    <span className="ov-bar-recycle" />
+                  </div>
+                ) : (
+                  <p className="ov-empty">暂无</p>
+                )}
+                <ul className="ov-legend">
+                  <li>
+                    <i className="ov-swatch ov-swatch-recycle" />
+                    门店回收 {recycle === null ? "暂无" : `${money(recycle)} 元`}
+                  </li>
+                  <li>
+                    <i className="ov-swatch ov-swatch-parts" />
+                    配件 暂无
+                  </li>
+                  <li>
+                    <i className="ov-swatch ov-swatch-online" />
+                    网单 暂无
+                  </li>
+                </ul>
+              </section>
+              <section className="ov-panel" aria-label="两店简表">
+                <div className="ov-panel-head">
+                  <h2>两店</h2>
+                </div>
+                <div className="card table-wrap ov-table">
+                  <table className="report">
+                    <thead>
+                      <tr>
+                        <th>门店</th>
+                        <th>回收</th>
+                        <th>单量</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {storeLines.map((line) => (
+                        <tr key={line.scope}>
+                          <td>{STORE_LABEL[line.scope]}</td>
+                          <td>{typeof line.row?.profit === "number" ? `${money(line.row.profit)} 元` : "暂无"}</td>
+                          <td>{typeof line.row?.orders === "number" ? int(line.row.orders) : "暂无"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
 
-            {sensitive ? (
-              <div className="annual-strip" aria-label="年回报率">
-                <span>
-                  年回报率（{operating.annual.label}）{" "}
-                  <strong>
-                    {operating.annual.returnRate === null
-                      ? "—"
-                      : `${operating.annual.returnRate.toFixed(1)}%`}
-                  </strong>
-                </span>
-                <span>
-                  近12个月{" "}
-                  <strong>
-                    {operating.rolling12.returnRate === null
-                      ? "—"
-                      : pct(operating.rolling12.returnRate)}
-                  </strong>
-                </span>
-                <span className="annual-note">
-                  净利覆盖 {operating.annual.coverageMonths.join("、") || "—"} · 投入覆盖{" "}
-                  {coverageRange(operating.annual.investedCoverageMonths)}（门店成本{" "}
-                  {money2(operating.annual.storeCostsTotal)} + 报销{" "}
-                  {money2(operating.annual.expenseAllTotal)} + 工资实发{" "}
-                  {money2(operating.annual.wageTotal)}）
-                </span>
-              </div>
-            ) : null}
-
-            <div className="kpi-row kpi-row-sm ov-sight">
-              <KpiCard size="sm" label="当月总单量" value={int(latest?.orders)} unit="单" hint="两店合计" />
-              <KpiCard size="sm" label="当月总分润" value={money(latest?.profit)} unit="元" hint="两店合计" />
-              <KpiCard size="sm" label="当月上门单量" value={int(latest?.door_orders)} unit="单" hint="两店合计" />
+            <div className="ov-rank">
+              <section className="ov-panel" aria-label="员工回收排名">
+                <div className="ov-panel-head">
+                  <h2>员工回收排名</h2>
+                </div>
+                <p className="ov-empty">暂无</p>
+              </section>
+              <section className="ov-panel" aria-label="员工配件排名">
+                <div className="ov-panel-head">
+                  <h2>员工配件排名</h2>
+                </div>
+                <p className="ov-empty">暂无</p>
+              </section>
             </div>
 
             <div className="ov-folds">
+              {sensitive && heroOp && heroNet !== null ? (
+                <details className="cost-details ov-fold">
+                  <summary>净利</summary>
+                  <div className="ov-fold-body">
+                    <section className="hero-net" aria-label="扣成本后净利">
+                      <div className="hero-net-label">扣成本后净利 · {heroOp.month}（两店合计）</div>
+                      <KpiValue
+                        value={money(heroNet)}
+                        unit="元"
+                        tone={heroNet < 0 ? "negative" : "positive"}
+                      />
+                      {heroMom ? <div className="hero-net-mom">{heroMom}</div> : null}
+                    </section>
+                    {selectedOp ? (
+                      <p className="ov-fold-note">
+                        利润率（分润）
+                        {selectedOp.profitMargin === null ? "暂无" : ` ${selectedOp.profitMargin.toFixed(1)}%`}
+                        。净利润 ÷ 当月分润。
+                        {selectedOp.revenueMargin === null
+                          ? " 营收利润率暂无：营收口径待接入（订单金额数据缺失），接入后自动出数。"
+                          : ` 利润率（营收）${selectedOp.revenueMargin.toFixed(1)}%。`}
+                      </p>
+                    ) : null}
+                  </div>
+                </details>
+              ) : null}
+              {sensitive ? (
+                <details className="cost-details ov-fold">
+                  <summary>年回报</summary>
+                  <div className="annual-strip" aria-label="年回报率">
+                    <span>
+                      年回报率（{operating.annual.label}）{" "}
+                      <strong>
+                        {operating.annual.returnRate === null
+                          ? "暂无"
+                          : `${operating.annual.returnRate.toFixed(1)}%`}
+                      </strong>
+                    </span>
+                    <span>
+                      近12个月{" "}
+                      <strong>
+                        {operating.rolling12.returnRate === null
+                          ? "暂无"
+                          : pct(operating.rolling12.returnRate)}
+                      </strong>
+                    </span>
+                    <span className="annual-note">
+                      净利覆盖 {operating.annual.coverageMonths.join("、") || "暂无"} · 投入覆盖{" "}
+                      {coverageRange(operating.annual.investedCoverageMonths)}（门店成本{" "}
+                      {money2(operating.annual.storeCostsTotal)} + 报销{" "}
+                      {money2(operating.annual.expenseAllTotal)} + 工资实发{" "}
+                      {money2(operating.annual.wageTotal)}）
+                    </span>
+                  </div>
+                </details>
+              ) : null}
               {sensitive && latestOp ? (
                 <details className="cost-details ov-fold">
                   <summary>花费拆分</summary>
