@@ -16,14 +16,6 @@ table.report td.commission-cell {
   overflow-wrap: break-word;
 }
 .commission-lines > div + div { margin-top: 4px; }
-/* 工资页与规则卡：楷体，缺字落到系统中文（--kaiti），避免方框 */
-.salary-page,
-.rule-card {
-  font-family: var(--kaiti);
-}
-.salary-page :where(input, button, select, textarea) {
-  font-family: inherit;
-}
 .salary-head {
   flex-wrap: wrap;
   row-gap: 8px;
@@ -1053,7 +1045,7 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   flex-direction: column;
 }
 .salary-page .kpi-label {
-  font-weight: 600;
+  font-weight: 400;
   margin: 0 0 8px;
   letter-spacing: 0;
 }
@@ -1068,8 +1060,9 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   white-space: normal;
 }
 .salary-page .kpi-unit {
-  font-size: var(--salary-meta);
+  font-size: var(--salary-amount);
   font-weight: 700;
+  line-height: var(--salary-line);
   margin-left: 4px;
 }
 .salary-page .kpi-sub {
@@ -1118,4 +1111,101 @@ table.report tr.row-selected td { background: var(--notice-bg); }
     line-height: var(--salary-line);
     min-height: var(--salary-line);
   }
+}
+
+/* 工资页字体锁：与壳同一字体栈，字号只留 16 / 14 / 12 / 18。 */
+.salary-page,
+.salary-page * {
+  font-family: inherit;
+  letter-spacing: 0;
+}
+.salary-page h1.page-title,
+.salary-page h2,
+.salary-page h3,
+.salary-page .section-title,
+.salary-page .salary-fold > summary,
+.salary-page .salary-head-text {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+.salary-page .eyebrow,
+.salary-page .eyebrow-cn,
+.salary-page .page-desc,
+.salary-page .kpi-label,
+.salary-page .kpi-sub,
+.salary-page .salary-fold-hint,
+.salary-page .salary-kind,
+.salary-page .tag,
+.salary-page .access-msg,
+.salary-page .field label,
+.salary-page .employee-cell-label,
+.salary-page .flow-steps li,
+.salary-page .form-error {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 18px;
+  letter-spacing: 0;
+}
+.salary-page > .page-desc,
+.salary-page .rule-card li,
+.salary-page .empty,
+.salary-page .btn,
+.salary-page button,
+.salary-page input,
+.salary-page select,
+.salary-page textarea,
+.salary-page .field input,
+.salary-page .field select,
+.salary-page .field textarea,
+.salary-page .inline-input,
+.salary-page .error,
+.salary-page .commission-lines,
+.salary-page .fetch-jobs-lines dt,
+.salary-page .fetch-jobs-lines dd,
+.salary-page table.report th,
+.salary-page table.report td {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: 0;
+}
+.salary-page table.report thead th,
+.salary-page table.report tr.total td {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 22px;
+}
+.salary-page .kpi-value,
+.salary-page .kpi-unit {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+.salary-page .en {
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+}
+.salary-page strong,
+.salary-page b {
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: 0;
+}
+.salary-page .field input::placeholder,
+.salary-page .field textarea::placeholder,
+.salary-page .inline-input::placeholder {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  letter-spacing: 0;
+}
+.salary-page .salary-fold > summary::after {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 24px;
 }
