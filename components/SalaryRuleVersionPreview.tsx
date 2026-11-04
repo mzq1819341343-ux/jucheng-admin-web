@@ -21,7 +21,7 @@ export default function SalaryRuleVersionPreview({
 
   return (
     <div style={{ marginTop: 20 }}>
-      <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>
+      <h3 className="section-title" style={{ margin: "0 0 8px" }}>
         双版本预览（{rule.title}）
       </h3>
       {eff ? (
