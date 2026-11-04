@@ -41,14 +41,14 @@ export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
           </li>
         ))}
       </ul>
-      <p className="page-desc" style={{ marginTop: 14, marginBottom: 0 }}>
+      <p className="page-desc">
         生效起始月：{rule.effective_from ?? "待老板确认"}
         {rule.effective_from
           ? "（该月起按本规则计算，此前月份按历史规则回算）"
           : "（确认后支持新旧双版本规则按月回算）"}
         {rule.note ? `｜${rule.note}` : ""}
       </p>
-      <p className="page-desc" style={{ marginTop: 8, marginBottom: 0 }}>
+      <p className="page-desc">
         历史双版本按生效起始月切换：新规则自生效月起算，之前月份按旧规则回算。
       </p>
     </div>

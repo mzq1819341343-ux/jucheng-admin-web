@@ -207,7 +207,7 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
                 </table>
               </div>
             )}
-            <p className="page-desc" style={{ marginTop: 12 }}>
+            <p className="page-desc">
               按人明细仅老板可见，本站不提供工资原表导出；员工只看到自己已发布月份的一行。
             </p>
           </div>
@@ -318,7 +318,7 @@ function SalaryDetailSection({
         </table>
       </div>
 
-      <h3 className="section-title" style={{ marginTop: 20 }}>与月度汇总对账</h3>
+      <h3 className="section-title">与月度汇总对账</h3>
       <div className="table-wrap">
         <table className="report">
           <thead>
@@ -368,7 +368,7 @@ function SalaryDetailSection({
           </tbody>
         </table>
       </div>
-      <p className="page-desc" style={{ marginTop: 12 }}>
+      <p className="page-desc">
         明细口径：实发取工资表最终打款列（2 月合计、3 月实际工资、4–9 月去除公费实际打款、1 月银行代发）；
         李东浩与李冬浩为同一人，已合并。年回报率的工资实发合计以本明细为准，与月度汇总交叉校验。
         员工账号建立后，可按姓名把明细晋升为员工可见的月度工资行（先未发布，核对后发布）。
@@ -413,7 +413,7 @@ async function PartnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurr
             </table>
           </div>
         )}
-        <p className="page-desc" style={{ marginTop: 12 }}>
+        <p className="page-desc">
           合伙人只看门店汇总，不显示他人工资明细。
         </p>
       </div>
@@ -435,14 +435,12 @@ async function StaffSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
 
   return (
     <>
-      <div className="kpi-row">
-        <div className="kpi-card kpi-wide kpi-hero">
+      <div className="kpi-row salary-metrics">
+        <div className="kpi-card">
           <div className="kpi-label">本月实发（{latest.month}，{STORE_LABEL[latest.scope]}）</div>
           <KpiValue value={money(latest.net_amount)} unit="元" />
           <div className="kpi-sub">工资由老板录入并发布，此处只显示你本人的数据</div>
         </div>
-      </div>
-      <div className="kpi-row" style={{ marginTop: 16 }}>
         <KpiCard label="底薪" value={money(latest.base_amount)} unit="元" />
         <KpiCard label="提成" value={money(latest.commission_amount)} unit="元" />
         <KpiCard label="扣款" value={money(latest.deduction_amount)} unit="元" />

@@ -325,11 +325,11 @@ export default function RealtimePayrollCard({
       />
 
       {phase === "loading" ? (
-        <div className="skel skel-block" style={{ marginTop: 16 }} aria-hidden="true" />
+        <div className="skel skel-block" aria-hidden="true" />
       ) : null}
 
       {phase === "error" ? (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card">
           <p className="empty" role="alert">
             {message}
           </p>
@@ -337,7 +337,7 @@ export default function RealtimePayrollCard({
       ) : null}
 
       {empty ? (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card">
           <p className="empty">暂无数据</p>
         </div>
       ) : null}
@@ -346,8 +346,8 @@ export default function RealtimePayrollCard({
         <>
           {summary === "full" ? (
             <>
-              <div className="kpi-row" style={{ marginTop: 16 }}>
-                <div className="kpi-card kpi-wide kpi-hero">
+              <div className="kpi-row">
+                <div className="kpi-card">
                   <div className="kpi-label">应发合计（实时工资草案，{payload.month}）</div>
                   <KpiValue value={money2(payload.totals.gross)} unit="元" />
                   <div className="kpi-sub">
@@ -368,7 +368,7 @@ export default function RealtimePayrollCard({
                   sub="应发合计 − 失误合计"
                 />
               </div>
-              <div className="kpi-row" style={{ marginTop: 16 }}>
+              <div className="kpi-row">
                 <KpiCard label="计薪人数" value={String(headcount)} unit="人" />
                 {headcount > 0 ? (
                   <KpiCard
@@ -393,8 +393,8 @@ export default function RealtimePayrollCard({
             </p>
           )}
 
-          <div className="card" style={{ marginTop: 16 }}>
-            <h3 className="section-title" style={{ marginTop: 0 }}>
+          <div className="card">
+            <h3 className="section-title">
               按人明细
             </h3>
             <div className="table-wrap">
@@ -461,14 +461,14 @@ export default function RealtimePayrollCard({
               </table>
             </div>
             {payload.caliber ? (
-              <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
+              <p className="page-desc">
                 口径：{payload.caliber}
               </p>
             ) : null}
-            <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
+            <p className="page-desc">
               {ACCESSORIES_SOURCE_NOTE}
             </p>
-            <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
+            <p className="page-desc">
               {canEdit
                 ? handFill
                   ? "补贴、奖金由老板手填并保存。应发按底薪 + 上门 + 线上 + 门店 + 配件 + 补贴 + 奖金，由接口计算后展示。实发 = 应发 − 失误扣款。编辑失误只改失误明细，不发布月度工资。草案里没有的人，不能从这里手填。"

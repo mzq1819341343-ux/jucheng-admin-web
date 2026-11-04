@@ -408,7 +408,7 @@ export default function EmployeeRosterCard({
         )}
 
         {canEdit ? (
-          <form onSubmit={onAdd} style={{ marginTop: rows.length === 0 ? 8 : 20 }}>
+          <form onSubmit={onAdd}>
             <div className="form-row">
               <div className="field">
                 <label htmlFor="emp-name">姓名</label>

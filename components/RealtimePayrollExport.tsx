@@ -47,7 +47,7 @@ export default function RealtimePayrollExport({
   }
 
   return (
-    <div style={{ marginTop: 14 }}>
+    <div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button
           type="button"

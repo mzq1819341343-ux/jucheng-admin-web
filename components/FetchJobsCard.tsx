@@ -157,7 +157,7 @@ export default function FetchJobsCard({ role }: { role: "owner" | "partner" }) {
         <span className="salary-kind salary-kind-draft">只下发任务</span>
       </h2>
       <div className="card">
-        <p className="page-desc" style={{ marginTop: 0 }}>
+        <p className="page-desc">
           {canDispatch
             ? "按月份下发抓取任务。全部包含旧机和配件，也可以只抓配件。这里提交任务并查看上次结果。配件金额由后端按加盟后台配件进销存 × 30% 写入人效。"
             : "按月份查看上次抓取结果。下发由老板操作。配件金额由后端按加盟后台配件进销存 × 30% 写入人效。"}

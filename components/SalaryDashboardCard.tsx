@@ -221,11 +221,11 @@ export default function SalaryDashboardCard() {
       </div>
 
       {phase === "loading" ? (
-        <div className="skel skel-block" style={{ marginTop: 16 }} aria-hidden="true" />
+        <div className="skel skel-block" aria-hidden="true" />
       ) : null}
 
       {phase === "error" ? (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card">
           <p className="empty" role="alert">
             {message}
           </p>
@@ -233,15 +233,15 @@ export default function SalaryDashboardCard() {
       ) : null}
 
       {empty ? (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card">
           <p className="empty">暂无数据</p>
         </div>
       ) : null}
 
       {showPeople && payload ? (
         <>
-          <div className="kpi-row" style={{ marginTop: 16 }}>
-            <div className="kpi-card kpi-wide kpi-hero">
+          <div className="kpi-row salary-metrics">
+            <div className="kpi-card">
               <div className="kpi-label">应发合计（{payload.month}）</div>
               <KpiValue value={money2(payload.totals.gross)} unit="元" />
               <div className="kpi-sub">
@@ -269,8 +269,8 @@ export default function SalaryDashboardCard() {
             />
           </div>
 
-          <div className="card" style={{ marginTop: 16 }}>
-            <h3 className="section-title" style={{ marginTop: 0 }}>
+          <div className="card">
+            <h3 className="section-title">
               按人
             </h3>
             <div className="table-wrap">
