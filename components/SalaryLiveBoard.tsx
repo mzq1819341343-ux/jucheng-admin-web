@@ -15,25 +15,35 @@ export default function SalaryLiveBoard({ role }: { role: "owner" | "partner" })
 
   return (
     <section className="salary-main" aria-label="实时工资">
-      <div className="field salary-month">
-        <label htmlFor="salary-live-month">月份</label>
-        <input
-          id="salary-live-month"
-          type="month"
-          value={month}
-          onChange={(event) => {
-            const next = event.target.value;
-            if (!isYearMonth(next) || next === month) {
-              event.target.value = month;
-              return;
-            }
-            if (!confirmRef.current()) {
-              event.target.value = month;
-              return;
-            }
-            setMonth(next);
-          }}
-        />
+      <div className="salary-toolbar">
+        <div className="field salary-month">
+          <label htmlFor="salary-live-month">月份</label>
+          <input
+            id="salary-live-month"
+            type="month"
+            value={month}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (!isYearMonth(next) || next === month) {
+                event.target.value = month;
+                return;
+              }
+              if (!confirmRef.current()) {
+                event.target.value = month;
+                return;
+              }
+              setMonth(next);
+            }}
+          />
+        </div>
+        <div className="salary-actions-row">
+          <button type="button" className="btn btn-ghost" disabled>
+            下载工资表
+          </button>
+          <button type="button" className="btn btn-ghost" disabled>
+            录入模板
+          </button>
+        </div>
       </div>
       <div className="salary-metrics-block">
         <h2 className="section-title">汇总</h2>

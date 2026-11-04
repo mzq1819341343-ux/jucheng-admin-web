@@ -1,7 +1,7 @@
 import { Fragment, Suspense } from "react";
 import loadable from "next/dynamic";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
-import SalaryRuleCard from "@/components/SalaryRuleCard";
+import SalaryTierEditor from "@/components/SalaryTierEditor";
 import FetchJobsCard from "@/components/FetchJobsCard";
 import SalaryLiveBoard from "@/components/SalaryLiveBoard";
 
@@ -61,7 +61,7 @@ export default async function SalaryPage() {
 
       <div className="salary-folds">
         <details className="salary-fold">
-          <summary>工资怎么算</summary>
+          <summary>阶梯提成与奖励</summary>
           <div className="salary-fold-body">
             <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
               <PublicSalaryRule user={user} />
@@ -111,7 +111,14 @@ async function EmployeeRoster({ user }: { user: Awaited<ReturnType<typeof getCur
 
 async function PublicSalaryRule({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {
   const publicRule = await getPublicSalaryRule(user);
-  return <SalaryRuleCard rule={publicRule} />;
+  return (
+    <SalaryTierEditor
+      rule={publicRule}
+      canEdit={user.role === "owner"}
+      demo={user.demo}
+      userId={user.id}
+    />
+  );
 }
 
 async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurrentUser>> }) {

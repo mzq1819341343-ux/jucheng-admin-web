@@ -25,6 +25,8 @@ const KNOWN_KEYS = new Set([
   "store_tiers",
   "accessories_tiers",
   "door_profit_pct",
+  // 阶梯提成表单自存自读。人话短句仍只译上面的计薪键，避免未接线的参考数字混进口径句。
+  "tier_rewards",
 ]);
 
 export type CommissionRuleLine = {

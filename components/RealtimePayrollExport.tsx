@@ -49,30 +49,13 @@ export default function RealtimePayrollExport({
   return (
     <div className="salary-actions">
       <div className="salary-actions-row">
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={disabled}
-          aria-describedby={notice ? "realtime-export-notice" : undefined}
-          onClick={exportCsv}
-        >
+        <button type="button" className="btn btn-ghost" disabled={disabled} onClick={exportCsv}>
           导出按人表 CSV
         </button>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={disabled}
-          aria-describedby={notice ? "realtime-export-notice" : undefined}
-          onClick={exportExcel}
-        >
+        <button type="button" className="btn btn-ghost" disabled={disabled} onClick={exportExcel}>
           导出按人表 Excel
         </button>
       </div>
-      {notice ? (
-        <p id="realtime-export-notice" className="salary-meta" role="status">
-          {notice}
-        </p>
-      ) : null}
     </div>
   );
 }
