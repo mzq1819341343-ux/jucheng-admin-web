@@ -13,7 +13,6 @@ import {
 import {
   DASHBOARD_AMOUNT_COLUMNS,
   dashboardHeadcount,
-  dashboardPersonLine,
   fetchLatestOneLiner,
   type DashboardAmountKey,
 } from "@/lib/salary-dashboard";
@@ -23,7 +22,6 @@ import {
   isYearMonth,
   shanghaiYearMonth,
   shownAfterDeduction,
-  type RealtimeSalaryPerson,
   type RealtimeSalaryResponse,
 } from "@/lib/salary-realtime";
 
@@ -211,7 +209,7 @@ export default function SalaryDashboardCard() {
         </div>
       </div>
       <p className="page-desc salary-dashboard-note">
-        只读当月实时草案和上次抓取。不写入草案，也不下发抓取。
+        只读当月实时草案和上次抓取。不写入草案，也不下发抓取。按人草案在本页下方，宽表在卡片内横向滑动。
       </p>
       <div className="salary-dashboard-fetch" aria-live="polite">
         {fetchError ? (
@@ -271,7 +269,7 @@ export default function SalaryDashboardCard() {
             />
           </div>
 
-          <div className="card salary-dashboard-desktop" style={{ marginTop: 16 }}>
+          <div className="card" style={{ marginTop: 16 }}>
             <h3 className="section-title" style={{ marginTop: 0 }}>
               按人
             </h3>
@@ -308,34 +306,8 @@ export default function SalaryDashboardCard() {
             <p className="page-desc salary-dashboard-note">{ACCESSORIES_SOURCE_NOTE}</p>
             {payload.caliber ? <p className="page-desc salary-dashboard-note">口径：{payload.caliber}</p> : null}
           </div>
-
-          <div className="card salary-dashboard-mobile" style={{ marginTop: 16 }}>
-            <h3 className="section-title" style={{ marginTop: 0 }}>
-              按人
-            </h3>
-            <p className="salary-dashboard-total">{dashboardPersonLine("合计", payload.totals.gross)}</p>
-            {people.map((person) => (
-              <PersonSummary key={person.person_key} person={person} />
-            ))}
-          </div>
         </>
       ) : null}
     </section>
-  );
-}
-
-function PersonSummary({ person }: { person: RealtimeSalaryPerson }) {
-  return (
-    <details className="salary-dashboard-person">
-      <summary>{dashboardPersonLine(person.display_name, person.gross)}</summary>
-      <dl className="salary-dashboard-break">
-        {DASHBOARD_AMOUNT_COLUMNS.map((column) => (
-          <div key={column.key}>
-            <dt>{column.label}</dt>
-            <dd>{money2(amountOf(person, column.key))}</dd>
-          </div>
-        ))}
-      </dl>
-    </details>
   );
 }
