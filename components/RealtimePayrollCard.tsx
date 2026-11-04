@@ -75,7 +75,14 @@ function lineFromRow(row: SalaryMistakeDetail): EditorLine {
   };
 }
 
-export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
+export default function RealtimePayrollCard({
+  role,
+  summary = "full",
+}: {
+  role: SalaryRole;
+  /** full：合计卡和草案表都在本卡。table：合计卡改由同页仪表盘承担，本卡只留草案表。 */
+  summary?: "full" | "table";
+}) {
   const canEdit = role === "owner";
   const [month, setMonth] = useState(shanghaiYearMonth);
   const [phase, setPhase] = useState<Phase>("loading");
@@ -337,46 +344,54 @@ export default function RealtimePayrollCard({ role }: { role: SalaryRole }) {
 
       {showPeople && payload ? (
         <>
-          <div className="kpi-row" style={{ marginTop: 16 }}>
-            <div className="kpi-card kpi-wide kpi-hero">
-              <div className="kpi-label">应发合计（实时工资草案，{payload.month}）</div>
-              <KpiValue value={money2(payload.totals.gross)} unit="元" />
-              <div className="kpi-sub">
-                计薪 {headcount} 人
-                {payload.as_of ? (
-                  <>
-                    ｜截至 <time dateTime={payload.as_of}>{formatShanghaiDateTime(payload.as_of)}</time>
-                  </>
+          {summary === "full" ? (
+            <>
+              <div className="kpi-row" style={{ marginTop: 16 }}>
+                <div className="kpi-card kpi-wide kpi-hero">
+                  <div className="kpi-label">应发合计（实时工资草案，{payload.month}）</div>
+                  <KpiValue value={money2(payload.totals.gross)} unit="元" />
+                  <div className="kpi-sub">
+                    计薪 {headcount} 人
+                    {payload.as_of ? (
+                      <>
+                        ｜截至 <time dateTime={payload.as_of}>{formatShanghaiDateTime(payload.as_of)}</time>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+                <KpiCard label="失误合计" value={money2(payload.totals.mistake_total ?? 0)} unit="元" sub="本月失误扣款" />
+                <KpiCard
+                  label="扣后合计"
+                  value={money2(afterTotal)}
+                  unit="元"
+                  tone={afterTotal < 0 ? "negative" : "default"}
+                  sub="应发合计 − 失误合计"
+                />
+              </div>
+              <div className="kpi-row" style={{ marginTop: 16 }}>
+                <KpiCard label="计薪人数" value={String(headcount)} unit="人" />
+                {headcount > 0 ? (
+                  <KpiCard
+                    label="人均应发"
+                    value={money2(payload.totals.gross / headcount)}
+                    unit="元"
+                    sub="应发合计 ÷ 计薪人数"
+                  />
+                ) : null}
+                <KpiCard label="底薪合计" value={money2(payload.totals.base)} unit="元" />
+                <KpiCard label="上门合计" value={money2(payload.totals.door)} unit="元" />
+                <KpiCard label="线上合计" value={money2(payload.totals.online)} unit="元" />
+                <KpiCard label="门店合计" value={money2(payload.totals.store)} unit="元" />
+                {showAccessories ? (
+                  <KpiCard label="配件合计" value={money2(payload.totals.accessories)} unit="元" />
                 ) : null}
               </div>
-            </div>
-            <KpiCard label="失误合计" value={money2(payload.totals.mistake_total ?? 0)} unit="元" sub="本月失误扣款" />
-            <KpiCard
-              label="扣后合计"
-              value={money2(afterTotal)}
-              unit="元"
-              tone={afterTotal < 0 ? "negative" : "default"}
-              sub="应发合计 − 失误合计"
-            />
-          </div>
-          <div className="kpi-row" style={{ marginTop: 16 }}>
-            <KpiCard label="计薪人数" value={String(headcount)} unit="人" />
-            {headcount > 0 ? (
-              <KpiCard
-                label="人均应发"
-                value={money2(payload.totals.gross / headcount)}
-                unit="元"
-                sub="应发合计 ÷ 计薪人数"
-              />
-            ) : null}
-            <KpiCard label="底薪合计" value={money2(payload.totals.base)} unit="元" />
-            <KpiCard label="上门合计" value={money2(payload.totals.door)} unit="元" />
-            <KpiCard label="线上合计" value={money2(payload.totals.online)} unit="元" />
-            <KpiCard label="门店合计" value={money2(payload.totals.store)} unit="元" />
-            {showAccessories ? (
-              <KpiCard label="配件合计" value={money2(payload.totals.accessories)} unit="元" />
-            ) : null}
-          </div>
+            </>
+          ) : (
+            <p className="page-desc salary-dashboard-note">
+              应发、人数、失误和扣后合计在上方仪表盘。这里只留按人草案，宽表在卡片内横向滑动。
+            </p>
+          )}
 
           <div className="card" style={{ marginTop: 16 }}>
             <h3 className="section-title" style={{ marginTop: 0 }}>

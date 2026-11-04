@@ -42,10 +42,11 @@ export const dynamic = "force-dynamic";
 
 /**
  * 工资页（指令41）：入口全角色可见，内容按角色分化——
- * 老板：工资体系配置 + 全员月度工资行（仅老板可见，不导出原表）；
- * 合伙人：只看门店月度汇总（视图聚合，无他人明细）；
- * 店员：「我的薪酬」，只查自己已发布的月份（RLS + 应用层双保险）。
- * 骨架阶段数据为空属正常，全部走空态，等老板提供数字后录入。
+ * 老板：同一页看规则人话、只读仪表盘、实时草案；工资体系配置仍在本页；
+ *       月度工资行、CSV、实表明细收进「录入与导入」，默认折叠。
+ * 合伙人：规则人话、仪表盘、草案（只读）和门店月度汇总；无他人明细、无录入。
+ * 店员：「我的薪酬」，只查自己已发布的月份（RLS + 应用层双保险），外加全员可见的规则人话。
+ * 算薪口径、闸和字段语义不在本页布局里改。骨架阶段数据为空属正常。
  */
 export default async function SalaryPage() {
   const user = await getCurrentUser();
@@ -62,34 +63,34 @@ export default async function SalaryPage() {
           当前角色：{ROLE_LABEL[user.role]}
           {user.demo ? "｜演示模式（表单仅本地演示，不落库）" : ""}
           ｜工资由老板录入，本站不展示工资原表。
+          {user.role === "owner" || user.role === "partner"
+            ? "规则说明、仪表盘和实时草案在这一页。"
+            : ""}
         </p>
 
-        {/* 仪表盘：老板 / 合伙人只读当月草案与上次抓取。店员不渲染。不写草案、不下发抓取。 */}
-        {salaryDashboardVisible(user.role) ? <SalaryDashboardCard /> : null}
-
-        {/* 规则卡与角色区互相独立，并行取数，不再先等 getPublicSalaryRule 再查工资行。 */}
-        <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
-          <PublicSalaryRule user={user} />
-        </Suspense>
-
-        {/* 员工表：老板可改 public.employees，合伙人只读，店员不渲染。
-            保存只写名单。成功后再 POST /api/salary/employee-draft，并 GET /api/salary/realtime。
-            浏览器不写 salary_realtime_draft。 */}
         {user.role === "owner" || user.role === "partner" ? (
+          <>
+            {/* 规则人话、只读仪表盘、按人草案收在同一区。店员不进这个分支。 */}
+            <section className="salary-live" aria-label="实时工资">
+              <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
+                <PublicSalaryRule user={user} />
+              </Suspense>
+              {salaryDashboardVisible(user.role) ? <SalaryDashboardCard /> : null}
+              <RealtimePayrollCard role={user.role} summary="table" />
+            </section>
+            {/* 名单与抓取留在同一页，不插在规则和草案中间。 */}
+            <div className="salary-ops">
+              <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
+                <EmployeeRoster user={user} />
+              </Suspense>
+              <FetchJobsCard role={user.role} />
+            </div>
+          </>
+        ) : (
           <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
-            <EmployeeRoster user={user} />
+            <PublicSalaryRule user={user} />
           </Suspense>
-        ) : null}
-
-        {/* 数据抓取：只下发 /api/ops/fetch-jobs，状态只读 latest。店员不渲染。 */}
-        {user.role === "owner" || user.role === "partner" ? <FetchJobsCard role={user.role} /> : null}
-
-        {/* 实时工资人效：老板 / 合伙人看按人草案（GET /api/salary/realtime）；
-            店员整卡不渲染。失误合计同卡展示，事由与编辑仅老板。
-            已发布月度工资仍走下方 salary_monthly。 */}
-        {user.role === "owner" || user.role === "partner" ? (
-          <RealtimePayrollCard role={user.role} />
-        ) : null}
+        )}
 
         <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
           {user.role === "owner" ? (
@@ -151,65 +152,73 @@ async function OwnerSalary({ user }: { user: Awaited<ReturnType<typeof getCurren
         />
       </div>
 
-      <h2 className="section-title">月度工资导入</h2>
-      <div className="card">
-        <SalaryMonthlyImporter members={members} demo={user.demo} userId={user.id} />
-      </div>
-
-      <h2 className="section-title">员工月度工资（按人行，仅老板可见）</h2>
-      <div className="card">
-        {rows.length === 0 ? (
-          <p className="empty">
-            暂无已发布的月度工资。录入并发布后，员工可在「我的薪酬」看到自己的一行。
-          </p>
-        ) : (
-          <div className="table-wrap">
-            <table className="report">
-              <thead>
-                <tr>
-                  <th>月份</th>
-                  <th style={{ textAlign: "left" }}>员工</th>
-                  <th>门店</th>
-                  <th>底薪（元）</th>
-                  <th>提成（元）</th>
-                  <th>扣款（元）</th>
-                  <th>实发（元）</th>
-                  <th>状态</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.month}</td>
-                    <td style={{ textAlign: "left" }}>{nameById.get(r.user_id) ?? "—"}</td>
-                    <td>{STORE_LABEL[r.scope]}</td>
-                    <td>{money2(r.base_amount)}</td>
-                    <td>{money2(r.commission_amount)}</td>
-                    <td>{money2(r.deduction_amount)}</td>
-                    <td>{money2(r.net_amount)}</td>
-                    <td>
-                      {r.published ? (
-                        <span className="tag tag-ok">已发布</span>
-                      ) : (
-                        <span className="tag tag-pending">未发布</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <details className="salary-fold">
+        <summary>
+          <span>录入与导入</span>
+          <span className="salary-fold-hint">月度工资行、CSV、实表明细</span>
+        </summary>
+        <div className="salary-fold-body">
+          <h2 className="section-title">月度工资导入</h2>
+          <div className="card">
+            <SalaryMonthlyImporter members={members} demo={user.demo} userId={user.id} />
           </div>
-        )}
-        <p className="page-desc" style={{ marginTop: 12 }}>
-          按人明细仅老板可见，本站不提供工资原表导出；员工只看到自己已发布月份的一行。
-        </p>
-      </div>
 
-      <h2 className="section-title salary-head">
-        <span className="salary-head-text">工资明细（实表导入）</span>
-        <span className="salary-kind salary-kind-actual">1–9 实表</span>
-      </h2>
-      <SalaryDetailSection user={user} detailRows={detailRows} combinedRows={combined.rows} />
+          <h2 className="section-title">员工月度工资（按人行，仅老板可见）</h2>
+          <div className="card">
+            {rows.length === 0 ? (
+              <p className="empty">
+                暂无已发布的月度工资。录入并发布后，员工可在「我的薪酬」看到自己的一行。
+              </p>
+            ) : (
+              <div className="table-wrap">
+                <table className="report">
+                  <thead>
+                    <tr>
+                      <th>月份</th>
+                      <th style={{ textAlign: "left" }}>员工</th>
+                      <th>门店</th>
+                      <th>底薪（元）</th>
+                      <th>提成（元）</th>
+                      <th>扣款（元）</th>
+                      <th>实发（元）</th>
+                      <th>状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id}>
+                        <td>{r.month}</td>
+                        <td style={{ textAlign: "left" }}>{nameById.get(r.user_id) ?? "—"}</td>
+                        <td>{STORE_LABEL[r.scope]}</td>
+                        <td>{money2(r.base_amount)}</td>
+                        <td>{money2(r.commission_amount)}</td>
+                        <td>{money2(r.deduction_amount)}</td>
+                        <td>{money2(r.net_amount)}</td>
+                        <td>
+                          {r.published ? (
+                            <span className="tag tag-ok">已发布</span>
+                          ) : (
+                            <span className="tag tag-pending">未发布</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <p className="page-desc" style={{ marginTop: 12 }}>
+              按人明细仅老板可见，本站不提供工资原表导出；员工只看到自己已发布月份的一行。
+            </p>
+          </div>
+
+          <h2 className="section-title salary-head">
+            <span className="salary-head-text">工资明细（实表导入）</span>
+            <span className="salary-kind salary-kind-actual">1–9 实表</span>
+          </h2>
+          <SalaryDetailSection user={user} detailRows={detailRows} combinedRows={combined.rows} />
+        </div>
+      </details>
     </>
   );
 }
