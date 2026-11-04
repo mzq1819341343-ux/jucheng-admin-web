@@ -220,8 +220,7 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
       ? await loadPayrollTotals(selected)
       : null;
   const reportsHref = `/business/aihuishou/reports?month=${selected}`;
-  const compareHref = `/business/aihuishou/compare?month=${selected}`;
-  const salaryHref = "/salary#salary-people";
+  const salaryHref = `/salary?month=${selected}#salary-people`;
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
   const wageNote = wageCheckNote(operating.annual);

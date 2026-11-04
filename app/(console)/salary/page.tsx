@@ -52,7 +52,9 @@ export default async function SalaryPage() {
       <h1 className="page-title">{user.role === "staff" ? "我的薪酬" : "工资"}</h1>
 
       {isLead(user.role) ? (
-        <SalaryLiveBoard role={user.role} />
+        <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
+          <SalaryLiveBoard role={user.role} />
+        </Suspense>
       ) : (
         <Suspense fallback={<div className="skel skel-block" aria-hidden="true" />}>
           <StaffSalary user={user} />

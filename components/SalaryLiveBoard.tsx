@@ -1,17 +1,21 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import RealtimePayrollCard from "@/components/RealtimePayrollCard";
 import SalaryDashboardCard from "@/components/SalaryDashboardCard";
 import { isYearMonth, shanghaiYearMonth } from "@/lib/salary-realtime";
 
-/**
- * 工资页主视线：一个月份，汇总指标在上，按人草案在下。
- * 月份切换先问未保存的手填，再让两块读同一月。
- */
 export default function SalaryLiveBoard({ role }: { role: "owner" | "partner" }) {
-  const [month, setMonth] = useState(shanghaiYearMonth);
+  const router = useRouter();
+  const requested = useSearchParams().get("month");
+  const [month, setMonth] = useState(isYearMonth(requested) ? requested : shanghaiYearMonth());
   const confirmRef = useRef<() => boolean>(() => true);
+
+  function commitMonth(next: string) {
+    setMonth(next);
+    router.replace(`/salary?month=${next}#salary-people`, { scroll: false });
+  }
 
   return (
     <section className="salary-main" aria-label="实时工资">
@@ -32,7 +36,7 @@ export default function SalaryLiveBoard({ role }: { role: "owner" | "partner" })
                 event.target.value = month;
                 return;
               }
-              setMonth(next);
+              commitMonth(next);
             }}
           />
         </div>

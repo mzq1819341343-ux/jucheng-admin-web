@@ -1144,6 +1144,41 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   font-size: var(--ov-note);
   font-variant-numeric: tabular-nums;
 }
+.person-month {
+  --pm-gap: 1rem;
+  --pm-pad: 1.25rem;
+  --pm-cols: repeat(3, minmax(0, 1fr));
+}
+.person-month .pm-grid {
+  display: grid;
+  grid-template-columns: var(--pm-cols);
+  gap: var(--pm-gap);
+}
+.person-month .pm-field {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: var(--pm-pad);
+}
+.person-month .pm-label { color: var(--label); font-size: 0.8125rem; font-weight: 600; }
+.person-month .pm-value {
+  margin-top: calc(var(--pm-gap) * 0.35);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.person-month .pm-daily {
+  margin-top: var(--pm-gap);
+  padding: var(--pm-pad);
+  border-radius: 0.75rem;
+  background: var(--bg-2);
+  color: var(--muted);
+}
+.person-month .pm-note { margin: calc(var(--pm-gap) * 0.35) 0 0; font-size: 0.875rem; }
+@media (max-width: 720px) {
+  .person-month { --pm-cols: 1fr; --pm-pad: 1rem; }
+}
 #salary-people { scroll-margin-top: calc(var(--nav-mobile-h) + 0.75rem); }
 #salary-people:target { box-shadow: 0 0 0 2px var(--primary); }
 .overview-page a.ov-metric {

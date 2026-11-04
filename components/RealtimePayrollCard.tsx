@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import Link from "next/link";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import RealtimePayrollExport from "@/components/RealtimePayrollExport";
 import { money2 } from "@/lib/format";
@@ -497,7 +498,12 @@ function PersonRows({
     <>
       <tr onClick={canEdit ? onToggle : undefined} style={canEdit ? { cursor: "pointer" } : undefined}>
         <td>
-          {person.display_name}
+          <Link
+            href={`/salary/people/${encodeURIComponent(person.person_key)}?month=${encodeURIComponent(month)}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            {person.display_name}
+          </Link>
           {canEdit ? (
             <button
               type="button"
