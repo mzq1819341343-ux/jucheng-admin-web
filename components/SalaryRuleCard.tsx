@@ -14,7 +14,7 @@ export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
   if (!rule) {
     return (
       <div className="card rule-card">
-        <p className="empty">暂无工资规则：规则保存后，这里会用一句话讲清工资怎么算。</p>
+        <p className="empty">暂无工资规则</p>
       </div>
     );
   }
@@ -41,16 +41,8 @@ export default function SalaryRuleCard({ rule }: { rule: SalaryRule | null }) {
           </li>
         ))}
       </ul>
-      <p className="page-desc" style={{ marginTop: 14, marginBottom: 0 }}>
-        生效起始月：{rule.effective_from ?? "待老板确认"}
-        {rule.effective_from
-          ? "（该月起按本规则计算，此前月份按历史规则回算）"
-          : "（确认后支持新旧双版本规则按月回算）"}
-        {rule.note ? `｜${rule.note}` : ""}
-      </p>
-      <p className="page-desc" style={{ marginTop: 8, marginBottom: 0 }}>
-        历史双版本按生效起始月切换：新规则自生效月起算，之前月份按旧规则回算。
-      </p>
+      <p className="salary-meta">生效起始月：{rule.effective_from ?? "待老板确认"}</p>
+      {rule.note ? <p className="salary-meta">备注：{rule.note}</p> : null}
     </div>
   );
 }

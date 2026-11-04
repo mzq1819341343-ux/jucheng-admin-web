@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import KpiCard, { KpiValue } from "@/components/KpiCard";
 import RealtimePayrollExport from "@/components/RealtimePayrollExport";
 import { money2 } from "@/lib/format";
@@ -17,7 +17,6 @@ import {
   type SalaryMistakeDetail,
 } from "@/lib/salary-mistake";
 import {
-  ACCESSORIES_SOURCE_NOTE,
   formatShanghaiDateTime,
   handFillShown,
   parseHandFillAmount,
@@ -78,13 +77,19 @@ function lineFromRow(row: SalaryMistakeDetail): EditorLine {
 export default function RealtimePayrollCard({
   role,
   summary = "full",
+  month: monthProp,
+  confirmRef,
 }: {
   role: SalaryRole;
-  /** full：合计卡和草案表都在本卡。table：合计卡改由同页仪表盘承担，本卡只留草案表。 */
+  /** full：合计卡和草案表都在本卡。table：合计卡改由同页汇总承担，本卡只留草案表。 */
   summary?: "full" | "table";
+  /** 与汇总共用的月份。传入后本卡不再单独放月份控件。 */
+  month?: string;
+  confirmRef?: MutableRefObject<() => boolean>;
 }) {
   const canEdit = role === "owner";
-  const [month, setMonth] = useState(shanghaiYearMonth);
+  const [monthState, setMonthState] = useState(monthProp ?? shanghaiYearMonth);
+  const month = monthProp ?? monthState;
   const [phase, setPhase] = useState<Phase>("loading");
   const [message, setMessage] = useState("");
   const [payload, setPayload] = useState<RealtimeSalaryResponse | null>(null);
@@ -134,6 +139,8 @@ export default function RealtimePayrollCard({
     acceptedLeaveRef.current = true;
     return true;
   }
+
+  if (confirmRef) confirmRef.current = confirmDiscard;
 
   const loadPayload = useCallback(async (targetMonth: string, signal: AbortSignal, quiet: boolean) => {
     if (!quiet) {
@@ -289,13 +296,10 @@ export default function RealtimePayrollCard({
 
   return (
     <section aria-busy={phase === "loading"} aria-live="polite">
-      <h2 className="section-title salary-head">
-        <span className="salary-head-text">实时工资 · 人效（{month}）</span>
-        <span className="salary-kind salary-kind-draft">实时草案（未月结）</span>
-      </h2>
+      <h2 className="section-title">{summary === "table" ? "按人草案" : `实时工资 · 人效（${month}）`}</h2>
 
-      <div className="form-row">
-        <div className="field" style={{ flex: "0 1 220px", marginBottom: 0 }}>
+      {monthProp === undefined ? (
+        <div className="field salary-month">
           <label htmlFor="realtime-salary-month">月份</label>
           <input
             id="realtime-salary-month"
@@ -312,11 +316,11 @@ export default function RealtimePayrollCard({
                 return;
               }
               setOpenKey(null);
-              setMonth(next);
+              setMonthState(next);
             }}
           />
         </div>
-      </div>
+      ) : null}
 
       <RealtimePayrollExport
         month={month}
@@ -324,12 +328,10 @@ export default function RealtimePayrollCard({
         notice={exportNote}
       />
 
-      {phase === "loading" ? (
-        <div className="skel skel-block" style={{ marginTop: 16 }} aria-hidden="true" />
-      ) : null}
+      {phase === "loading" ? <div className="skel skel-block salary-gap" aria-hidden="true" /> : null}
 
       {phase === "error" ? (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card salary-gap">
           <p className="empty" role="alert">
             {message}
           </p>
@@ -337,7 +339,7 @@ export default function RealtimePayrollCard({
       ) : null}
 
       {empty ? (
-        <div className="card" style={{ marginTop: 16 }}>
+        <div className="card salary-gap">
           <p className="empty">暂无数据</p>
         </div>
       ) : null}
@@ -346,7 +348,7 @@ export default function RealtimePayrollCard({
         <>
           {summary === "full" ? (
             <>
-              <div className="kpi-row" style={{ marginTop: 16 }}>
+              <div className="kpi-row salary-gap">
                 <div className="kpi-card kpi-wide kpi-hero">
                   <div className="kpi-label">应发合计（实时工资草案，{payload.month}）</div>
                   <KpiValue value={money2(payload.totals.gross)} unit="元" />
@@ -368,7 +370,7 @@ export default function RealtimePayrollCard({
                   sub="应发合计 − 失误合计"
                 />
               </div>
-              <div className="kpi-row" style={{ marginTop: 16 }}>
+              <div className="kpi-row salary-gap">
                 <KpiCard label="计薪人数" value={String(headcount)} unit="人" />
                 {headcount > 0 ? (
                   <KpiCard
@@ -387,16 +389,10 @@ export default function RealtimePayrollCard({
                 ) : null}
               </div>
             </>
-          ) : (
-            <p className="page-desc salary-dashboard-note">
-              应发、人数、失误和扣后合计在上方仪表盘。这里只留按人草案，宽表在卡片内横向滑动。
-            </p>
-          )}
+          ) : null}
 
-          <div className="card" style={{ marginTop: 16 }}>
-            <h3 className="section-title" style={{ marginTop: 0 }}>
-              按人明细
-            </h3>
+          <div className="card salary-gap">
+            {summary === "table" ? null : <h3 className="section-title salary-title-tight">按人明细</h3>}
             <div className="table-wrap">
               <table className={handFill ? "report salary-people salary-people-hand" : "report salary-people"}>
                 <thead>
@@ -406,7 +402,7 @@ export default function RealtimePayrollCard({
                     <th>上门（元）</th>
                     <th>线上（元）</th>
                     <th>门店（元）</th>
-                    {showAccessories ? <th title={ACCESSORIES_SOURCE_NOTE}>配件（元）</th> : null}
+                    {showAccessories ? <th>配件（元）</th> : null}
                     {handFill ? (
                       <>
                         <th>补贴（元）</th>
@@ -415,7 +411,7 @@ export default function RealtimePayrollCard({
                     ) : null}
                     <th>应发（元）</th>
                     <th>失误扣款（元）</th>
-                    <th title="应发 − 失误扣款">实发（元）</th>
+                    <th>实发（元）</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -460,23 +456,6 @@ export default function RealtimePayrollCard({
                 </tbody>
               </table>
             </div>
-            {payload.caliber ? (
-              <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
-                口径：{payload.caliber}
-              </p>
-            ) : null}
-            <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
-              {ACCESSORIES_SOURCE_NOTE}
-            </p>
-            <p className="page-desc" style={{ marginTop: 12, marginBottom: 0 }}>
-              {canEdit
-                ? handFill
-                  ? "补贴、奖金由老板手填并保存。应发按底薪 + 上门 + 线上 + 门店 + 配件 + 补贴 + 奖金，由接口计算后展示。实发 = 应发 − 失误扣款。编辑失误只改失误明细，不发布月度工资。草案里没有的人，不能从这里手填。"
-                  : "实发 = 应发 − 失误扣款。编辑只改失误明细，不回写应发草案，也不发布月度工资。表里还没有的人，本轮不能从这里新增。"
-                : handFill
-                  ? "补贴、奖金只显示，不能修改。失误扣款只显示每人合计和上方合计，不显示事由，也不能修改。应发按接口结果展示，本卡不改草案、不发布月度工资。"
-                  : "失误扣款只显示每人合计和上方合计，不显示事由，也不能修改。应发仍是实时草案，本卡不改草案、不发布月度工资。"}
-            </p>
           </div>
         </>
       ) : null}
@@ -548,7 +527,7 @@ function PersonRows({
           ) : (
             <>
               <td>{money2(person.subsidy ?? 0)}</td>
-              <td title={person.in_draft ? undefined : "草案里没有该人，补贴和奖金为 0"}>
+              <td>
                 {money2(person.bonus ?? 0)}
               </td>
             </>
@@ -689,7 +668,7 @@ function HandFillCells({
           </button>
         </div>
         {error ? (
-          <p className="empty" role="alert" style={{ margin: "6px 0 0" }}>
+          <p className="empty salary-gap" role="alert">
             {error}
           </p>
         ) : null}
@@ -828,9 +807,7 @@ function MistakeEditor({
 
   return (
     <div className="mistake-editor-panel">
-      <p className="page-desc" style={{ marginTop: 0 }}>
-        {personName} 的失误扣款。多行事由与金额，合计 {money2(live)} 元。
-      </p>
+      <p className="salary-meta">合计 {money2(live)} 元</p>
       {lines === null ? <div className="skel skel-block" aria-hidden="true" /> : null}
       {lines ? (
         <>
@@ -893,7 +870,7 @@ function MistakeEditor({
               </div>
             ))}
           </div>
-          <div className="form-row" style={{ marginTop: 12 }}>
+          <div className="form-row salary-gap">
             <button
               type="button"
               className="btn btn-ghost"
@@ -909,13 +886,10 @@ function MistakeEditor({
         </>
       ) : null}
       {error ? (
-        <p className="empty" role="alert" style={{ marginTop: 8 }}>
+        <p className="empty salary-gap" role="alert">
           {error}
         </p>
       ) : null}
-      <p className="page-desc" style={{ marginBottom: 0 }}>
-        空行不计入。全部清空后保存，该人失误合计为 0。
-      </p>
     </div>
   );
 }

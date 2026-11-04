@@ -20,20 +20,9 @@ export default function SalaryRuleVersionPreview({
   const eff = rule.effective_from;
 
   return (
-    <div style={{ marginTop: 20 }}>
-      <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>
-        双版本预览（{rule.title}）
-      </h3>
-      {eff ? (
-        <p className="page-desc" style={{ margin: "0 0 10px" }}>
-          生效起始月 {eff}：该月及之后按<strong>新规则</strong>，此前月份按<strong>旧规则</strong>回算。
-        </p>
-      ) : (
-        <p className="page-desc" style={{ margin: "0 0 10px" }}>
-          生效起始月未填（待确认）：不臆测切换点，全部月份暂标「待确认」；在上方规则行填入并保存生效起始月后，这里自动按月切换新旧规则。
-        </p>
-      )}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+    <div className="salary-gap">
+      <h3 className="salary-subhead">双版本预览（{rule.title}）</h3>
+      <div className="salary-tags">
         {sorted.map((m) => {
           const isNew = eff !== null && m >= eff;
           const isEffMonth = eff !== null && m === eff;

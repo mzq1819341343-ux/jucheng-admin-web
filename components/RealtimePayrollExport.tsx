@@ -47,8 +47,8 @@ export default function RealtimePayrollExport({
   }
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div className="salary-actions">
+      <div className="salary-actions-row">
         <button
           type="button"
           className="btn btn-ghost"
@@ -69,7 +69,7 @@ export default function RealtimePayrollExport({
         </button>
       </div>
       {notice ? (
-        <p id="realtime-export-notice" className="page-desc" role="status" style={{ marginTop: 8, marginBottom: 0 }}>
+        <p id="realtime-export-notice" className="salary-meta" role="status">
           {notice}
         </p>
       ) : null}
