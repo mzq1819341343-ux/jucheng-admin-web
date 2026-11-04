@@ -30,9 +30,9 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/overview.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/overview.png" alt="总览：扣成本后净利、双利润率与年回报率一行" loading="lazy" />
+              <img src="/help-shots/overview.png" alt="总览：左侧深蓝栏常显，扣成本后净利、双利润率与年回报率一行" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：总览英雄净利、双利润率与年回报率一行。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：总览左侧深蓝栏常显、菜单平铺；英雄净利、双利润率与年回报率一行。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -44,16 +44,16 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/mobile-overview.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/mobile-overview.png" alt="手机 390 宽总览：英雄净利、双利润率、年回报一行、月度目标与业务卡单列排布" loading="lazy" />
+              <img src="/help-shots/mobile-overview.png" alt="手机：左上汉堡打开的深蓝抽屉，菜单平铺，底栏为角色、掩码邮箱和退出" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：手机上的总览——卡片单列、数字不溢出。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：手机点左上汉堡打开抽屉——菜单平铺，底栏是角色、掩码邮箱和退出。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
           <figure className="help-shot">
             <a href="/help-shots/mobile-expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/mobile-expenses.png" alt="手机 390 宽报销页：汇总卡、建单表单、状态筛选与台账单列排布" loading="lazy" />
+              <img src="/help-shots/mobile-expenses.png" alt="手机报销页：左上汉堡，汇总卡单列" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：手机上的报销页——表单纵排、筛选 chips 同行、台账在卡片内滑动。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：手机报销页——左上汉堡，汇总卡单列。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -357,9 +357,9 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/expenses.png" alt="报销页：按状态筛选（全部 / 未报销 / 已报销）与当前筛选小计" loading="lazy" />
+              <img src="/help-shots/expenses.png" alt="报销页：左侧深蓝栏常显，汇总卡与建单表单" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据）：报销页状态筛选 chips（图中落在「未报销」）与当前筛选小计。截图刷新：2026-10-30；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据）：报销页左侧深蓝栏常显，汇总卡与建单表单。与线上真实经营数据无关。截图刷新：2026-11-04；点图看大图。</figcaption>
           </figure>
         </div>
 
