@@ -54,25 +54,22 @@ function NavLink({
   );
 }
 
-function NavGroup({
+function NavFolder({
   id,
   label,
-  pathname,
-  items,
+  active,
+  children,
 }: {
   id: string;
   label: string;
-  pathname: string;
-  items: { href: string; label: string }[];
+  active: boolean;
+  children: ReactNode;
 }) {
-  const active = items.some((item) => isCurrent(pathname, item.href));
   const [open, setOpen] = useState(active);
 
   useEffect(() => {
     if (active) setOpen(true);
   }, [active]);
-
-  if (items.length === 0) return null;
 
   return (
     <div className={`menu-group${active ? " is-active" : ""}${open ? " is-open" : ""}`}>
@@ -87,13 +84,33 @@ function NavGroup({
         <span className="menu-caret" aria-hidden="true" />
       </button>
       <div className="menu-sub" id={id} role="group" aria-label={label} hidden={!open}>
-        {items.map((item) => (
-          <NavLink key={item.href} href={item.href} pathname={pathname}>
-            {item.label}
-          </NavLink>
-        ))}
+        {children}
       </div>
     </div>
+  );
+}
+
+function NavGroup({
+  id,
+  label,
+  pathname,
+  items,
+}: {
+  id: string;
+  label: string;
+  pathname: string;
+  items: { href: string; label: string }[];
+}) {
+  const active = items.some((item) => isCurrent(pathname, item.href));
+  if (items.length === 0) return null;
+  return (
+    <NavFolder id={id} label={label} active={active}>
+      {items.map((item) => (
+        <NavLink key={item.href} href={item.href} pathname={pathname}>
+          {item.label}
+        </NavLink>
+      ))}
+    </NavFolder>
   );
 }
 
@@ -121,6 +138,12 @@ function NavBody({ chrome }: { chrome: ConsoleNavChrome }) {
     { href: "/salary", label: role === "staff" ? "我的薪酬" : "薪资" },
     { href: "/members", label: "成员" },
   ];
+  const inProject =
+    pathname === "/" ||
+    pathname.startsWith("/business/aihuishou") ||
+    pathname.startsWith("/salary") ||
+    pathname.startsWith("/members") ||
+    pathname.startsWith("/expenses");
 
   return (
     <>
@@ -131,11 +154,15 @@ function NavBody({ chrome }: { chrome: ConsoleNavChrome }) {
         <span className="brand-slogan">{BRAND_SLOGAN}</span>
       </div>
       <nav className="menu" aria-label="主导航">
-        <NavGroup id="nav-operate" label="经营" pathname={pathname} items={operateItems} />
-        <NavGroup id="nav-people" label="员工" pathname={pathname} items={peopleItems} />
-        <NavLink href="/expenses" pathname={pathname}>
-          报销
-        </NavLink>
+        <NavFolder id="nav-projects" label="项目" active={inProject}>
+          <NavFolder id="nav-aihuishou" label="爱回收" active={inProject}>
+            <NavGroup id="nav-operate" label="经营" pathname={pathname} items={operateItems} />
+            <NavGroup id="nav-people" label="员工" pathname={pathname} items={peopleItems} />
+            <NavLink href="/expenses" pathname={pathname}>
+              报销
+            </NavLink>
+          </NavFolder>
+        </NavFolder>
         <div className="menu-rule" aria-hidden="true" />
         <NavLink href="/status" pathname={pathname}>
           数据状态

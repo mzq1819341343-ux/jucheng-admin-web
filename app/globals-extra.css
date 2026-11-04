@@ -1144,15 +1144,25 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   font-size: var(--ov-note);
   font-variant-numeric: tabular-nums;
 }
+.overview-page a.ov-metric {
+  display: block;
+  color: inherit;
+}
+.overview-page a.ov-metric:hover { border-color: var(--primary); }
+.overview-page .ov-panel-head a { color: var(--primary); }
 .overview-page .ov-plot {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--ov-gap) * 0.35);
   min-height: var(--ov-chart-h);
   border-radius: calc(var(--ov-radius) * 0.6);
   background: var(--bg-2);
   color: var(--muted);
   font-size: var(--ov-note);
 }
+.overview-page .ov-plot-note { color: var(--faint); }
 .overview-page .ov-bar {
   display: flex;
   height: var(--ov-bar-h);

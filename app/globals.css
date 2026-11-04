@@ -190,6 +190,10 @@ body:has(.app-shell) .site-footer { margin-left: var(--sidebar-w); }
 .sidebar .menu-sub a {
   font-size: var(--nav-sub-fs);
 }
+.sidebar .menu-sub .menu-sub {
+  margin-left: calc(var(--nav-sub-indent) * 0.45);
+  padding-left: calc(var(--nav-sub-indent) * 0.55);
+}
 .sidebar .menu-sub[hidden] { display: none; }
 .sidebar .menu a:hover,
 .sidebar .menu-group-toggle:hover {

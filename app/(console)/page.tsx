@@ -19,6 +19,7 @@ import {
   salaryDetailByMonth,
   getFetchRefreshMarker,
   getSiteTargets,
+  realMode,
   type StoreCost,
   type ExpenseClaim,
   type SalaryDetailImportRow,
@@ -31,7 +32,16 @@ import { isOverdueUnreimbursed } from "@/lib/expenses";
 import MonthlyTargetCard from "@/components/MonthlyTargetCard";
 import { money, money2, int, pct } from "@/lib/format";
 import { buildTargetReviewRows } from "@/lib/targets";
-import { shanghaiYearMonth } from "@/lib/salary-realtime";
+import { readSalaryActor } from "@/lib/salary-actor";
+import { loadMistakeTotals } from "@/lib/salary-mistake-query";
+import {
+  buildRealtimeSalary,
+  isMissingHandFillColumn,
+  realtimeReadDecision,
+  type RealtimeSalaryTotals,
+  type SalaryRealtimeDraftRow,
+  shanghaiYearMonth,
+} from "@/lib/salary-realtime";
 import { STORE_LABEL, STORE_SHORT_LABEL, COST_TYPE_LABEL, type CostType, type StoreScope } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -67,19 +77,48 @@ function MetricSlot({
   text,
   kind,
   sub,
+  href,
 }: {
   label: string;
   text: string;
   kind: "num" | "note";
   sub?: string;
+  href: string;
 }) {
   return (
-    <article className="ov-metric">
+    <Link href={href} className="ov-metric">
       <div className="ov-metric-label">{label}</div>
       <div className={kind === "num" ? "ov-metric-value" : "ov-empty"}>{text}</div>
       {sub ? <div className="ov-metric-sub">{sub}</div> : null}
-    </article>
+    </Link>
   );
+}
+
+const DRAFT_SELECT =
+  "person_name, user_id, as_of, base_amount, door_amount, online_amount, store_amount, accessories_amount, gross_amount, deduction_amount, net_amount, caliber";
+
+async function loadPayrollTotals(month: string): Promise<RealtimeSalaryTotals | null> {
+  const actor = await readSalaryActor();
+  if (!actor.ok) return null;
+  if (realtimeReadDecision({ month, authenticated: true, role: actor.role }) !== 200) return null;
+  const extended = await actor.supabase
+    .from("salary_realtime_draft")
+    .select(`${DRAFT_SELECT}, subsidy_amount, bonus_amount`)
+    .eq("month", month);
+  let rows: SalaryRealtimeDraftRow[] = [];
+  let handFill = true;
+  if (extended.error) {
+    if (!isMissingHandFillColumn(extended.error)) return null;
+    const plain = await actor.supabase.from("salary_realtime_draft").select(DRAFT_SELECT).eq("month", month);
+    if (plain.error) return null;
+    rows = (plain.data ?? []) as SalaryRealtimeDraftRow[];
+    handFill = false;
+  } else {
+    rows = (extended.data ?? []) as SalaryRealtimeDraftRow[];
+  }
+  const mistakes = await loadMistakeTotals(actor.supabase, month);
+  if (!mistakes.ok) return null;
+  return buildRealtimeSalary(month, rows, mistakes.rows, { handFill }).totals;
 }
 
 export default async function OverviewPage({
@@ -176,6 +215,13 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
     return { scope, row: source.find((r) => r.month === selected) };
   });
   const recycle = typeof selectedRow?.profit === "number" ? selectedRow.profit : null;
+  const payroll =
+    (user.role === "owner" || user.role === "partner") && realMode(user)
+      ? await loadPayrollTotals(selected)
+      : null;
+  const reportsHref = `/business/aihuishou/reports?month=${selected}`;
+  const compareHref = `/business/aihuishou/compare?month=${selected}`;
+  const salaryHref = "/salary";
   const latestCostTotal = latest ? storeCostsTotalForMonth(costs, latest.month) : 0;
   const latestCostDesc = latest ? describeMonthCosts(costs, latest.month) : null;
   const wageNote = wageCheckNote(operating.annual);
@@ -294,6 +340,7 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
           <>
             <div className="ov-metrics">
               <MetricSlot
+                href={reportsHref}
                 label={`${monthLabel(selected)}门店回收`}
                 text={recycle === null ? "暂无" : `${money(recycle)} 元`}
                 kind={recycle === null ? "note" : "num"}
@@ -304,6 +351,7 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                 }
               />
               <MetricSlot
+                href={reportsHref}
                 label="目标达成"
                 text={
                   !profitTarget || profitTarget.status === "未设定"
@@ -319,11 +367,27 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                     : "回收目标未设定"
                 }
               />
-              <MetricSlot label="配件" text="暂无" kind="note" />
-              <MetricSlot label="网单" text="暂无" kind="note" />
-              <MetricSlot label="失误" text="暂无" kind="note" />
+              <MetricSlot
+                href={salaryHref}
+                label="配件"
+                text={payroll ? `${money2(payroll.accessories)} 元` : "暂无"}
+                kind={payroll ? "num" : "note"}
+              />
+              <MetricSlot
+                href={salaryHref}
+                label="网单"
+                text={payroll ? `${money2(payroll.online)} 元` : "暂无"}
+                kind={payroll ? "num" : "note"}
+              />
+              <MetricSlot
+                href={salaryHref}
+                label="失误"
+                text={payroll ? `${money2(payroll.mistake_total)} 元` : "暂无"}
+                kind={payroll ? "num" : "note"}
+              />
               {sensitive ? (
                 <MetricSlot
+                  href={salaryHref}
                   label="当月工资"
                   text={typeof selectedRow?.wage_cost === "number" ? `${money(selectedRow.wage_cost)} 元` : "暂无"}
                   kind={typeof selectedRow?.wage_cost === "number" ? "num" : "note"}
@@ -338,13 +402,19 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                   <h2>{monthLabel(selected)}门店回收走势（按日）</h2>
                   {recycle !== null ? <span>当月分润 {money(recycle)} 元</span> : null}
                 </div>
-                <div className="ov-plot">暂无</div>
+                <div className="ov-plot">
+                  <span>暂无</span>
+                  <span className="ov-plot-note">台账无按日明细</span>
+                </div>
               </section>
               <section className="ov-panel" aria-label="配件日走势">
                 <div className="ov-panel-head">
                   <h2>{monthLabel(selected)}配件销售走势（按日）</h2>
                 </div>
-                <div className="ov-plot">暂无</div>
+                <div className="ov-plot">
+                  <span>暂无</span>
+                  <span className="ov-plot-note">台账无按日明细</span>
+                </div>
               </section>
             </div>
 
@@ -356,29 +426,24 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                 </div>
                 {recycle !== null && recycle > 0 ? (
                   <div className="ov-bar" aria-hidden="true">
-                    <span className="ov-bar-recycle" />
+                    <span className="ov-bar-recycle" style={{ width: "100%" }} />
                   </div>
                 ) : (
                   <p className="ov-empty">暂无</p>
                 )}
+                <p className="ov-empty">仅回收口径</p>
                 <ul className="ov-legend">
                   <li>
                     <i className="ov-swatch ov-swatch-recycle" />
                     门店回收 {recycle === null ? "暂无" : `${money(recycle)} 元`}
                   </li>
-                  <li>
-                    <i className="ov-swatch ov-swatch-parts" />
-                    配件 暂无
-                  </li>
-                  <li>
-                    <i className="ov-swatch ov-swatch-online" />
-                    网单 暂无
-                  </li>
                 </ul>
               </section>
               <section className="ov-panel" aria-label="两店简表">
                 <div className="ov-panel-head">
-                  <h2>两店</h2>
+                  <h2>
+                    <Link href={compareHref}>两店</Link>
+                  </h2>
                 </div>
                 <div className="card table-wrap ov-table">
                   <table className="report">
@@ -406,15 +471,21 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
             <div className="ov-rank">
               <section className="ov-panel" aria-label="员工回收排名">
                 <div className="ov-panel-head">
-                  <h2>员工回收排名</h2>
+                  <h2>
+                    <Link href={salaryHref}>员工回收排名</Link>
+                  </h2>
                 </div>
                 <p className="ov-empty">暂无</p>
+                <p className="ov-plot-note">台账无按人回收明细</p>
               </section>
               <section className="ov-panel" aria-label="员工配件排名">
                 <div className="ov-panel-head">
-                  <h2>员工配件排名</h2>
+                  <h2>
+                    <Link href={salaryHref}>员工配件排名</Link>
+                  </h2>
                 </div>
                 <p className="ov-empty">暂无</p>
+                <p className="ov-plot-note">台账无按人配件明细</p>
               </section>
             </div>
 
