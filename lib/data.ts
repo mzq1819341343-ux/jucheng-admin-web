@@ -22,6 +22,8 @@ import {
 } from "./data-core";
 import {
   getSiteTargets as getSiteTargetsImpl,
+  getStores as getStoresImpl,
+  getMonthlySalesTargets as getMonthlySalesTargetsImpl,
   getSalaryRules as getSalaryRulesImpl,
   getEmployees as getEmployeesImpl,
   getPublicSalaryRule as getPublicSalaryRuleImpl,
@@ -49,6 +51,8 @@ export const getFetchLogs = cache(getFetchLogsImpl);
 export const getFetchRefreshMarker = cache(getFetchRefreshMarkerImpl);
 
 export const getSiteTargets = cache(getSiteTargetsImpl);
+export const getStores = cache(getStoresImpl);
+export const getMonthlySalesTargets = cache(getMonthlySalesTargetsImpl);
 export const getSalaryRules = cache(getSalaryRulesImpl);
 export const getEmployees = cache(getEmployeesImpl);
 export const getPublicSalaryRule = cache(getPublicSalaryRuleImpl);

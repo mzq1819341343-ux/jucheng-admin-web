@@ -13,6 +13,15 @@ import { STORE_LABEL, COST_TYPE_LABEL, STORE_SHORT_LABEL, type StoreScope, type 
 import { EXPENSE_SCOPE_LABEL, type ExpenseScope, type ExpenseStatus } from "./expenses";
 import { money2 } from "./format";
 import { EMPLOYEE_COLUMNS, coerceEmployeeRow, sortEmployees, type EmployeeRow } from "./employees";
+import {
+  coerceMonthlySalesTarget,
+  coerceStoreOption,
+  isMissingMonthlySalesTargetsError,
+  MONTHLY_SALES_TARGETS_TABLE,
+  type MonthlySalesTarget,
+  type MonthlySalesTargetRead,
+  type StoreOption,
+} from "./monthly-sales-targets";
 export type { EmployeeRow };
 export type { StoreScope, CostType };
 export type { ExpenseScope, ExpenseStatus };
@@ -125,6 +134,51 @@ if (!error && data) return data as SiteTarget[];
 // 空态（表未建时按未设定处理）
 }
 return [];
+}
+
+/**
+ * stores 主键与名称。读不到时返回空，调用方再用本库已知的两家店 id，不编外部门店。
+ */
+export async function getStores(user: CurrentUser): Promise<StoreOption[]> {
+  if (!realMode(user)) return [];
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.from("stores").select("id, name").order("name", { ascending: true });
+    if (error || !data) return [];
+    const rows: StoreOption[] = [];
+    for (const item of data) {
+      const row = coerceStoreOption(item);
+      if (row) rows.push(row);
+    }
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 人×店×月目标。表未建时返回 missing_table，不把空数组假装成「已经确认没人设目标」。
+ * 演示与未登录不注入任何目标。
+ */
+export async function getMonthlySalesTargets(user: CurrentUser): Promise<MonthlySalesTargetRead> {
+  if (!realMode(user)) return { ok: true, rows: [] };
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase
+      .from(MONTHLY_SALES_TARGETS_TABLE)
+      .select("id, month, store_id, employee_id, recycle_target, accessories_sales_target");
+    if (error) {
+      return { ok: false, reason: isMissingMonthlySalesTargetsError(error) ? "missing_table" : "unavailable" };
+    }
+    const rows: MonthlySalesTarget[] = [];
+    for (const item of data ?? []) {
+      const row = coerceMonthlySalesTarget(item);
+      if (row) rows.push(row);
+    }
+    return { ok: true, rows };
+  } catch (error) {
+    return { ok: false, reason: isMissingMonthlySalesTargetsError(error) ? "missing_table" : "unavailable" };
+  }
 }
 
 /** 工资体系规则：仅老板（RLS 同样仅 owner 可写）。演示模式回兜底规则（与 migration_004 种子一致）。 */
