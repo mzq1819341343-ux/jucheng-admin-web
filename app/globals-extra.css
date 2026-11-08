@@ -1203,6 +1203,62 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   font-size: var(--ov-note);
 }
 .overview-page .ov-plot-note { color: var(--faint); }
+.overview-page .ov-panel-head { flex-wrap: wrap; min-width: 0; }
+.overview-page .ov-panel-head h2,
+.overview-page .ov-panel-head span { min-width: 0; overflow-wrap: anywhere; }
+.overview-page .ov-plot-live {
+  display: block;
+  min-width: 0;
+  padding: 0.45rem 0.35rem 0.55rem;
+}
+.overview-page .ov-plot-live svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+.overview-page .ov-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  color: var(--faint);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+.overview-page .ov-plot-live .ov-plot-note {
+  display: block;
+  margin-top: 0.35rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.overview-page .ov-rank-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.overview-page .ov-rank-item {
+  display: grid;
+  grid-template-columns: 1.4rem minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: baseline;
+  min-width: 0;
+  font-size: var(--ov-note);
+}
+.overview-page .ov-rank-pos {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.overview-page .ov-rank-name { min-width: 0; overflow-wrap: anywhere; }
+.overview-page .ov-rank-amt {
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
 .overview-page .ov-rank-single { margin-top: var(--ov-gap); }
 .overview-page .ov-target-note { margin-bottom: calc(var(--ov-gap) * 0.65); }
 .overview-page .ov-target .btn { margin-top: calc(var(--ov-gap) * 0.55); }
