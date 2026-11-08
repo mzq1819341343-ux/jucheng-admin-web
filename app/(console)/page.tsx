@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { KpiValue } from "@/components/KpiCard";
 import { SectionSkeleton } from "@/components/PageSkeleton";
-import Sparkline from "@/components/Sparkline";
 import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
+import PersonStoreTargetForm from "@/components/PersonStoreTargetForm";
 import {
   getCurrentUser,
   getMyBusinesses,
@@ -18,20 +17,26 @@ import {
   getSalaryDetailImport,
   salaryDetailByMonth,
   getFetchRefreshMarker,
-  getSiteTargets,
+  getStores,
+  getMonthlySalesTargets,
+  getEmployees,
   realMode,
   type StoreCost,
   type ExpenseClaim,
   type SalaryDetailImportRow,
-  type SiteTarget,
   type FetchRefreshMarker,
   type MetricRow,
 } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import { isOverdueUnreimbursed } from "@/lib/expenses";
-import MonthlyTargetCard from "@/components/MonthlyTargetCard";
-import { money, money2, int, pct } from "@/lib/format";
-import { buildTargetReviewRows } from "@/lib/targets";
+import { money, money2, int } from "@/lib/format";
+import {
+  TARGET_READ_UNAVAILABLE,
+  TARGET_TABLE_MISSING_READ,
+  recycleAchievement,
+  type MonthlySalesTargetRead,
+  type StoreOption,
+} from "@/lib/monthly-sales-targets";
 import { readSalaryActor } from "@/lib/salary-actor";
 import { loadMistakeTotals } from "@/lib/salary-mistake-query";
 import {
@@ -66,9 +71,10 @@ function monthLabel(ym: string) {
   return `${year}年${Number(month)}月`;
 }
 
-function monthHref(month: string, denied?: string) {
+function monthHref(month: string, denied?: string, store?: string) {
   const query = new URLSearchParams();
   query.set("month", month);
+  if (store && store !== "all") query.set("store", store);
   if (denied) query.set("denied", denied);
   return `/?${query.toString()}`;
 }
@@ -84,13 +90,19 @@ function MetricSlot({
   text: string;
   kind: "num" | "note";
   sub?: string;
-  href: string;
+  href?: string;
 }) {
-  return (
-    <Link href={href} className="ov-metric">
+  const body = (
+    <>
       <div className="ov-metric-label">{label}</div>
       <div className={kind === "num" ? "ov-metric-value" : "ov-empty"}>{text}</div>
       {sub ? <div className="ov-metric-sub">{sub}</div> : null}
+    </>
+  );
+  if (!href) return <div className="ov-metric">{body}</div>;
+  return (
+    <Link href={href} className="ov-metric">
+      {body}
     </Link>
   );
 }
@@ -141,13 +153,13 @@ async function loadPayrollTotals(month: string): Promise<RealtimeSalaryResponse 
 export default async function OverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ denied?: string; month?: string }>;
+  searchParams: Promise<{ denied?: string; month?: string; store?: string }>;
 }) {
-  const { denied, month } = await searchParams;
+  const { denied, month, store } = await searchParams;
   return (
     <main className="container calm no-enter overview-page">
       <Suspense fallback={<OverviewFallback denied={denied} />}>
-        <OverviewContent denied={denied} monthParam={month} />
+        <OverviewContent denied={denied} monthParam={month} storeParam={store} />
       </Suspense>
     </main>
   );
@@ -164,7 +176,15 @@ function OverviewFallback({ denied }: { denied?: string }) {
   );
 }
 
-async function OverviewContent({ denied, monthParam }: { denied?: string; monthParam?: string }) {
+async function OverviewContent({
+  denied,
+  monthParam,
+  storeParam,
+}: {
+  denied?: string;
+  monthParam?: string;
+  storeParam?: string;
+}) {
   const user = await getCurrentUser();
   const { businesses, grantedIds } = await getMyBusinesses(user);
   const hasAihuishou = canAccessBusiness(grantedIds, "aihuishou");
@@ -179,7 +199,8 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
   const sensitive = canSeeSensitive(user.role);
   const withData = hasAihuishou && sensitive;
   const canReadPayroll = (user.role === "owner" || user.role === "partner") && realMode(user);
-  const [combinedMetrics, wandaMetrics, friendshipMetrics, costs, expenseInput, detailRows, allClaims, siteTargets, refreshMarker, latestDraftMonth] =
+  const rosterKnown = user.role === "owner" || user.role === "partner";
+  const [combinedMetrics, wandaMetrics, friendshipMetrics, costs, expenseInput, detailRows, allClaims, refreshMarker, latestDraftMonth, dbStores, salesTargets, employees] =
     await Promise.all([
       getMetrics("combined", user.role),
       hasAihuishou ? getMetrics("wanda", user.role) : Promise.resolve({ rows: [] as MetricRow[], fromDb: false }),
@@ -194,11 +215,13 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
       hasAihuishou && user.role !== "partner"
         ? getExpenseClaims(user)
         : Promise.resolve<ExpenseClaim[]>([]),
-      hasAihuishou ? getSiteTargets(user) : Promise.resolve<SiteTarget[]>([]),
       hasAihuishou
         ? getFetchRefreshMarker(user)
         : Promise.resolve<FetchRefreshMarker | null>(null),
       canReadPayroll ? loadLatestDraftMonth() : Promise.resolve<string | null>(null),
+      hasAihuishou ? getStores(user) : Promise.resolve<StoreOption[]>([]),
+      hasAihuishou ? getMonthlySalesTargets(user) : Promise.resolve<MonthlySalesTargetRead>({ ok: true, rows: [] }),
+      hasAihuishou && rosterKnown ? getEmployees(user) : Promise.resolve([]),
     ]);
   const rows = combinedMetrics.rows;
   const latest = rows[rows.length - 1];
@@ -206,11 +229,6 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
   const prevCalendarMonth = shiftMonth(calendarMonth, -1);
   const requested = monthParam && /^\d{4}-\d{2}$/.test(monthParam) ? monthParam : null;
   const selected = requested ?? latestDraftMonth ?? latest?.month ?? calendarMonth;
-  const selectedRow = rows.find((r) => r.month === selected);
-  const reviewMonths = rows.map((r) => ({ month: r.month, profit: r.profit ?? null, orders: r.orders ?? null }));
-  if (!reviewMonths.some((r) => r.month === selected)) {
-    reviewMonths.push({ month: selected, profit: null, orders: null });
-  }
   const totalProfit = rows.reduce((s, r) => s + (r.profit ?? 0), 0);
   const totalOrders = rows.reduce((s, r) => s + (r.orders ?? 0), 0);
   const totalDoor = rows.reduce((s, r) => s + (r.door_orders ?? 0), 0);
@@ -222,18 +240,40 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
   });
   const latestOp = latest ? operating.months.find((m) => m.month === latest.month) : undefined;
   const selectedOp = operating.months.find((m) => m.month === selected);
-  const companyNet: Record<string, number | null> = {};
-  for (const item of operating.months) companyNet[item.month] = item.companyNetProfit;
-  const profitTarget = buildTargetReviewRows({
-    months: reviewMonths,
-    targets: siteTargets.map((t) => ({ month: t.month, metric: t.metric, target_value: t.target_value })),
-    companyNetProfit: companyNet,
-  }).find((r) => r.month === selected && r.metric === "profit");
+  const storeOptions: StoreOption[] =
+    dbStores.length > 0
+      ? dbStores
+      : (["wanda", "friendship"] as const).map((id) => ({ id, name: STORE_LABEL[id] }));
+  const storeFilter = storeOptions.some((store) => store.id === storeParam) ? storeParam! : "all";
+  const storeName = storeOptions.find((store) => store.id === storeFilter)?.name ?? null;
+  const scopedRows =
+    storeFilter === "wanda" ? wandaMetrics.rows : storeFilter === "friendship" ? friendshipMetrics.rows : storeFilter === "all" ? rows : [];
+  const scopedRow = scopedRows.find((row) => row.month === selected);
   const storeLines = (["friendship", "wanda"] as StoreScope[]).map((scope) => {
     const source = scope === "wanda" ? wandaMetrics.rows : friendshipMetrics.rows;
     return { scope, row: source.find((r) => r.month === selected) };
   });
-  const recycle = typeof selectedRow?.profit === "number" ? selectedRow.profit : null;
+  const recycle = typeof scopedRow?.profit === "number" ? scopedRow.profit : null;
+  const achievement = recycleAchievement({
+    targets: salesTargets.ok ? salesTargets.rows : [],
+    employees,
+    month: selected,
+    storeId: storeFilter === "all" ? null : storeFilter,
+    actual: recycle,
+    rosterKnown,
+  });
+  const achievementText = !achievement.rosterKnown
+    ? "—"
+    : achievement.target === null
+      ? "未设定"
+      : achievement.rate === null
+        ? "—"
+        : `${achievement.rate.toFixed(1)}%`;
+  const achievementSub = !achievement.rosterKnown
+    ? "在职口径不可见"
+    : achievement.target === null
+      ? "回收目标未设定"
+      : `${storeName ? `${storeName} · ` : ""}回收目标 ${money(achievement.target)} 元`;
   const payroll = canReadPayroll ? await loadPayrollTotals(selected) : null;
   const hasRoster = Boolean(payroll && payroll.people.length > 0);
   const reportsHref = `/business/aihuishou/reports?month=${selected}`;
@@ -319,19 +359,36 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
             <div className="ov-toolbar">
               <span className="ov-query">查询月份 {monthLabel(selected)}</span>
               <Link
-                href={monthHref(prevCalendarMonth, denied)}
+                href={monthHref(prevCalendarMonth, denied, storeFilter)}
                 className="ov-month-btn"
                 aria-current={selected === prevCalendarMonth ? "page" : undefined}
               >
                 上月
               </Link>
               <Link
-                href={monthHref(calendarMonth, denied)}
+                href={monthHref(calendarMonth, denied, storeFilter)}
                 className="ov-month-btn"
                 aria-current={selected === calendarMonth ? "page" : undefined}
               >
                 本月
               </Link>
+              <Link
+                href={monthHref(selected, denied, "all")}
+                className="ov-month-btn"
+                aria-current={storeFilter === "all" ? "page" : undefined}
+              >
+                全部
+              </Link>
+              {storeOptions.map((store) => (
+                <Link
+                  key={store.id}
+                  href={monthHref(selected, denied, store.id)}
+                  className="ov-month-btn"
+                  aria-current={storeFilter === store.id ? "page" : undefined}
+                >
+                  {store.name}
+                </Link>
+              ))}
             </div>
           ) : null}
         </header>
@@ -363,33 +420,24 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                 text={recycle === null ? "暂无" : `${money(recycle)} 元`}
                 kind={recycle === null ? "note" : "num"}
                 sub={
-                  selectedRow
-                    ? `${typeof selectedRow.orders === "number" ? `${int(selectedRow.orders)} 单` : "单量暂无"} · 上门 ${typeof selectedRow.door_orders === "number" ? `${int(selectedRow.door_orders)} 单` : "暂无"}`
-                    : undefined
+                  scopedRow
+                    ? storeFilter === "all"
+                      ? `${typeof scopedRow.orders === "number" ? `${int(scopedRow.orders)} 单` : "单量暂无"} · 上门 ${typeof scopedRow.door_orders === "number" ? `${int(scopedRow.door_orders)} 单` : "暂无"}`
+                      : `${storeName ?? ""} · ${typeof scopedRow.orders === "number" ? `${int(scopedRow.orders)} 单` : "单量暂无"}`
+                    : storeName ?? undefined
                 }
               />
               <MetricSlot
-                href={reportsHref}
                 label="目标达成"
-                text={
-                  !profitTarget || profitTarget.status === "未设定"
-                    ? "未设定"
-                    : profitTarget.status === "待核算" || profitTarget.rate === null
-                      ? profitTarget.status
-                      : `${profitTarget.rate.toFixed(1)}%`
-                }
-                kind={profitTarget?.rate != null && profitTarget.status !== "未设定" && profitTarget.status !== "待核算" ? "num" : "note"}
-                sub={
-                  profitTarget?.targetValue != null
-                    ? `回收目标 ${money(profitTarget.targetValue)} 元`
-                    : "回收目标未设定"
-                }
+                text={achievementText}
+                kind={achievement.rate != null ? "num" : "note"}
+                sub={achievementSub}
               />
               <MetricSlot
-                href={salaryHref}
                 label="配件"
-                text={hasRoster ? `${money2(payroll!.totals.accessories)} 元` : "暂无"}
-                kind={hasRoster ? "num" : "note"}
+                text="暂无"
+                kind="note"
+                sub="销售额未接通"
               />
               <MetricSlot
                 href={salaryHref}
@@ -414,6 +462,26 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
               ) : null}
             </div>
 
+            {!salesTargets.ok ? (
+              <p className="ov-fold-note">
+                {salesTargets.reason === "missing_table" ? TARGET_TABLE_MISSING_READ : TARGET_READ_UNAVAILABLE}
+              </p>
+            ) : null}
+            {user.role === "owner" ? (
+              <PersonStoreTargetForm
+                month={selected}
+                stores={storeOptions}
+                people={employees.map((person) => ({
+                  id: person.id,
+                  person_name: person.person_name,
+                  employment_status: person.employment_status,
+                }))}
+                existing={salesTargets.ok ? salesTargets.rows : []}
+                persist={realMode(user)}
+                tableMissing={!salesTargets.ok && salesTargets.reason === "missing_table"}
+              />
+            ) : null}
+
             <div className="ov-charts">
               <section className="ov-panel" aria-label="门店回收日走势">
                 <div className="ov-panel-head">
@@ -432,6 +500,39 @@ async function OverviewContent({ denied, monthParam }: { denied?: string; monthP
                 <div className="ov-plot">
                   <span>暂无</span>
                   <span className="ov-plot-note">台账无按日明细</span>
+                </div>
+              </section>
+            </div>
+
+            <section className="ov-panel ov-rank-single" aria-label="门店排名">
+              <div className="ov-panel-head">
+                <h2>门店排名</h2>
+                <span>未接通</span>
+              </div>
+              <div className="ov-plot">
+                <span>暂无</span>
+                <span className="ov-plot-note">回收、配件、网单销售额未接通</span>
+              </div>
+            </section>
+            <div className="ov-rank">
+              <section className="ov-panel" aria-label="员工回收排名">
+                <div className="ov-panel-head">
+                  <h2>员工回收排名</h2>
+                  <span>未接通</span>
+                </div>
+                <div className="ov-plot">
+                  <span>暂无</span>
+                  <span className="ov-plot-note">未接通</span>
+                </div>
+              </section>
+              <section className="ov-panel" aria-label="员工配件排名">
+                <div className="ov-panel-head">
+                  <h2>员工配件排名</h2>
+                  <span>未接通</span>
+                </div>
+                <div className="ov-plot">
+                  <span>暂无</span>
+                  <span className="ov-plot-note">销售额未接通，不用提成代替</span>
                 </div>
               </section>
             </div>

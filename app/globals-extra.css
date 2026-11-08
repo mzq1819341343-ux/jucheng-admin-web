@@ -1028,6 +1028,8 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 }
 
 .overview-page {
+  min-width: 0;
+  max-width: 100%;
   --ov-gap: 1rem;
   --ov-stack: 1.75rem;
   --ov-hero-pad-y: 1rem;
@@ -1075,6 +1077,7 @@ table.report tr.row-selected td { background: var(--notice-bg); }
 .overview-page .ov-month-btn {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   min-height: var(--ov-control);
   padding: 0 0.9rem;
   border: 1px solid var(--border);
@@ -1200,6 +1203,28 @@ table.report tr.row-selected td { background: var(--notice-bg); }
   font-size: var(--ov-note);
 }
 .overview-page .ov-plot-note { color: var(--faint); }
+.overview-page .ov-rank-single { margin-top: var(--ov-gap); }
+.overview-page .ov-target-note { margin-bottom: calc(var(--ov-gap) * 0.65); }
+.overview-page .ov-target .btn { margin-top: calc(var(--ov-gap) * 0.55); }
+.overview-page .ov-target-list {
+  list-style: none;
+  margin: 0 0 var(--ov-gap);
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.overview-page .ov-target-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.85rem;
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--ov-note);
+}
+.overview-page .ov-toolbar,
+.overview-page .ov-target,
+.overview-page .ov-target .form-row,
+.overview-page .ov-target .field { min-width: 0; max-width: 100%; }
 .overview-page .ov-bar {
   display: flex;
   height: var(--ov-bar-h);

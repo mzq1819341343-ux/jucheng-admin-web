@@ -68,13 +68,12 @@ async function ReportsBody() {
   );
   const wandaCostTotal = [...wandaCmp.values()].reduce((s, m) => s + m.storeCosts, 0);
   const friendshipCostTotal = [...friendshipCmp.values()].reduce((s, m) => s + m.storeCosts, 0);
-  // 指令58 A4：目标达成复盘——目标与总览目标卡同一数据源（site_targets），
+  // 目标达成复盘仍只读 site_targets（全站月目标）。总览人×店×月目标在
+  // monthly_sales_targets，不从这张表回写，也不再把两处说成同一份数据。
   // 实际走经营核算口径：分润/单量取两店合计月度汇总，公司口径净利仅完整
   // 口径月份有值（operating.companyNetProfit），其余月份标「待核算」不冒数；
   // 未设目标的月份标「未设定」。整节仅敏感角色渲染（店员不渲染，见 audit-staff）。
-  // 指令58 A4 / 指令59 A5：目标达成复盘——行计算下沉 lib/targets.ts 单一来源，
-  // 页面表格与 CSV 导出共用同一份行数据；目标与总览目标卡同源（site_targets），
-  // 实际走经营核算口径，公司口径净利仅完整口径月份有值，其余标「待核算」。
+  // 行计算在 lib/targets.ts，页面表格与 CSV 导出共用同一份行数据。
   const companyNetMap: Record<string, number | null> = {};
   for (const m of operating.months) companyNetMap[m.month] = m.companyNetProfit;
   const reviewRows = buildTargetReviewRows({ months: rows, targets: siteTargets, companyNetProfit: companyNetMap });
@@ -184,7 +183,9 @@ async function ReportsBody() {
               </table>
             </div>
             <p className="page-desc" style={{ marginTop: 12 }}>
-              目标存 site_targets（与总览目标卡同一数据源，老板在总览设定）；未设目标的月份标「未设定」。
+              本表只读 site_targets（全站月目标：分润、净利、单量），不从总览写入。
+              总览的人×店×月回收与配件销售目标在 monthly_sales_targets，两处不是同一张表。
+              未设全站月目标的月份标「未设定」。
               公司口径净利仅完整口径月份出数，缺完整口径的月份实际与达成率标「待核算」，不估算冒数。
             </p>
             <TargetReviewExport rows={reviewRows} />
