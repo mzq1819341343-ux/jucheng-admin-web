@@ -167,13 +167,17 @@ describe("overview does not draw a daily curve", () => {
   const help = readFileSync(new URL("../app/(console)/help/page.tsx", import.meta.url), "utf8");
   const reports = readFileSync(new URL("../app/(console)/business/aihuishou/reports/page.tsx", import.meta.url), "utf8");
 
-  it("keeps the ledger empty state and does not embed the disk dump", () => {
-    assert.equal(page.split("台账无按日明细").length - 1, 2);
+  it("reads daily sales from the owner route and does not embed the disk dump", () => {
+    assert.match(page, /readDailySalesForOwner/);
+    assert.match(page, /EmptyPlot/);
+    assert.match(page, /暂无/);
+    assert.equal(page.includes("台账无按日明细"), false);
     assert.equal(page.includes("recycle_order_amount"), false);
     assert.equal(page.includes("accessories_sales_amount"), false);
     assert.equal(page.includes("13399"), false);
     assert.equal(page.includes("fj_20261104"), false);
     assert.equal(page.includes("daily_series"), false);
+    assert.equal(page.includes("Desktop"), false);
     assert.equal(page.includes('from("site_targets")'), false);
   });
 

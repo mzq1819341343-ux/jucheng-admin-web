@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { SectionSkeleton } from "@/components/PageSkeleton";
 import FetchRefreshMarkerLine from "@/components/FetchRefreshMarker";
+import DailySalesChart from "@/components/DailySalesChart";
 import PersonStoreTargetForm from "@/components/PersonStoreTargetForm";
 import {
   getCurrentUser,
@@ -29,6 +30,13 @@ import {
 } from "@/lib/data";
 import { buildOperatingMetrics, coverageRange, wageCheckNote } from "@/lib/operating";
 import { isOverdueUnreimbursed } from "@/lib/expenses";
+import {
+  groupMoney,
+  presentDailySales,
+  readDailySalesForOwner,
+  trendSeries,
+  type RankRow,
+} from "@/lib/daily-person-store-sales";
 import { money, money2, int } from "@/lib/format";
 import {
   TARGET_READ_UNAVAILABLE,
@@ -104,6 +112,29 @@ function MetricSlot({
     <Link href={href} className="ov-metric">
       {body}
     </Link>
+  );
+}
+
+function RankList({ rows }: { rows: RankRow[] }) {
+  return (
+    <ol className="ov-rank-list">
+      {rows.map((row, index) => (
+        <li key={row.name} className="ov-rank-item">
+          <span className="ov-rank-pos">{index + 1}</span>
+          <span className="ov-rank-name">{row.name}</span>
+          <span className="ov-rank-amt">{groupMoney(row.amount)} 元</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function EmptyPlot({ note }: { note: string }) {
+  return (
+    <div className="ov-plot">
+      <span>暂无</span>
+      <span className="ov-plot-note">{note}</span>
+    </div>
   );
 }
 
@@ -274,7 +305,30 @@ async function OverviewContent({
     : achievement.target === null
       ? "回收目标未设定"
       : `${storeName ? `${storeName} · ` : ""}回收目标 ${money(achievement.target)} 元`;
-  const payroll = canReadPayroll ? await loadPayrollTotals(selected) : null;
+  const realOwner = user.role === "owner" && realMode(user);
+  const [payroll, sales] = await Promise.all([
+    canReadPayroll ? loadPayrollTotals(selected) : Promise.resolve<RealtimeSalaryResponse | null>(null),
+    hasAihuishou
+      ? readDailySalesForOwner({ role: realOwner ? user.role : null, month: selected })
+      : Promise.resolve(null),
+  ]);
+  const salesView = sales && sales.ok
+    ? presentDailySales(sales.detail, storeFilter === "all" ? null : storeName)
+    : null;
+  const hasDaily = Boolean(salesView && salesView.daily.length > 0);
+  const dailyNote = !realOwner
+    ? user.demo
+      ? "没有按日实绩"
+      : "按日实绩仅老板可看"
+    : !sales || !sales.ok
+      ? "按日实绩暂时读不到"
+      : sales.detail.length === 0
+        ? "本月没有按日记录"
+        : hasDaily
+          ? ""
+          : "本月没有该店的按日记录";
+  const recyclePoints = hasDaily && salesView ? trendSeries(selected, salesView.daily, "recycle_store_amount") : [];
+  const accessoryPoints = hasDaily && salesView ? trendSeries(selected, salesView.daily, "accessories_sales") : [];
   const hasRoster = Boolean(payroll && payroll.people.length > 0);
   const reportsHref = `/business/aihuishou/reports?month=${selected}`;
   const salaryHref = hasRoster
@@ -435,9 +489,9 @@ async function OverviewContent({
               />
               <MetricSlot
                 label="配件"
-                text="暂无"
-                kind="note"
-                sub="销售额未接通"
+                text={hasDaily && salesView ? `${groupMoney(salesView.accessoriesTotal)} 元` : "暂无"}
+                kind={hasDaily && salesView ? "num" : "note"}
+                sub={hasDaily ? "配件销售额" : dailyNote}
               />
               <MetricSlot
                 href={salaryHref}
@@ -486,54 +540,74 @@ async function OverviewContent({
               <section className="ov-panel" aria-label="门店回收日走势">
                 <div className="ov-panel-head">
                   <h2>{monthLabel(selected)}门店回收走势（按日）</h2>
-                  {recycle !== null ? <span>当月分润 {money(recycle)} 元</span> : null}
+                  {hasDaily && salesView ? (
+                    <span>合计 {groupMoney(salesView.recycleStoreTotal)} 元</span>
+                  ) : recycle !== null ? (
+                    <span>当月分润 {money(recycle)} 元</span>
+                  ) : null}
                 </div>
-                <div className="ov-plot">
-                  <span>暂无</span>
-                  <span className="ov-plot-note">台账无按日明细</span>
-                </div>
+                {hasDaily ? (
+                  <DailySalesChart
+                    points={recyclePoints}
+                    tone="recycle"
+                    label={`${monthLabel(selected)}门店回收按日曲线，空档不是 0`}
+                    note="空档表示当天没有记录，不是 0。曲线是门店回收，不含网单。"
+                  />
+                ) : (
+                  <EmptyPlot note={dailyNote} />
+                )}
               </section>
               <section className="ov-panel" aria-label="配件日走势">
                 <div className="ov-panel-head">
                   <h2>{monthLabel(selected)}配件销售走势（按日）</h2>
+                  {hasDaily && salesView ? <span>合计 {groupMoney(salesView.accessoriesTotal)} 元</span> : null}
                 </div>
-                <div className="ov-plot">
-                  <span>暂无</span>
-                  <span className="ov-plot-note">台账无按日明细</span>
-                </div>
+                {hasDaily ? (
+                  <DailySalesChart
+                    points={accessoryPoints}
+                    tone="parts"
+                    label={`${monthLabel(selected)}配件销售额按日曲线，空档不是 0`}
+                    note="空档表示当天没有记录，不是 0。按配件销售额，不是提成。"
+                  />
+                ) : (
+                  <EmptyPlot note={dailyNote} />
+                )}
               </section>
             </div>
 
-            <section className="ov-panel ov-rank-single" aria-label="门店排名">
+            <section className="ov-panel ov-rank-single" aria-label="门店回收排名">
               <div className="ov-panel-head">
-                <h2>门店排名</h2>
-                <span>未接通</span>
+                <h2>门店回收排名</h2>
+                <span>按门店回收，不含网单</span>
               </div>
-              <div className="ov-plot">
-                <span>暂无</span>
-                <span className="ov-plot-note">回收、配件、网单销售额未接通</span>
-              </div>
+              {hasDaily && salesView && salesView.storeRecycle.length > 0 ? (
+                <RankList rows={salesView.storeRecycle} />
+              ) : (
+                <EmptyPlot note={dailyNote} />
+              )}
             </section>
             <div className="ov-rank">
               <section className="ov-panel" aria-label="员工回收排名">
                 <div className="ov-panel-head">
                   <h2>员工回收排名</h2>
-                  <span>未接通</span>
+                  <span>门店回收 + 网单不含券</span>
                 </div>
-                <div className="ov-plot">
-                  <span>暂无</span>
-                  <span className="ov-plot-note">未接通</span>
-                </div>
+                {hasDaily && salesView && salesView.personRecycle.length > 0 ? (
+                  <RankList rows={salesView.personRecycle} />
+                ) : (
+                  <EmptyPlot note={dailyNote} />
+                )}
               </section>
-              <section className="ov-panel" aria-label="员工配件排名">
+              <section className="ov-panel" aria-label="员工配件销售额排名">
                 <div className="ov-panel-head">
-                  <h2>员工配件排名</h2>
-                  <span>未接通</span>
+                  <h2>员工配件销售额排名</h2>
+                  <span>按销售额，不是提成</span>
                 </div>
-                <div className="ov-plot">
-                  <span>暂无</span>
-                  <span className="ov-plot-note">销售额未接通，不用提成代替</span>
-                </div>
+                {hasDaily && salesView && salesView.personAccessories.length > 0 ? (
+                  <RankList rows={salesView.personAccessories} />
+                ) : (
+                  <EmptyPlot note={dailyNote} />
+                )}
               </section>
             </div>
           </>
