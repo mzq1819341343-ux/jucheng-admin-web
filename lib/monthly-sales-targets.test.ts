@@ -190,8 +190,9 @@ describe("overview does not draw a daily curve", () => {
   it("stops telling people the overview writes site_targets", () => {
     assert.equal(help.includes("老板在总览设定"), false);
     assert.equal(help.includes("老板在总览用 site_targets"), false);
+    assert.equal(help.includes("monthly_sales_targets"), false);
+    assert.equal(help.includes("site_targets"), false);
     assert.equal(reports.includes("老板在总览设定"), false);
-    assert.match(help, /monthly_sales_targets/);
     assert.match(reports, /monthly_sales_targets/);
   });
 });
