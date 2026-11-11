@@ -80,9 +80,9 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/overview.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/overview.png" alt="总览：月份与门店筛选，门店回收、目标达成、配件、网单、失误、当月工资，走势和排名仍是暂无或未接通" loading="lazy" />
+              <img src="/help-shots/overview.png" alt="经营概览：侧栏展开项目和爱回收，指标卡与设目标，走势显示暂无，门店排名显示未接通。图中金额为示例数字" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。总览面板：月份和门店筛选、指标格、设目标；走势与排名仍是暂无或未接通。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。示例数字。桌面经营概览：侧栏展开「项目 → 爱回收」；指标卡和设目标；门店回收与配件销售走势显示「暂无」，门店排名显示「未接通」。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -95,16 +95,16 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/mobile-overview.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/mobile-overview.png" alt="手机上的总览：筛选和指标格单列排布，走势与排名显示暂无或未接通" loading="lazy" />
+              <img src="/help-shots/mobile-overview.png" alt="手机经营概览：左上角菜单抽屉打开，里面是同一套项目、爱回收、经营、员工和报销" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。手机上的总览：卡片单列，走势与排名仍是暂无或未接通。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。手机经营概览：左上角菜单抽屉打开，菜单与桌面相同，从「项目」到「爱回收」。点链接、遮罩或 Esc 即收起。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
           <figure className="help-shot">
             <a href="/help-shots/mobile-expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/mobile-expenses.png" alt="手机 390 宽报销页：汇总卡、建单表单、状态筛选与台账单列排布" loading="lazy" />
+              <img src="/help-shots/mobile-expenses.png" alt="手机报销台账：菜单抽屉关闭，汇总卡与新建表单上下排列。金额为示例数字" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。手机上的报销页：表单纵排、筛选在一行、台账在卡片内滑动。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。示例数字。手机报销台账：左上角菜单抽屉关闭，汇总卡和新建表单上下排列。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -321,9 +321,9 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/costs-utilities.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/costs-utilities.png" alt="门店成本页电费实报快捷区：门店、月份、电费金额与备注" loading="lazy" />
+              <img src="/help-shots/costs-utilities.png" alt="门店成本页的电费实报表单：门店、月份、电费金额与备注。画面从月度成本拍起" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。门店成本页「电费实报」：门店、月份、金额与备注。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。门店成本页「电费实报」：按门店和月份填写金额与备注。这张图从月度成本的表单拍起，上方合同台账不在画面里，页面本身不是空白。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -380,11 +380,11 @@ export default function HelpPage() {
             </li>
           </ul>
           <figure className="help-shot">
-            <a href="/help-shots/salary-rule-preview.png" target="_blank" rel="noreferrer">
+            <a href="/help-shots/salary.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/salary-rule-preview.png" alt="薪资页：规则、汇总与实时应发草案在同一页，录入与导入默认收起" loading="lazy" />
+              <img src="/help-shots/salary.png" alt="工资页：规则、汇总和实时应发草案在同一页。金额为示例数字" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。薪资页：规则、汇总和实时应发草案在同一页，录入与导入默认收起。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。示例数字。规则、汇总和实时应发草案在同一页。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -427,9 +427,9 @@ export default function HelpPage() {
           <figure className="help-shot">
             <a href="/help-shots/expenses.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/expenses.png" alt="报销页：按状态筛选（全部 / 未报销 / 已报销）与当前筛选小计" loading="lazy" />
+              <img src="/help-shots/expenses.png" alt="报销台账：未报销、已报销和本月花费三张汇总卡，以及新建报销单。金额为示例数字" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。报销页：按状态筛选（全部 / 未报销 / 已报销）与当前筛选小计。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。示例数字。报销台账：上方是未报销、已报销和本月花费汇总，下方是新建报销单。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
         </div>
 
@@ -488,9 +488,9 @@ export default function HelpPage() {
             </li>
             <li>
               <strong>目标从哪来：</strong>
-              这张复盘仍只读 site_targets（全站月目标：当月分润、公司口径净利、当月单量），本页只读不改。
-              总览上老板设的是人×店×月的回收目标与配件销售目标（monthly_sales_targets），不是这张表。
-              没设 site_targets 的月份在复盘里标「未设定」。
+              这张复盘仍用原来那套店目标（当月分润、公司口径净利、当月单量），本页只读不改。
+              总览上老板设的是按人、按店、按月各存一条的回收目标与配件销售目标。
+              没设店目标的月份在复盘里标「未设定」。
             </li>
             <li>
               <strong>状态怎么读：</strong>
@@ -534,10 +534,10 @@ export default function HelpPage() {
               用「电费实报」按月录入实际电费。录入后进入「报表」和「净利构成」的核算；未录入的月份按未取得、不计入。
             </li>
             <li>
-              <strong>定目标：</strong>老板在总览按人、按店、按月填写回收目标和配件销售目标，写入 monthly_sales_targets（一个人、一家店、一个月只有一行）。
+              <strong>定目标：</strong>老板在总览按人、按店、按月填写回收目标和配件销售目标，按人、按店、按月各存一条。
               达成率只用同店在职人员的回收目标合计；没设目标显示「未设定」，有目标但当月回收实际还没有则显示「—」。
               表还没建好时保存会提示失败，不会在浏览器里留一份假目标。配件销售目标填销售额，不用工资提成代替。
-              「报表」里的目标达成复盘仍只读 site_targets，不从总览这张人店月表回写。
+              报表里的目标达成复盘仍用原来那套店目标，不从总览这份人店月目标回写。
             </li>
             <li>
               <strong>管成员与数据状态：</strong>邀请新成员先在「成员」（/members）的「待邀请名单」登记邮箱、意向角色与意向授权，
@@ -546,18 +546,11 @@ export default function HelpPage() {
             </li>
           </ol>
           <figure className="help-shot">
-            <a href="/help-shots/dashboard-drill.png" target="_blank" rel="noreferrer">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/dashboard-drill.png" alt="净利构成：从当月分润逐步扣到公司口径净利" loading="lazy" />
-            </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。净利构成：从当月分润逐步扣到公司口径净利。截图刷新：2026-11-11；点图看大图。</figcaption>
-          </figure>
-          <figure className="help-shot">
             <a href="/help-shots/compare.png" target="_blank" rel="noreferrer">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/help-shots/compare.png" alt="两店对比：友谊与万达同月分润、门店成本、净利与利润率并排" loading="lazy" />
+              <img src="/help-shots/compare.png" alt="两店对比：同月两店并排，显示当月分润、门店成本、扣成本后净利和利润率。金额为示例数字" loading="lazy" />
             </a>
-            <figcaption>示例截图（演示数据），与线上真实经营数据无关。两店对比：同月双店并排（分润、门店成本、扣成本后净利、利润率）。截图刷新：2026-11-11；点图看大图。</figcaption>
+            <figcaption>示例截图（演示数据），与线上真实经营数据无关。示例数字。两店对比：选中月份后，两店并排看当月分润、门店成本、扣成本后净利和利润率。利润率（营收）在这张图里是「—」。截图刷新：2026-11-11；点图看大图。</figcaption>
           </figure>
         </div>
 
